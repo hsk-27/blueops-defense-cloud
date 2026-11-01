@@ -1,0 +1,28 @@
+title: Unexpected Privileged Command Execution via Sudo
+id: 5f1b1e90-0004-4e89-9a08-000000000004
+status: test
+description: Detects interactive shell invocations or high-risk administrative binaries launched with sudo privileges.
+references:
+    - https://attack.mitre.org/techniques/T1548/003/
+author: BlueOps Detection Engineering
+date: 2026-11-01
+tags:
+    - attack.privilege_escalation
+    - attack.t1548.003
+logsource:
+    product: linux
+    service: auditd
+detection:
+    selection:
+        process.executable: '/usr/bin/sudo'
+        process.command_line|contains:
+            - 'sudo -i'
+            - 'sudo su'
+            - 'sudo bash'
+            - 'sudo sh'
+            - 'sudo /bin/sh'
+            - 'sudo /bin/bash'
+    condition: selection
+falsepositives:
+    - Systems engineers elevating to root during scheduled interactive troubleshooting
+level: high

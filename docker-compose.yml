@@ -1,0 +1,199 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: blueops-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-blueops_db}
+      POSTGRES_USER: ${POSTGRES_USER:-blueops_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-blueops_secure_password_replace_in_prod}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-blueops_user} -d ${POSTGRES_DB:-blueops_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    networks:
+      - blueops-net
+
+  opensearch:
+    image: opensearchproject/opensearch:2.13.0
+    container_name: blueops-opensearch
+    restart: unless-stopped
+    environment:
+      - cluster.name=blueops-cluster
+      - node.name=blueops-node1
+      - discovery.type=single-node
+      - bootstrap.memory_lock=true
+      - "OPENSEARCH_JAVA_OPTS=-Xms1g -Xmx1g"
+      - DISABLE_SECURITY_PLUGIN=true
+      - DISABLE_INSTALL_DEMO_CONFIG=true
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    ports:
+      - "${OPENSEARCH_PORT:-9200}:9200"
+      - "9600:9600"
+    volumes:
+      - opensearch_data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -f http://localhost:9200/_cluster/health | grep -E '\"status\":\"(green|yellow)\"' || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2560M
+    networks:
+      - blueops-net
+
+  opensearch-dashboards:
+    image: opensearchproject/opensearch-dashboards:2.13.0
+    container_name: blueops-dashboards
+    restart: unless-stopped
+    ports:
+      - "${OPENSEARCH_DASHBOARDS_PORT:-5601}:5601"
+    environment:
+      OPENSEARCH_HOSTS: '["http://opensearch:9200"]'
+      DISABLE_SECURITY_DASHBOARDS_PLUGIN: "true"
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    networks:
+      - blueops-net
+
+  fluent-bit:
+    image: fluent/fluent-bit:3.0.4
+    container_name: blueops-fluent-bit
+    restart: unless-stopped
+    ports:
+      - "5140:5140/udp"
+      - "5140:5140/tcp"
+      - "24224:24224"
+      - "2020:2020"
+    volumes:
+      - ./infrastructure/fluent-bit/fluent-bit.conf:/fluent-bit/etc/fluent-bit.conf:ro
+      - ./infrastructure/fluent-bit/parsers.conf:/fluent-bit/etc/parsers.conf:ro
+      - fluentbit_buffer:/fluent-bit/buffer
+    depends_on:
+      opensearch:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    networks:
+      - blueops-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: blueops-backend
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-blueops_db}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-blueops_user}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-blueops_secure_password_replace_in_prod}
+      BLUEOPS_OPENSEARCH_URI: http://opensearch:9200
+      JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      RESPONSE_AGENT_URL: http://response-agent:5000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      opensearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -f http://localhost:8080/actuator/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '1.5'
+          memory: 1024M
+    networks:
+      - blueops-net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: blueops-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    networks:
+      - blueops-net
+
+  response-agent:
+    build:
+      context: ./response-agent
+      dockerfile: Dockerfile
+    container_name: blueops-response-agent
+    restart: unless-stopped
+    ports:
+      - "5000:5000"
+    environment:
+      RESPONSE_AGENT_SECRET: ${RESPONSE_AGENT_SECRET:-b7c938d10b7f43a99e1d8847e923832c3f59194e432c7e436814041b65b16130}
+      RESPONSE_AGENT_SIMULATION_MODE: "true"
+      RESPONSE_AGENT_PORT: 5000
+    healthcheck:
+      test: ["CMD-SHELL", "curl -s -f http://localhost:5000/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 128M
+    networks:
+      - blueops-net
+
+volumes:
+  postgres_data:
+  opensearch_data:
+  fluentbit_buffer:
+
+networks:
+  blueops-net:
+    driver: bridge

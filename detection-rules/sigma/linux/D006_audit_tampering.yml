@@ -1,0 +1,29 @@
+title: Audit Subsystem Tampering or Disablement
+id: 5f1b1e90-0006-4e89-9a08-000000000006
+status: test
+description: Detects attempts to clear, modify, or stop Linux audit rules using auditctl or stopping the auditd daemon.
+references:
+    - https://attack.mitre.org/techniques/T1562/001/
+author: BlueOps Detection Engineering
+date: 2026-11-01
+tags:
+    - attack.defense_evasion
+    - attack.t1562.001
+logsource:
+    product: linux
+    service: auditd
+detection:
+    selection_cmd:
+        process.executable|endswith: '/auditctl'
+        process.command_line|contains:
+            - ' -D'
+            - ' -e 0'
+    selection_service:
+        process.command_line|contains:
+            - 'systemctl stop auditd'
+            - 'service auditd stop'
+            - 'killall auditd'
+    condition: selection_cmd or selection_service
+falsepositives:
+    - Kernel patching or maintenance operations reconfiguring audit policies
+level: critical

@@ -1,0 +1,22 @@
+title: Repeated Authentication Failures Across Monitored Lab
+id: 5f1b1e90-0017-4e89-9a08-000000000017
+status: test
+description: Cross-platform correlation rule aggregating multiple authentication failure events originating from a single internal or boundary source.
+references:
+    - https://attack.mitre.org/techniques/T1110/
+author: BlueOps Detection Engineering
+date: 2026-11-01
+tags:
+    - attack.credential_access
+    - attack.t1110
+logsource:
+    category: authentication
+detection:
+    selection:
+        event.category: 'authentication'
+        event.outcome: 'failure'
+    timeframe: 5m
+    condition: selection | count(event.id) by source.ip > 10
+falsepositives:
+    - User account locked out while email application repeatedly attempts authentication
+level: medium

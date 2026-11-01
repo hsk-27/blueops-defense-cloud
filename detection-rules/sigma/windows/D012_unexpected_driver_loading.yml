@@ -1,0 +1,28 @@
+title: Unexpected Driver Loading
+id: 5f1b1e90-0012-4e89-9a08-000000000012
+status: test
+description: Detects loading of kernel drivers from non-standard directories or with anomalous certificate metadata (potential Bring Your Own Vulnerable Driver attack).
+references:
+    - https://attack.mitre.org/techniques/T1543/003/
+author: BlueOps Detection Engineering
+date: 2026-11-01
+tags:
+    - attack.persistence
+    - attack.privilege_escalation
+    - attack.t1543.003
+logsource:
+    category: driver_load
+    product: windows
+    service: sysmon
+detection:
+    selection:
+        ImageLoaded|contains:
+            - '\Temp\'
+            - '\Users\'
+            - '\AppData\'
+    filter_standard:
+        ImageLoaded|startswith: 'C:\Windows\System32\drivers\'
+    condition: selection and not filter_standard
+falsepositives:
+    - Specialized hardware diagnostic utilities or hypervisor virtualization guest tools
+level: high

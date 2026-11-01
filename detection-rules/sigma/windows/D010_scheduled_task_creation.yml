@@ -1,0 +1,33 @@
+title: Unexpected Scheduled Task Creation
+id: 5f1b1e90-0010-4e89-9a08-000000000010
+status: test
+description: Detects scheduled task creation via schtasks.exe pointing to temporary directories, scripts, or suspicious binaries.
+references:
+    - https://attack.mitre.org/techniques/T1053/005/
+author: BlueOps Detection Engineering
+date: 2026-11-01
+tags:
+    - attack.persistence
+    - attack.t1053.005
+logsource:
+    category: process_creation
+    product: windows
+    service: sysmon
+detection:
+    selection:
+        Image|endswith: '\schtasks.exe'
+        CommandLine|contains:
+            - ' /create '
+            - ' -create '
+    suspicious_paths:
+        CommandLine|contains:
+            - '\AppData\'
+            - '\Temp\'
+            - '\Users\Public\'
+            - 'powershell'
+            - 'cmd.exe'
+            - 'wscript'
+    condition: selection and suspicious_paths
+falsepositives:
+    - Legitimate software installers registering update scheduled tasks
+level: medium

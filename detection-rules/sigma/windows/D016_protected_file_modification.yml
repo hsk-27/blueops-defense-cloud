@@ -1,0 +1,24 @@
+title: Protected System File Modification
+id: 5f1b1e90-0016-4e89-9a08-000000000016
+status: test
+description: Detects unauthorized modification of critical Windows system files such as hosts file, LSA registry, or security providers.
+references:
+    - https://attack.mitre.org/techniques/T1565/001/
+author: BlueOps Detection Engineering
+date: 2026-11-01
+tags:
+    - attack.impact
+    - attack.t1565.001
+logsource:
+    category: file_event
+    product: windows
+    service: sysmon
+detection:
+    selection_hosts:
+        TargetFilename|endswith: '\System32\drivers\etc\hosts'
+    filter_trusted_editor:
+        Image|endswith: '\notepad.exe'
+    condition: selection_hosts
+falsepositives:
+    - Administrative modification of hosts file for local development name resolution
+level: high

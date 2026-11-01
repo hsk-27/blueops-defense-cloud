@@ -1,0 +1,60 @@
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: blueops-backend
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc:
+          batch_size: 25
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+# Security & JWT Configuration
+blueops:
+  jwt:
+    secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+    expiration-ms: ${JWT_EXPIRATION_MS:3600000} # 1 hour
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:86400000} # 24 hours
+  opensearch:
+    uri: ${BLUEOPS_OPENSEARCH_URI:http://localhost:9200}
+    username: ${BLUEOPS_OPENSEARCH_USERNAME:admin}
+    password: ${BLUEOPS_OPENSEARCH_PASSWORD:BlueOpsAdminPass123!@#}
+    sync-interval-ms: ${BLUEOPS_OPENSEARCH_SYNC_INTERVAL_MS:10000}
+    enabled: ${BLUEOPS_OPENSEARCH_ENABLED:true}
+  response-agent:
+    url: ${RESPONSE_AGENT_URL:http://localhost:5000}
+    secret: ${RESPONSE_AGENT_SECRET:b7c938d10b7f43a99e1d8847e923832c3f59194e432c7e436814041b65b16130}
+    simulation-mode: ${RESPONSE_AGENT_SIMULATION_MODE:true}
+
+# Actuator & Management
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+
+# SpringDoc OpenAPI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: method

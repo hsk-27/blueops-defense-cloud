@@ -1,0 +1,44 @@
+# OS metadata
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# IDE and Editor files
+.idea/
+*.iml
+.vscode/
+*.suo
+*.user
+
+# Environment and secrets
+.env
+*.env.local
+*.pem
+*.key
+*.p12
+
+# Maven / Java
+backend/target/
+*.class
+*.jar
+*.war
+.m2/
+
+# Node / Frontend
+frontend/node_modules/
+frontend/dist/
+frontend/.turbo/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python / Response Agent
+response-agent/__pycache__/
+response-agent/*.pyc
+response-agent/venv/
+response-agent/.venv/
+
+# Docker volumes and logs
+infrastructure/data/
+*.log
+test-lab/results/*.tmp

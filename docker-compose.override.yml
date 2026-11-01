@@ -1,0 +1,14 @@
+version: '3.8'
+
+# Development override: Use this when developing the backend and frontend locally on the host
+# Run: docker compose -f docker-compose.yml -f docker-compose.override.yml up -d postgres opensearch opensearch-dashboards fluent-bit
+
+services:
+  backend:
+    profiles: ["full-stack"]
+
+  frontend:
+    profiles: ["full-stack"]
+
+  response-agent:
+    profiles: ["full-stack"]

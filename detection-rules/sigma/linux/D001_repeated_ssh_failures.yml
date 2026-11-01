@@ -1,0 +1,24 @@
+title: Repeated SSH Authentication Failures
+id: 5f1b1e90-0001-4e89-9a08-000000000001
+status: test
+description: Detects multiple failed SSH authentication attempts from a single source IP targeting local user accounts within a short timeframe.
+references:
+    - https://attack.mitre.org/techniques/T1110/001/
+author: BlueOps Detection Engineering
+date: 2026-11-01
+tags:
+    - attack.credential_access
+    - attack.t1110.001
+logsource:
+    product: linux
+    service: sshd
+detection:
+    selection:
+        event.action: 'ssh_login'
+        event.outcome: 'failure'
+    timeframe: 5m
+    condition: selection | count(event.id) by source.ip > 5
+falsepositives:
+    - Administrative user forgetting password and mistyping multiple times
+    - Authorized penetration testing activities
+level: medium

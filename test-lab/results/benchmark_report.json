@@ -1,0 +1,87 @@
+{
+  "timestamp": "2026-11-01T08:07:24.280Z",
+  "totalAdversaryScenarios": 10,
+  "benignTests": 50,
+  "truePositives": 10,
+  "falsePositives": 1,
+  "falseNegatives": 0,
+  "trueNegatives": 49,
+  "precision": 0.9091,
+  "recall": 1,
+  "falsePositiveRate": 0.02,
+  "meanTimeToDetectSeconds": 3.74,
+  "meanTimeToRespondSeconds": 42,
+  "scenarios": [
+    {
+      "code": "T001",
+      "name": "SSH Brute-Force Simulation",
+      "tp": true,
+      "fp": 0,
+      "mttd": 4.2
+    },
+    {
+      "code": "T002",
+      "name": "Successful SSH Login After Failures",
+      "tp": true,
+      "fp": 0,
+      "mttd": 6.1
+    },
+    {
+      "code": "T003",
+      "name": "Linux Privilege Escalation Activity",
+      "tp": true,
+      "fp": 0,
+      "mttd": 3.8
+    },
+    {
+      "code": "T004",
+      "name": "Linux User Creation",
+      "tp": true,
+      "fp": 0,
+      "mttd": 4.5
+    },
+    {
+      "code": "T005",
+      "name": "Windows Suspicious PowerShell",
+      "tp": true,
+      "fp": 1,
+      "mttd": 2.9
+    },
+    {
+      "code": "T006",
+      "name": "Suspicious Process Chain",
+      "tp": true,
+      "fp": 0,
+      "mttd": 3.1
+    },
+    {
+      "code": "T007",
+      "name": "Scheduled Task Creation",
+      "tp": true,
+      "fp": 0,
+      "mttd": 5.4
+    },
+    {
+      "code": "T008",
+      "name": "Security Log Clearing",
+      "tp": true,
+      "fp": 0,
+      "mttd": 2.1
+    },
+    {
+      "code": "T009",
+      "name": "Known Threat Intel IOC Communication",
+      "tp": true,
+      "fp": 0,
+      "mttd": 1.8
+    },
+    {
+      "code": "T010",
+      "name": "Controlled Response Simulation",
+      "tp": true,
+      "fp": 0,
+      "mttd": 3.5,
+      "mttr": 42
+    }
+  ]
+}

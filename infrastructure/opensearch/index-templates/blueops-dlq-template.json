@@ -1,0 +1,24 @@
+{
+  "index_patterns": ["blueops-dlq-*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "error": {
+          "properties": {
+            "message": { "type": "text" },
+            "type": { "type": "keyword" },
+            "parser": { "type": "keyword" }
+          }
+        },
+        "collector": { "type": "keyword" },
+        "source_host": { "type": "keyword" },
+        "raw_payload": { "type": "text" }
+      }
+    }
+  }
+}

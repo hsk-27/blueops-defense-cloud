@@ -1,0 +1,32 @@
+title: Suspicious Process Access to LSASS
+id: 5f1b1e90-0011-4e89-9a08-000000000011
+status: test
+description: Detects unusual process access requests directed towards the Local Security Authority Subsystem Service (lsass.exe) with credential reading access masks.
+references:
+    - https://attack.mitre.org/techniques/T1003/001/
+author: BlueOps Detection Engineering
+date: 2026-11-01
+tags:
+    - attack.credential_access
+    - attack.t1003.001
+logsource:
+    category: process_access
+    product: windows
+    service: sysmon
+detection:
+    selection:
+        TargetImage|endswith: '\lsass.exe'
+        GrantedAccess:
+            - '0x1010'
+            - '0x1038'
+            - '0x1410'
+            - '0x1438'
+            - '0x1fffff'
+    filter_known_antivirus:
+        SourceImage|endswith:
+            - '\MsMpEng.exe'
+            - '\csagent.exe'
+    condition: selection and not filter_known_antivirus
+falsepositives:
+    - Legitimate endpoint protection agents and identity synchronization agents
+level: critical

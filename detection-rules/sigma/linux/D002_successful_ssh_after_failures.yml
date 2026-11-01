@@ -1,0 +1,26 @@
+title: Successful SSH Login After Repeated Failures
+id: 5f1b1e90-0002-4e89-9a08-000000000002
+status: test
+description: Detects a successful SSH authentication occurring from the same source IP that previously generated multiple failed authentication attempts.
+references:
+    - https://attack.mitre.org/techniques/T1110/
+author: BlueOps Detection Engineering
+date: 2026-11-01
+tags:
+    - attack.credential_access
+    - attack.t1110
+logsource:
+    product: linux
+    service: sshd
+detection:
+    selection_fail:
+        event.action: 'ssh_login'
+        event.outcome: 'failure'
+    selection_success:
+        event.action: 'ssh_login'
+        event.outcome: 'success'
+    timeframe: 15m
+    condition: selection_fail and selection_success by source.ip
+falsepositives:
+    - Legitimate user successfully guessing or finding their forgotten credentials after failed attempts
+level: high

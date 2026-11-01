@@ -1,0 +1,132 @@
+{
+  "index_patterns": ["blueops-events-*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0,
+      "index.refresh_interval": "5s"
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": {
+          "type": "date"
+        },
+        "event": {
+          "properties": {
+            "id": { "type": "keyword" },
+            "provider": { "type": "keyword" },
+            "dataset": { "type": "keyword" },
+            "category": { "type": "keyword" },
+            "type": { "type": "keyword" },
+            "action": { "type": "keyword" },
+            "severity": { "type": "integer" },
+            "original": { "type": "text", "index": false }
+          }
+        },
+        "host": {
+          "properties": {
+            "id": { "type": "keyword" },
+            "name": { "type": "keyword" },
+            "ip": { "type": "ip" },
+            "os": {
+              "properties": {
+                "name": { "type": "keyword" },
+                "version": { "type": "keyword" },
+                "arch": { "type": "keyword" }
+              }
+            }
+          }
+        },
+        "user": {
+          "properties": {
+            "name": { "type": "keyword" },
+            "id": { "type": "keyword" },
+            "domain": { "type": "keyword" }
+          }
+        },
+        "process": {
+          "properties": {
+            "pid": { "type": "long" },
+            "name": { "type": "keyword" },
+            "executable": { "type": "keyword" },
+            "command_line": { "type": "text" },
+            "hash": {
+              "properties": {
+                "md5": { "type": "keyword" },
+                "sha256": { "type": "keyword" }
+              }
+            },
+            "parent": {
+              "properties": {
+                "pid": { "type": "long" },
+                "name": { "type": "keyword" },
+                "executable": { "type": "keyword" },
+                "command_line": { "type": "text" }
+              }
+            }
+          }
+        },
+        "source": {
+          "properties": {
+            "ip": { "type": "ip" },
+            "port": { "type": "integer" },
+            "domain": { "type": "keyword" }
+          }
+        },
+        "destination": {
+          "properties": {
+            "ip": { "type": "ip" },
+            "port": { "type": "integer" },
+            "domain": { "type": "keyword" }
+          }
+        },
+        "network": {
+          "properties": {
+            "transport": { "type": "keyword" },
+            "protocol": { "type": "keyword" },
+            "community_id": { "type": "keyword" },
+            "direction": { "type": "keyword" }
+          }
+        },
+        "file": {
+          "properties": {
+            "path": { "type": "keyword" },
+            "name": { "type": "keyword" },
+            "size": { "type": "long" },
+            "hash": {
+              "properties": {
+                "md5": { "type": "keyword" },
+                "sha256": { "type": "keyword" }
+              }
+            }
+          }
+        },
+        "registry": {
+          "properties": {
+            "path": { "type": "keyword" },
+            "key": { "type": "keyword" },
+            "value": { "type": "text" }
+          }
+        },
+        "related": {
+          "properties": {
+            "ip": { "type": "keyword" },
+            "user": { "type": "keyword" },
+            "hash": { "type": "keyword" }
+          }
+        },
+        "labels": {
+          "type": "object"
+        },
+        "blueops": {
+          "properties": {
+            "schema_version": { "type": "keyword" },
+            "ingestion_timestamp": { "type": "date" },
+            "collector": { "type": "keyword" },
+            "normalization_status": { "type": "keyword" }
+          }
+        }
+      }
+    }
+  }
+}

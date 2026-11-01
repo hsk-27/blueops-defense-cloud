@@ -1,0 +1,35 @@
+title: Privileged Account Creation or Modification
+id: 5f1b1e90-0005-4e89-9a08-000000000005
+status: test
+description: Detects creation of new local Linux accounts or assignment of existing users to sudoers or wheel groups.
+references:
+    - https://attack.mitre.org/techniques/T1136/001/
+author: BlueOps Detection Engineering
+date: 2026-11-01
+tags:
+    - attack.persistence
+    - attack.t1136.001
+logsource:
+    product: linux
+    service: auditd
+detection:
+    selection_exec:
+        process.executable|endswith:
+            - '/useradd'
+            - '/adduser'
+            - '/usermod'
+        process.command_line|contains:
+            - '-G sudo'
+            - '-G wheel'
+            - '-aG sudo'
+            - '-aG wheel'
+    selection_file:
+        file.path:
+            - '/etc/passwd'
+            - '/etc/sudoers'
+            - '/etc/sudoers.d/'
+        event.action: 'file_modified'
+    condition: selection_exec or selection_file
+falsepositives:
+    - DevOps automated server configuration playbooks (Ansible, Puppet, Salt)
+level: high

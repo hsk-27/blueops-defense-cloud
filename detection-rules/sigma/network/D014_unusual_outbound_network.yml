@@ -1,0 +1,27 @@
+title: Unusual Outbound Network Connection
+id: 5f1b1e90-0014-4e89-9a08-000000000014
+status: test
+description: Detects outbound TCP/UDP connections to anomalous high ports or common C2 reverse shell ports (e.g. 4444, 1337, 8888, 9001).
+references:
+    - https://attack.mitre.org/techniques/T1071/001/
+author: BlueOps Detection Engineering
+date: 2026-11-01
+tags:
+    - attack.command_and_control
+    - attack.t1071.001
+logsource:
+    category: network_connection
+    product: suricata
+detection:
+    selection:
+        network.direction: 'outbound'
+        destination.port:
+            - 4444
+            - 1337
+            - 8888
+            - 9001
+            - 5555
+    condition: selection
+falsepositives:
+    - Internal engineering lab test applications utilizing non-standard high ports
+level: medium
