@@ -23,4 +23,7 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
 
     @Query("SELECT COUNT(i) FROM Incident i WHERE i.status NOT IN ('RESOLVED', 'FALSE_POSITIVE')")
     long countActiveIncidents();
+
+    @Query("SELECT i FROM Incident i WHERE i.title = :title AND (:assetId IS NULL OR i.primaryAsset.id = :assetId) AND i.status NOT IN ('RESOLVED', 'FALSE_POSITIVE')")
+    List<Incident> findActiveByTitleAndAsset(@Param("title") String title, @Param("assetId") Long assetId);
 }

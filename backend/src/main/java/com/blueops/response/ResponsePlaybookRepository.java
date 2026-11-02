@@ -8,4 +8,5 @@ import java.util.Optional;
 @Repository
 public interface ResponsePlaybookRepository extends JpaRepository<ResponsePlaybook, Long> {
     Optional<ResponsePlaybook> findByPlaybookCode(String playbookCode);
+    Optional<ResponsePlaybook> findByActionType(String actionType);
 }

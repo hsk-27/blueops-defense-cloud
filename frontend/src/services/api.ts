@@ -97,7 +97,7 @@ export const api = {
   deleteIoc: (id: number) => request<void>(`/threat-intel/iocs/${id}`, { method: 'DELETE' }),
   importIocsCsv: (csvContent: string) =>
     request<any>('/threat-intel/import', { method: 'POST', body: csvContent, headers: { 'Content-Type': 'text/plain' } }),
-  getIocMatches: () => request<any[]>('/threat-intel/matches'),
+  getIocMatches: () => request<IocMatch[]>('/threat-intel/matches'),
 
   // Response Orchestration
   getPlaybooks: () => request<ResponsePlaybook[]>('/response/playbooks'),

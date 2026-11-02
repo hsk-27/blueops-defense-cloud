@@ -251,9 +251,19 @@ export const ResponseManagementPage: React.FC<{
                   onChange={(e) => setSelectedPlaybook(e.target.value)}
                   className="w-full bg-[#0a0d14] border border-[#1e293b] rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
                 >
-                  <option value="P001">P001 — Block Suspicious Lab IP</option>
-                  <option value="P002">P002 — Disable Compromised Test Account</option>
-                  <option value="P003">P003 — Isolate Suspicious Lab Endpoint</option>
+                  {playbooks.length > 0 ? (
+                    playbooks.map((pb) => (
+                      <option key={pb.playbookCode} value={pb.playbookCode}>
+                        {pb.playbookCode} — {pb.name} ({pb.targetType})
+                      </option>
+                    ))
+                  ) : (
+                    <>
+                      <option value="P001">P001 — Block Suspicious Lab IP</option>
+                      <option value="P002">P002 — Disable Compromised Test Account</option>
+                      <option value="P003">P003 — Isolate Suspicious Lab Endpoint</option>
+                    </>
+                  )}
                 </select>
               </div>
 

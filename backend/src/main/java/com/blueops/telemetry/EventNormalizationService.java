@@ -5,6 +5,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedDeque;
 import java.util.concurrent.atomic.AtomicLong;
@@ -13,6 +15,9 @@ import java.util.concurrent.atomic.AtomicLong;
 public class EventNormalizationService {
 
     private static final Logger log = LoggerFactory.getLogger(EventNormalizationService.class);
+
+    private static final DateTimeFormatter SYSMON_UTC_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss[.SSS]")
+            .withZone(ZoneOffset.UTC);
 
     private final AtomicLong totalReceived = new AtomicLong(0);
     private final AtomicLong totalNormalized = new AtomicLong(0);
@@ -41,17 +46,12 @@ public class EventNormalizationService {
             }
 
             // Timestamp parsing
-            Instant eventTime = Instant.now();
-            if (raw.containsKey("@timestamp")) {
-                try {
-                    eventTime = Instant.parse(raw.get("@timestamp").toString());
-                } catch (Exception ignored) {}
-            }
+            Instant eventTime = parseTimestamp(raw);
             event.setTimestamp(eventTime);
 
             // Event Metadata
             String action = (String) raw.getOrDefault("action", "unknown_action");
-            int severity = raw.containsKey("severity") ? Integer.parseInt(raw.get("severity").toString()) : 1;
+            int severity = parseSeverity(raw);
             event.setEvent(new NormalizedEvent.EventMetadata(
                     eventId, provider, provider.toLowerCase() + ".security",
                     List.of(extractCategory(raw, provider)),
@@ -59,40 +59,47 @@ public class EventNormalizationService {
             ));
 
             // Host Metadata
-            String hostname = (String) raw.getOrDefault("hostname", raw.getOrDefault("host", "LAB-UNKNOWN"));
-            String hostIp = (String) raw.getOrDefault("host_ip", "192.168.56.101");
+            String hostname = extractFirstString(raw, List.of("hostname", "host", "HostName", "Computer", "ComputerName"), "LAB-UNKNOWN");
+            String hostIp = extractFirstString(raw, List.of("host_ip", "hostIp", "HostIp", "ip"), "192.168.56.101");
             String os = hostname.contains("WIN") ? "Windows" : (hostname.contains("FW") ? "FreeBSD" : "Linux");
             String persistentId = hostname.contains("WIN") ? "WIN-ASSET-001" : (hostname.contains("LNX") ? "LNX-ASSET-001" : "NET-ASSET-001");
             event.setHost(new NormalizedEvent.HostMetadata(persistentId, hostname, hostIp, os, "2026.1"));
 
             // User Metadata
-            String username = (String) raw.getOrDefault("username", raw.getOrDefault("user", "SYSTEM"));
+            String username = extractFirstString(raw, List.of("username", "user", "User", "UserName"), "SYSTEM");
             event.setUser(new NormalizedEvent.UserMetadata(username, "S-1-" + Math.abs(username.hashCode()), "BLUEOPS-LAB"));
 
             // Process Metadata
-            if (raw.containsKey("process_name") || raw.containsKey("Image") || raw.containsKey("command_line") || raw.containsKey("CommandLine")) {
-                String procPath = (String) raw.getOrDefault("executable", raw.getOrDefault("Image", "unknown.exe"));
-                String procName = (String) raw.getOrDefault("process_name", extractFileName(procPath));
-                String cmdLine = (String) raw.getOrDefault("command_line", raw.getOrDefault("CommandLine", ""));
-                String procHash = (String) raw.getOrDefault("hash", raw.getOrDefault("sha256", ""));
-                Long pid = raw.containsKey("pid") ? Long.parseLong(raw.get("pid").toString()) : 1000L;
+            if (raw.containsKey("process_name") || raw.containsKey("Image") || raw.containsKey("command_line") || raw.containsKey("CommandLine") || raw.containsKey("executable")) {
+                String procPath = extractFirstString(raw, List.of("executable", "Image", "process_path"), "unknown.exe");
+                String procName = extractFirstString(raw, List.of("process_name", "ProcessName"), extractFileName(procPath));
+                String cmdLine = extractFirstString(raw, List.of("command_line", "CommandLine", "cmdline"), "");
+                String procHash = extractFirstString(raw, List.of("hash", "sha256", "Hashes"), "");
+                Long pid = parseLongSafe(raw.getOrDefault("pid", raw.get("ProcessId")), 1000L);
 
                 NormalizedEvent.ProcessParent parent = null;
-                if (raw.containsKey("parent_process") || raw.containsKey("ParentImage")) {
-                    String parentPath = (String) raw.getOrDefault("parent_executable", raw.getOrDefault("ParentImage", "explorer.exe"));
-                    String parentName = (String) raw.getOrDefault("parent_process", extractFileName(parentPath));
-                    parent = new NormalizedEvent.ProcessParent(900L, parentName, parentPath, (String) raw.getOrDefault("ParentCommandLine", ""));
+                if (raw.containsKey("parent_process") || raw.containsKey("ParentImage") || raw.containsKey("parent_executable")) {
+                    String parentPath = extractFirstString(raw, List.of("parent_executable", "ParentImage"), "explorer.exe");
+                    String parentName = extractFirstString(raw, List.of("parent_process", "ParentProcessName"), extractFileName(parentPath));
+                    parent = new NormalizedEvent.ProcessParent(900L, parentName, parentPath, extractFirstString(raw, List.of("ParentCommandLine", "parent_command_line"), ""));
                 }
                 event.setProcess(new NormalizedEvent.ProcessMetadata(pid, procName, procPath, cmdLine, procHash, parent));
             }
 
             // Network Metadata
-            if (raw.containsKey("dest_ip") || raw.containsKey("destination_ip") || raw.containsKey("DestinationIp") || raw.containsKey("src_ip") || raw.containsKey("source_ip")) {
-                String srcIp = (String) raw.getOrDefault("src_ip", raw.getOrDefault("source_ip", raw.getOrDefault("SourceIp", "192.168.56.101")));
-                Integer srcPort = raw.containsKey("src_port") ? Integer.parseInt(raw.get("src_port").toString()) : 49152;
-                String dstIp = (String) raw.getOrDefault("dest_ip", raw.getOrDefault("destination_ip", raw.getOrDefault("DestinationIp", "198.51.100.24")));
-                Integer dstPort = raw.containsKey("dest_port") ? Integer.parseInt(raw.get("dest_port").toString()) : 443;
-                String domain = (String) raw.getOrDefault("domain", raw.getOrDefault("dns_query", ""));
+            boolean hasNetwork = raw.containsKey("dest_ip") || raw.containsKey("destination_ip") ||
+                    raw.containsKey("DestinationIp") || raw.containsKey("src_ip") ||
+                    raw.containsKey("source_ip") || raw.containsKey("SourceIp") ||
+                    raw.containsKey("dst_ip") || raw.containsKey("dest_port") ||
+                    raw.containsKey("destination_port") || raw.containsKey("DestinationPort") ||
+                    raw.containsKey("dport") || raw.containsKey("dns_query") || raw.containsKey("domain");
+
+            if (hasNetwork) {
+                String srcIp = extractFirstString(raw, List.of("src_ip", "source_ip", "SourceIp", "src", "client_ip"), "192.168.56.101");
+                Integer srcPort = parsePort(raw, List.of("src_port", "source_port", "SourcePort", "sport"), 49152);
+                String dstIp = extractFirstString(raw, List.of("dest_ip", "destination_ip", "DestinationIp", "dst_ip", "dest", "server_ip"), "198.51.100.24");
+                Integer dstPort = parsePort(raw, List.of("dest_port", "destination_port", "DestinationPort", "dport"), 443);
+                String domain = extractFirstString(raw, List.of("domain", "dns_query", "QueryName"), "");
 
                 event.setSource(new NormalizedEvent.NetworkEndpoint(srcIp, srcPort, null));
                 event.setDestination(new NormalizedEvent.NetworkEndpoint(dstIp, dstPort, domain));
@@ -169,5 +176,89 @@ public class EventNormalizationService {
         if (path == null || path.isEmpty()) return "";
         int idx = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
         return idx >= 0 ? path.substring(idx + 1) : path;
+    }
+
+    private Instant parseTimestamp(Map<String, Object> raw) {
+        Object val = raw.getOrDefault("@timestamp",
+                raw.getOrDefault("timestamp",
+                raw.getOrDefault("time",
+                raw.getOrDefault("UtcTime",
+                raw.get("event_time")))));
+
+        if (val == null) {
+            return Instant.now();
+        }
+
+        String str = val.toString().trim();
+        if (str.isEmpty()) {
+            return Instant.now();
+        }
+
+        try {
+            return Instant.parse(str);
+        } catch (Exception ignored) {}
+
+        try {
+            return SYSMON_UTC_FORMAT.parse(str, Instant::from);
+        } catch (Exception ignored) {}
+
+        try {
+            long num = Long.parseLong(str);
+            if (num > 100000000000L) {
+                return Instant.ofEpochMilli(num);
+            } else if (num > 0) {
+                return Instant.ofEpochSecond(num);
+            }
+        } catch (Exception ignored) {}
+
+        return Instant.now();
+    }
+
+    private int parseSeverity(Map<String, Object> raw) {
+        if (!raw.containsKey("severity") || raw.get("severity") == null) return 1;
+        try {
+            return Integer.parseInt(raw.get("severity").toString().trim());
+        } catch (Exception ignored) {
+            return 1;
+        }
+    }
+
+    private Integer parsePort(Map<String, Object> raw, List<String> candidateKeys, int defaultPort) {
+        for (String k : candidateKeys) {
+            if (raw.containsKey(k) && raw.get(k) != null) {
+                try {
+                    String str = raw.get(k).toString().trim();
+                    if (!str.isEmpty()) {
+                        int p = Integer.parseInt(str);
+                        if (p >= 0 && p <= 65535) {
+                            return p;
+                        }
+                    }
+                } catch (Exception ignored) {}
+            }
+        }
+        return defaultPort;
+    }
+
+    private Long parseLongSafe(Object obj, Long defaultVal) {
+        if (obj == null) return defaultVal;
+        try {
+            String str = obj.toString().trim();
+            return str.isEmpty() ? defaultVal : Long.parseLong(str);
+        } catch (Exception ignored) {
+            return defaultVal;
+        }
+    }
+
+    private String extractFirstString(Map<String, Object> raw, List<String> candidateKeys, String defaultVal) {
+        for (String k : candidateKeys) {
+            if (raw.containsKey(k) && raw.get(k) != null) {
+                String str = raw.get(k).toString().trim();
+                if (!str.isEmpty()) {
+                    return str;
+                }
+            }
+        }
+        return defaultVal;
     }
 }

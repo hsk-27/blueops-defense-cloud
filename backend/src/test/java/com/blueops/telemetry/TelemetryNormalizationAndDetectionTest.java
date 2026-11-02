@@ -340,6 +340,7 @@ class TelemetryNormalizationAndDetectionTest {
         @Override public long countBySeverity(IncidentSeverity severity) { return 0; }
         @Override public Page<Incident> findFiltered(IncidentStatus status, IncidentSeverity severity, Pageable pageable) { return Page.empty(); }
         @Override public long countActiveIncidents() { return 0; }
+        @Override public List<Incident> findActiveByTitleAndAsset(String title, Long assetId) { return Collections.emptyList(); }
         @Override public <S extends Incident> S save(S entity) { entity.setId(100L); return entity; }
         @Override public <S extends Incident> List<S> saveAll(Iterable<S> entities) { return Collections.emptyList(); }
         @Override public Optional<Incident> findById(Long aLong) { return Optional.empty(); }

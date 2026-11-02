@@ -53,7 +53,11 @@ INSERT INTO response_playbooks (playbook_code, name, description, action_type, r
 VALUES
 ('P001', 'Block Suspicious Lab IP', 'Inserts a drop rule on the lab perimeter firewall for the identified malicious source IP.', 'BLOCK_IP', TRUE, 'IP', TRUE),
 ('P002', 'Disable Compromised Test Account', 'Locks and disables authentication credentials for an identified compromised lab account.', 'DISABLE_USER', TRUE, 'USERNAME', TRUE),
-('P003', 'Isolate Suspicious Lab Endpoint', 'Applies dynamic network isolation rules to sever non-management connectivity to the asset.', 'ISOLATE_HOST', TRUE, 'ASSET', TRUE);
+('P003', 'Isolate Suspicious Lab Endpoint', 'Applies dynamic network isolation rules to sever non-management connectivity to the asset.', 'ISOLATE_HOST', TRUE, 'ASSET', TRUE),
+('P004', 'Restore Lab IP Communication', 'Removes the drop rule from the lab perimeter firewall, restoring network reachability.', 'RESTORE_IP', FALSE, 'IP', FALSE),
+('P005', 'Re-enable Lab Test Account', 'Unlocks and restores authentication access for the lab user account.', 'ENABLE_USER', FALSE, 'USERNAME', FALSE),
+('P006', 'Reconnect Isolated Lab Endpoint', 'Restores full network connectivity to the previously quarantined lab asset.', 'RECONNECT_HOST', FALSE, 'ASSET', FALSE),
+('P007', 'Collect Endpoint Evidence Archive', 'Acquires forensic artifacts, triage memory dumps, and relevant audit logs.', 'COLLECT_EVIDENCE', FALSE, 'ASSET', FALSE);
 
 -- 4. Initial Threat Intelligence Indicators (Sample IOCs)
 INSERT INTO ioc_indicators (indicator_value, indicator_type, source, confidence, severity, description, status, tags)

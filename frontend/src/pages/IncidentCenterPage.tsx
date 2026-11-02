@@ -118,8 +118,11 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
             <option value="NEW">New</option>
             <option value="TRIAGED">Triaged</option>
             <option value="INVESTIGATING">Investigating</option>
+            <option value="CONTAINMENT_PENDING">Containment Pending</option>
             <option value="CONTAINED">Contained</option>
             <option value="RESOLVED">Resolved</option>
+            <option value="FALSE_POSITIVE">False Positive</option>
+            <option value="REOPENED">Reopened</option>
           </select>
         </div>
 

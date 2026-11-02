@@ -150,8 +150,10 @@ public class IocService {
     }
 
     @Transactional(readOnly = true)
-    public List<IocMatch> getRecentMatches() {
-        return matchRepository.findTop50ByOrderByEventTimestampDesc();
+    public List<IocMatchDto> getRecentMatches() {
+        return matchRepository.findTop50ByOrderByEventTimestampDesc().stream()
+                .map(IocMatchDto::new)
+                .collect(Collectors.toList());
     }
 
     @Transactional(readOnly = true)

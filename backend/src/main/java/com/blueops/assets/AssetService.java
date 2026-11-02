@@ -65,6 +65,40 @@ public class AssetService {
     }
 
     @Transactional
+    public Asset recordTelemetryHeartbeat(String persistentId, String hostname, String ipAddress, String osName) {
+        if (persistentId == null || persistentId.trim().isEmpty()) {
+            return null;
+        }
+        Asset asset = assetRepository.findByPersistentId(persistentId)
+                .or(() -> assetRepository.findByHostname(hostname))
+                .or(() -> assetRepository.findByIpAddress(ipAddress))
+                .orElseGet(() -> {
+                    Asset newAsset = new Asset();
+                    newAsset.setPersistentId(persistentId);
+                    newAsset.setHostname(hostname != null && !hostname.isBlank() ? hostname : persistentId);
+                    newAsset.setIpAddress(ipAddress != null && !ipAddress.isBlank() ? ipAddress : "0.0.0.0");
+                    newAsset.setOsName(osName != null && !osName.isBlank() ? osName : "Linux");
+                    newAsset.setOsVersion("Discovered Endpoint");
+                    newAsset.setEnvironment("LAB");
+                    newAsset.setStatus(AssetStatus.HEALTHY);
+                    newAsset.setCriticality("MEDIUM");
+                    newAsset.setLastTelemetryAt(Instant.now());
+                    Asset saved = assetRepository.save(newAsset);
+                    recordStatusHistory(saved.getId(), "NONE", "HEALTHY", "Dynamic discovery via telemetry ingestion", "system:telemetry-collector");
+                    return saved;
+                });
+
+        asset.setLastTelemetryAt(Instant.now());
+        if (hostname != null && !hostname.isBlank() && !asset.getHostname().equals(hostname)) {
+            asset.setHostname(hostname);
+        }
+        if (ipAddress != null && !ipAddress.isBlank() && !"0.0.0.0".equals(ipAddress) && !asset.getIpAddress().equals(ipAddress)) {
+            asset.setIpAddress(ipAddress);
+        }
+        return assetRepository.save(asset);
+    }
+
+    @Transactional
     public AssetDto updateAsset(Long id, AssetDto dto, String actor) {
         Asset asset = assetRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Asset", "id", id));

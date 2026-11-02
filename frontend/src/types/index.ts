@@ -126,6 +126,21 @@ export interface IocIndicator {
   tags?: string;
 }
 
+export interface IocMatch {
+  id: number;
+  iocId?: number;
+  iocValue?: string;
+  iocType?: string;
+  matchedValue: string;
+  assetId?: number;
+  assetHostname?: string;
+  eventTimestamp: string;
+  opensearchDocId?: string;
+  matchedField: string;
+  incidentId?: number;
+  createdAt: string;
+}
+
 export interface ResponsePlaybook {
   id: number;
   playbookCode: string;

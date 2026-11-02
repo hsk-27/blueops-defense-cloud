@@ -169,9 +169,12 @@ public class ResponseOrchestrationService {
             default: throw new InvalidActionException("Unknown reversal action type for " + originalPlaybook.getActionType());
         }
 
+        ResponsePlaybook reversalPlaybook = playbookRepository.findByActionType(reverseActionType)
+                .orElseThrow(() -> new InvalidActionException("No reversal playbook configured for action type: " + reverseActionType));
+
         ResponseAction rollback = new ResponseAction();
         rollback.setActionUuid(UUID.randomUUID().toString());
-        rollback.setPlaybookCode("ROLLBACK_" + originalAction.getPlaybookCode());
+        rollback.setPlaybookCode(reversalPlaybook.getPlaybookCode());
         rollback.setTargetIdentifier(originalAction.getTargetIdentifier());
         rollback.setTargetAsset(originalAction.getTargetAsset());
         rollback.setIncident(originalAction.getIncident());
@@ -230,12 +233,8 @@ public class ResponseOrchestrationService {
             action.setExecutionStatus("SUCCEEDED");
             actionRepository.save(action);
 
-            // Update asset status if target is an asset isolation playbook
-            if ("P003".equalsIgnoreCase(action.getPlaybookCode()) && action.getTargetAsset() != null) {
-                Asset asset = action.getTargetAsset();
-                asset.setStatus(AssetStatus.ISOLATED);
-                assetRepository.save(asset);
-            }
+            // Update asset status based on action type
+            updateTargetAssetStatus(action);
         } else {
             // Live restricted lab agent execution with HMAC signature
             try {
@@ -255,12 +254,16 @@ public class ResponseOrchestrationService {
 
                 long duration = System.currentTimeMillis() - startTime;
                 execution.setExecutionDurationMs(duration);
-                execution.setSuccess(response.getStatusCode().is2xxSuccessful());
+                boolean isSuccess = response.getStatusCode().is2xxSuccessful();
+                execution.setSuccess(isSuccess);
                 execution.setStatusCode(response.getStatusCode().value());
                 execution.setResponsePayload(response.getBody());
-                execution.setVerificationPassed(response.getStatusCode().is2xxSuccessful());
+                execution.setVerificationPassed(isSuccess);
 
-                action.setExecutionStatus(response.getStatusCode().is2xxSuccessful() ? "SUCCEEDED" : "FAILED");
+                action.setExecutionStatus(isSuccess ? "SUCCEEDED" : "FAILED");
+                if (isSuccess) {
+                    updateTargetAssetStatus(action);
+                }
             } catch (Exception ex) {
                 log.warn("Response agent execution failed: {}", ex.getMessage());
                 long duration = System.currentTimeMillis() - startTime;
@@ -275,5 +278,20 @@ public class ResponseOrchestrationService {
         }
 
         return executionRepository.save(execution);
+    }
+
+    private void updateTargetAssetStatus(ResponseAction action) {
+        if (action.getTargetAsset() == null) return;
+        Asset asset = action.getTargetAsset();
+        ResponsePlaybook playbook = playbookRepository.findByPlaybookCode(action.getPlaybookCode()).orElse(null);
+        String actionType = playbook != null ? playbook.getActionType() : "";
+
+        if ("ISOLATE_HOST".equalsIgnoreCase(actionType) || "P003".equalsIgnoreCase(action.getPlaybookCode())) {
+            asset.setStatus(AssetStatus.ISOLATED);
+            assetRepository.save(asset);
+        } else if ("RECONNECT_HOST".equalsIgnoreCase(actionType) || "P006".equalsIgnoreCase(action.getPlaybookCode())) {
+            asset.setStatus(AssetStatus.HEALTHY);
+            assetRepository.save(asset);
+        }
     }
 }

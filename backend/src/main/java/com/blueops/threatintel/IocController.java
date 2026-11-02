@@ -69,7 +69,7 @@ public class IocController {
 
     @GetMapping("/matches")
     @Operation(summary = "Retrieve telemetry events matched against active IOCs")
-    public ResponseEntity<ApiResponse<List<IocMatch>>> getMatches() {
+    public ResponseEntity<ApiResponse<List<IocMatchDto>>> getMatches() {
         return ResponseEntity.ok(ApiResponse.success(iocService.getRecentMatches()));
     }
 

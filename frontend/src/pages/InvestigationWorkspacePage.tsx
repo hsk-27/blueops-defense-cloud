@@ -316,6 +316,16 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
                 Reopen Incident
               </button>
             )}
+
+            {(incident.status === 'NEW' || incident.status === 'TRIAGED' || incident.status === 'INVESTIGATING') && (
+              <button
+                onClick={() => handleStatusChange('FALSE_POSITIVE')}
+                disabled={transitioning}
+                className="px-3 py-1 bg-slate-800/80 hover:bg-slate-700 border border-slate-600 text-slate-300 text-xs rounded transition"
+              >
+                Mark False Positive
+              </button>
+            )}
           </div>
         </div>
       </div>

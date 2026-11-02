@@ -2,6 +2,7 @@ package com.blueops.telemetry;
 
 import com.blueops.assets.Asset;
 import com.blueops.assets.AssetRepository;
+import com.blueops.assets.AssetService;
 import com.blueops.detections.correlation.CorrelationEngine;
 import com.blueops.findings.FindingDto;
 import com.blueops.findings.OpenSearchFindingAdapter;
@@ -9,14 +10,15 @@ import com.blueops.incidents.*;
 import com.blueops.threatintel.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 @Service
 public class DetectionEvaluationService {
@@ -30,9 +32,9 @@ public class DetectionEvaluationService {
     private final IncidentService incidentService;
     private final IncidentRepository incidentRepository;
     private final AssetRepository assetRepository;
+    private final AssetService assetService;
 
     private final AtomicLong findingSeq = new AtomicLong(1000);
-    private final Set<String> activeIncidentScenarioKeys = ConcurrentHashMap.newKeySet();
 
     // Regex patterns for deceptive and obfuscated attack detection
     private static final Pattern POWERSHELL_ENCODED = Pattern.compile("(?i)(powershell|pwsh)(\\.exe)?.*(-e|-enc|-encodedcommand|-eNCoDeDCoMmAnD)\\s+[A-Za-z0-9+/=]{10,}");
@@ -47,6 +49,26 @@ public class DetectionEvaluationService {
     private static final Pattern SCHTASKS_CREATE = Pattern.compile("(?i)schtasks(\\.exe)?\\s+/create");
     private static final Pattern SC_CREATE = Pattern.compile("(?i)sc(\\.exe)?\\s+create");
 
+    @Autowired
+    public DetectionEvaluationService(
+            IocIndicatorRepository iocRepository,
+            IocMatchRepository matchRepository,
+            OpenSearchFindingAdapter findingAdapter,
+            CorrelationEngine correlationEngine,
+            IncidentService incidentService,
+            IncidentRepository incidentRepository,
+            AssetRepository assetRepository,
+            @Autowired(required = false) AssetService assetService) {
+        this.iocRepository = iocRepository;
+        this.matchRepository = matchRepository;
+        this.findingAdapter = findingAdapter;
+        this.correlationEngine = correlationEngine;
+        this.incidentService = incidentService;
+        this.incidentRepository = incidentRepository;
+        this.assetRepository = assetRepository;
+        this.assetService = assetService;
+    }
+
     public DetectionEvaluationService(
             IocIndicatorRepository iocRepository,
             IocMatchRepository matchRepository,
@@ -55,13 +77,7 @@ public class DetectionEvaluationService {
             IncidentService incidentService,
             IncidentRepository incidentRepository,
             AssetRepository assetRepository) {
-        this.iocRepository = iocRepository;
-        this.matchRepository = matchRepository;
-        this.findingAdapter = findingAdapter;
-        this.correlationEngine = correlationEngine;
-        this.incidentService = incidentService;
-        this.incidentRepository = incidentRepository;
-        this.assetRepository = assetRepository;
+        this(iocRepository, matchRepository, findingAdapter, correlationEngine, incidentService, incidentRepository, assetRepository, null);
     }
 
     @Transactional
@@ -73,11 +89,19 @@ public class DetectionEvaluationService {
         String assetName = event.getHost() != null ? event.getHost().getName() : "LAB-HOST";
         String hostIp = event.getHost() != null ? event.getHost().getIp() : "192.168.56.101";
 
-        // Resolve Asset Entity
-        Asset asset = assetRepository.findByPersistentId(assetId)
-                .or(() -> assetRepository.findByHostname(assetName))
-                .or(() -> assetRepository.findByIpAddress(hostIp))
-                .orElse(null);
+        // Resolve Asset Entity and record telemetry heartbeat
+        Asset asset;
+        if (assetService != null) {
+            asset = assetService.recordTelemetryHeartbeat(
+                    assetId, assetName, hostIp,
+                    event.getHost() != null ? event.getHost().getOsName() : null
+            );
+        } else {
+            asset = assetRepository.findByPersistentId(assetId)
+                    .or(() -> assetRepository.findByHostname(assetName))
+                    .or(() -> assetRepository.findByIpAddress(hostIp))
+                    .orElse(null);
+        }
 
         // 1. Threat Intelligence IOC Matching
         evaluateThreatIntel(event, asset, triggeredFindings);
@@ -285,10 +309,10 @@ public class DetectionEvaluationService {
             for (CorrelationEngine.CorrelatedScenario sc : scenarios) {
                 if (!sc.assetId().equalsIgnoreCase(assetId)) continue;
 
-                String dedupKey = sc.scenarioCode() + ":" + assetId;
-                if (!activeIncidentScenarioKeys.contains(dedupKey)) {
-                    activeIncidentScenarioKeys.add(dedupKey);
+                Long assetDbId = asset != null ? asset.getId() : null;
+                List<Incident> activeIncidents = incidentRepository.findActiveByTitleAndAsset(sc.title(), assetDbId);
 
+                if (activeIncidents.isEmpty()) {
                     // Automatically generate incident for this correlated attack scenario
                     IncidentCreateRequest req = new IncidentCreateRequest();
                     req.setTitle(sc.title());
@@ -308,6 +332,38 @@ public class DetectionEvaluationService {
                     note.setNoteText("Automated Correlation Engine: Detected sequence of " + sc.matchedFindingIds().size() +
                             " security findings matching scenario " + sc.scenarioCode() + " within the correlation window.");
                     incidentService.addNote(incident.getId(), note, "system:correlation-engine");
+                } else {
+                    // Existing active incident: link newly observed findings in this attack chain
+                    Incident existing = activeIncidents.get(0);
+                    Set<String> attachedIds = existing.getFindings().stream()
+                            .map(IncidentFinding::getOpensearchFindingId)
+                            .collect(Collectors.toSet());
+                    List<String> newIds = new ArrayList<>();
+                    for (String fid : sc.matchedFindingIds()) {
+                        if (!attachedIds.contains(fid)) {
+                            Optional<FindingDto> findingOpt = findingAdapter.getFindingById(fid);
+                            if (findingOpt.isPresent()) {
+                                FindingDto f = findingOpt.get();
+                                IncidentFinding incFinding = new IncidentFinding(
+                                        existing, f.getFindingId(), f.getRuleId(), f.getRuleName(),
+                                        f.getRuleSeverity(), f.getTimestamp(), f.getRelatedDocId(),
+                                        f.getDetails() != null ? f.getDetails().toString() : null
+                                );
+                                existing.getFindings().add(incFinding);
+                                f.setStatus("LINKED_TO_INCIDENT");
+                                newIds.add(fid);
+                            }
+                        }
+                    }
+                    if (!newIds.isEmpty()) {
+                        existing.setUpdatedAt(Instant.now());
+                        incidentRepository.save(existing);
+                        IncidentNoteRequest note = new IncidentNoteRequest();
+                        note.setNoteText("Correlation Engine Update: Associated additional findings: " +
+                                String.join(", ", newIds));
+                        incidentService.addNote(existing.getId(), note, "system:correlation-engine");
+                        log.info("Appended new findings to active incident {}: {}", existing.getIncidentNumber(), newIds);
+                    }
                 }
             }
         } catch (Exception ex) {

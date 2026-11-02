@@ -6,6 +6,7 @@ import {
   Clock,
   CheckCircle2,
   AlertTriangle,
+  AlertOctagon,
   ArrowUpRight,
   RefreshCw,
   Activity
@@ -114,15 +115,33 @@ export const OverviewPage: React.FC<{ onNavigateToIncident: (id: number) => void
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {metrics?.subsystemHealth &&
-            Object.entries(metrics.subsystemHealth).map(([key, val]) => (
-              <div key={key} className="bg-[#0a0d14] border border-[#1e293b] rounded-lg p-3">
-                <div className="text-[11px] text-slate-400 font-mono uppercase truncate">{key}</div>
-                <div className="flex items-center space-x-1.5 mt-1">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
-                  <span className="text-xs font-semibold text-emerald-300 font-mono">{val}</span>
+            Object.entries(metrics.subsystemHealth).map(([key, val]) => {
+              const upper = (val || '').toUpperCase();
+              const isHealthy = upper.includes('UP') || upper.includes('HEALTHY') || upper.includes('ONLINE') || upper.includes('ACTIVE');
+              const isDegraded = upper.includes('DEGRADED') || upper.includes('WARN');
+
+              return (
+                <div key={key} className="bg-[#0a0d14] border border-[#1e293b] rounded-lg p-3">
+                  <div className="text-[11px] text-slate-400 font-mono uppercase truncate">{key}</div>
+                  <div className="flex items-center space-x-1.5 mt-1">
+                    {isHealthy ? (
+                      <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
+                    ) : isDegraded ? (
+                      <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                    ) : (
+                      <AlertOctagon className="w-3.5 h-3.5 text-rose-400" />
+                    )}
+                    <span
+                      className={`text-xs font-semibold font-mono ${
+                        isHealthy ? 'text-emerald-300' : isDegraded ? 'text-amber-300' : 'text-rose-300'
+                      }`}
+                    >
+                      {val}
+                    </span>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
         </div>
       </div>
 

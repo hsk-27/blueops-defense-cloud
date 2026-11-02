@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 public class CorrelationEngine {
 
     private static final Logger log = LoggerFactory.getLogger(CorrelationEngine.class);
+    private static final Duration MAX_CORRELATION_WINDOW = Duration.ofMinutes(60);
 
     public record CorrelatedScenario(
             String scenarioCode,
@@ -62,11 +63,13 @@ public class CorrelationEngine {
         boolean hasPrivExec = findings.stream().anyMatch(f -> "D004".equalsIgnoreCase(f.getRuleId()));
 
         if (hasSshFail && (hasSshSuccess || hasPrivExec)) {
-            List<String> matchedIds = findings.stream()
+            List<FindingDto> matched = findings.stream()
                     .filter(f -> Set.of("D001", "D002", "D004", "D006").contains(f.getRuleId()))
-                    .map(FindingDto::getFindingId)
                     .collect(Collectors.toList());
 
+            if (!isWithinCorrelationWindow(matched)) return;
+
+            List<String> matchedIds = matched.stream().map(FindingDto::getFindingId).collect(Collectors.toList());
             results.add(new CorrelatedScenario(
                     "C001",
                     "Correlated Attack: Linux Account Compromise & Privilege Escalation",
@@ -74,7 +77,7 @@ public class CorrelationEngine {
                     IncidentSeverity.CRITICAL,
                     assetId,
                     matchedIds,
-                    "Sequence satisfied: Repeated brute-force attempts followed by privileged session activity within 30-minute window."
+                    "Sequence satisfied: Repeated brute-force attempts followed by privileged session activity within 60-minute window."
             ));
         }
     }
@@ -85,11 +88,13 @@ public class CorrelationEngine {
         boolean hasOutbound = findings.stream().anyMatch(f -> "D014".equalsIgnoreCase(f.getRuleId()));
 
         if ((hasParentChild && hasPowerShell) || (hasPowerShell && hasOutbound)) {
-            List<String> matchedIds = findings.stream()
+            List<FindingDto> matched = findings.stream()
                     .filter(f -> Set.of("D008", "D009", "D014").contains(f.getRuleId()))
-                    .map(FindingDto::getFindingId)
                     .collect(Collectors.toList());
 
+            if (!isWithinCorrelationWindow(matched)) return;
+
+            List<String> matchedIds = matched.stream().map(FindingDto::getFindingId).collect(Collectors.toList());
             results.add(new CorrelatedScenario(
                     "C002",
                     "Correlated Attack: Windows Multi-Stage Execution Chain",
@@ -97,7 +102,7 @@ public class CorrelationEngine {
                     IncidentSeverity.CRITICAL,
                     assetId,
                     matchedIds,
-                    "Execution chain satisfied: MITRE T1059 (Execution) -> T1059.001 (PowerShell) -> T1071 (C2 egress)."
+                    "Execution chain satisfied: MITRE T1059 (Execution) -> T1059.001 (PowerShell) -> T1071 (C2 egress) within 60-minute window."
             ));
         }
     }
@@ -105,6 +110,8 @@ public class CorrelationEngine {
     private void checkC003IocActivity(String assetId, List<FindingDto> findings, List<CorrelatedScenario> results) {
         boolean hasIoc = findings.stream().anyMatch(f -> "D015".equalsIgnoreCase(f.getRuleId()));
         if (hasIoc && findings.size() > 1) {
+            if (!isWithinCorrelationWindow(findings)) return;
+
             List<String> matchedIds = findings.stream().map(FindingDto::getFindingId).collect(Collectors.toList());
             results.add(new CorrelatedScenario(
                     "C003",
@@ -113,7 +120,7 @@ public class CorrelationEngine {
                     IncidentSeverity.HIGH,
                     assetId,
                     matchedIds,
-                    "Multi-source correlation: Network threat indicator confirmed by subsequent endpoint execution behavior."
+                    "Multi-source correlation: Network threat indicator confirmed by subsequent endpoint execution behavior within 60-minute window."
             ));
         }
     }
@@ -123,11 +130,13 @@ public class CorrelationEngine {
         boolean hasServiceOrTask = findings.stream().anyMatch(f -> "D007".equalsIgnoreCase(f.getRuleId()) || "D010".equalsIgnoreCase(f.getRuleId()) || "D018".equalsIgnoreCase(f.getRuleId()));
 
         if (hasAcctCreate && hasServiceOrTask) {
-            List<String> matchedIds = findings.stream()
+            List<FindingDto> matched = findings.stream()
                     .filter(f -> Set.of("D005", "D007", "D010", "D018").contains(f.getRuleId()))
-                    .map(FindingDto::getFindingId)
                     .collect(Collectors.toList());
 
+            if (!isWithinCorrelationWindow(matched)) return;
+
+            List<String> matchedIds = matched.stream().map(FindingDto::getFindingId).collect(Collectors.toList());
             results.add(new CorrelatedScenario(
                     "C004",
                     "Correlated Attack: Account and Persistence Manipulation",
@@ -135,8 +144,16 @@ public class CorrelationEngine {
                     IncidentSeverity.HIGH,
                     assetId,
                     matchedIds,
-                    "Persistence correlation: MITRE T1136 (Local Account) followed by persistence establishment (T1543 / T1053)."
+                    "Persistence correlation: MITRE T1136 (Local Account) followed by persistence establishment (T1543 / T1053) within 60-minute window."
             ));
         }
+    }
+
+    private boolean isWithinCorrelationWindow(List<FindingDto> matched) {
+        if (matched.size() < 2) return true;
+        Instant minTime = matched.stream().map(FindingDto::getTimestamp).filter(Objects::nonNull).min(Instant::compareTo).orElse(null);
+        Instant maxTime = matched.stream().map(FindingDto::getTimestamp).filter(Objects::nonNull).max(Instant::compareTo).orElse(null);
+        if (minTime == null || maxTime == null) return true;
+        return Duration.between(minTime, maxTime).abs().compareTo(MAX_CORRELATION_WINDOW) <= 0;
     }
 }
