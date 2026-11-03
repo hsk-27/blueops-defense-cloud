@@ -1,0 +1,98 @@
+name: BlueOps Continuous Integration
+
+on:
+  push:
+    branches: [ master, main, develop ]
+  pull_request:
+    branches: [ master, main ]
+
+permissions:
+  contents: read
+
+jobs:
+  backend-test:
+    name: Backend (Spring Boot & JUnit 5)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21 (Temurin)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Make Maven Wrapper Executable
+        run: chmod +x backend/mvnw
+
+      - name: Run Backend Unit Tests
+        working-directory: backend
+        run: ./mvnw -B test
+
+  frontend-test:
+    name: Frontend (React, Vitest & Vite Build)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install Dependencies
+        working-directory: frontend
+        run: npm ci || npm install
+
+      - name: Run Frontend Unit Tests
+        working-directory: frontend
+        run: npm test
+
+      - name: Run Production Bundle Build
+        working-directory: frontend
+        run: npm run build
+
+  response-agent-test:
+    name: Response Agent (Python & Pytest)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+          cache-dependency-path: response-agent/requirements.txt
+
+      - name: Install Python Dependencies
+        working-directory: response-agent
+        run: pip install -r requirements.txt
+
+      - name: Run Pytest Suite
+        working-directory: response-agent
+        run: pytest
+
+  adversary-simulation-test:
+    name: Adversary Simulations & Empirical Benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Execute Dynamic Empirical Research Benchmark
+        run: node test-lab/run_simulations.js
+
+      - name: Execute Deceptive Adversary Simulation Suite
+        run: node test-lab/adversary-simulation/deceptive_attack_suite.js

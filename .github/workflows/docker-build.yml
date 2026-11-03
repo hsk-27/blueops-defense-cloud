@@ -1,0 +1,42 @@
+name: Docker Container Build Check
+
+on:
+  push:
+    branches: [ master, main ]
+  pull_request:
+    branches: [ master, main ]
+
+permissions:
+  contents: read
+
+jobs:
+  build-containers:
+    name: Build Docker Containers
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Backend Container
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: false
+          tags: blueops/backend:latest
+
+      - name: Build Frontend Container
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: false
+          tags: blueops/frontend:latest
+
+      - name: Build Response Agent Container
+        uses: docker/build-push-action@v5
+        with:
+          context: ./response-agent
+          push: false
+          tags: blueops/response-agent:latest

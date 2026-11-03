@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: BlueOps Documentation
+    url: https://github.com/your-org/blueops/tree/master/docs
+    about: Read the official documentation and deployment guides.
+  - name: Security Vulnerability Reporting
+    url: https://github.com/your-org/blueops/security/advisories/new
+    about: Report security issues privately through GitHub Advisories.
