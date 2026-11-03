@@ -238,4 +238,42 @@ public class IncidentService {
                 .orElseThrow(() -> new ResourceNotFoundException("Incident", "id", id));
         return incident.getFindings();
     }
+
+    @Transactional
+    public IncidentFinding attachFinding(Long incidentId, String findingId, String actor) {
+        Incident incident = incidentRepository.findById(incidentId)
+                .orElseThrow(() -> new ResourceNotFoundException("Incident", "id", incidentId));
+
+        boolean alreadyAttached = incident.getFindings().stream()
+                .anyMatch(f -> f.getOpensearchFindingId().equalsIgnoreCase(findingId));
+        if (alreadyAttached) {
+            throw new InvalidActionException("Finding " + findingId + " is already attached to this incident.");
+        }
+
+        FindingDto f = findingAdapter.getFindingById(findingId)
+                .orElseThrow(() -> new ResourceNotFoundException("Finding", "id", findingId));
+
+        IncidentFinding incFinding = new IncidentFinding(
+                incident, f.getFindingId(), f.getRuleId(), f.getRuleName(),
+                f.getRuleSeverity(), f.getTimestamp(), f.getRelatedDocId(),
+                f.getDetails() != null ? f.getDetails().toString() : null
+        );
+        incident.getFindings().add(incFinding);
+        f.setStatus("LINKED_TO_INCIDENT");
+
+        IncidentStatusHistory history = new IncidentStatusHistory(
+                incident, incident.getStatus().name(), incident.getStatus().name(),
+                actor, "Attached finding " + f.getFindingId() + " (" + f.getRuleName() + ") as evidence"
+        );
+        incident.getStatusHistory().add(history);
+        incident.setUpdatedAt(Instant.now());
+        incidentRepository.save(incident);
+
+        if (auditService != null) {
+            auditService.recordEvent(actor, "INCIDENT_FINDING_ATTACHED", "Incident", String.valueOf(incident.getId()), null,
+                    "Attached finding " + f.getFindingId() + " to incident " + incident.getIncidentNumber());
+        }
+
+        return incFinding;
+    }
 }

@@ -401,6 +401,7 @@ class TelemetryNormalizationAndDetectionTest {
         StubAssetRepository(Asset asset) { this.asset = asset; }
         @Override public Optional<Asset> findByPersistentId(String id) { return Optional.of(asset); }
         @Override public Optional<Asset> findByHostname(String host) { return Optional.of(asset); }
+        @Override public Optional<Asset> findByHostnameIgnoreCase(String host) { return Optional.of(asset); }
         @Override public Optional<Asset> findByIpAddress(String ip) { return Optional.of(asset); }
         @Override public boolean existsByPersistentId(String id) { return true; }
         @Override public <S extends Asset> S save(S entity) { return entity; }

@@ -8,12 +8,13 @@ import { useAuth } from '../context/AuthContext';
 const MITRE_TACTICS = [
   { id: 'Initial Access', label: 'Initial Access', techniques: ['T1078'] },
   { id: 'Execution', label: 'Execution', techniques: ['T1059', 'T1059.001'] },
-  { id: 'Persistence', label: 'Persistence', techniques: ['T1053.003', 'T1053.005', 'T1136.001', 'T1543.003', 'T1547.001'] },
+  { id: 'Persistence', label: 'Persistence', techniques: ['T1053.003', 'T1053.005', 'T1136.001', 'T1543.002', 'T1543.003', 'T1547.001', 'T1569.002'] },
   { id: 'Privilege Escalation', label: 'Privilege Escalation', techniques: ['T1548.003'] },
-  { id: 'Defense Evasion', label: 'Defense Evasion', techniques: ['T1036', 'T1070.001', 'T1562.002'] },
-  { id: 'Credential Access', label: 'Credential Access', techniques: ['T1003.001', 'T1110'] },
+  { id: 'Defense Evasion', label: 'Defense Evasion', techniques: ['T1036', 'T1070.001', 'T1562.001', 'T1562.002'] },
+  { id: 'Credential Access', label: 'Credential Access', techniques: ['T1003.001', 'T1110', 'T1110.001', 'T1110.003'] },
   { id: 'Discovery', label: 'Discovery', techniques: ['T1082', 'T1087'] },
-  { id: 'Command and Control', label: 'Command & Control', techniques: ['T1071'] }
+  { id: 'Command and Control', label: 'Command & Control', techniques: ['T1071', 'T1071.001'] },
+  { id: 'Impact', label: 'Impact', techniques: ['T1565.001'] }
 ];
 
 export const DetectionManagementPage: React.FC = () => {

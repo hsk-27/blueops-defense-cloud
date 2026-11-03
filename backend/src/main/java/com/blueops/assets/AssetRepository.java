@@ -9,6 +9,7 @@ import java.util.Optional;
 public interface AssetRepository extends JpaRepository<Asset, Long> {
     Optional<Asset> findByPersistentId(String persistentId);
     Optional<Asset> findByHostname(String hostname);
+    Optional<Asset> findByHostnameIgnoreCase(String hostname);
     Optional<Asset> findByIpAddress(String ipAddress);
     boolean existsByPersistentId(String persistentId);
 }

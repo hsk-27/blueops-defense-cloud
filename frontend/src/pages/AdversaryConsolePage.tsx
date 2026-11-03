@@ -27,7 +27,7 @@ const SCENARIOS: AttackScenarioDef[] = [
       'Stage 1: Office document (winword.exe) spawns cmd.exe (D009)',
       'Stage 2: Execution of obfuscated Base64 PowerShell download cradle (D008)',
       'Stage 3: Outbound egress to non-standard port 4444 matching IOC IP (D014, D015)',
-      'Stage 4: Execution of wevtutil.exe to clear Windows Security Event Log (D012)',
+      'Stage 4: Execution of wevtutil.exe to clear Windows Security Event Log (D013)',
       'Stage 5: Multi-stage correlation trigger C002 -> Auto-create CRITICAL Incident'
     ]
   },
@@ -36,7 +36,7 @@ const SCENARIOS: AttackScenarioDef[] = [
     name: 'Linux Account Compromise & Privilege Escalation',
     category: 'Account Takeover',
     severity: 'CRITICAL',
-    mitreTechniques: ['T1110', 'T1078', 'T1548.003', 'T1562.002'],
+    mitreTechniques: ['T1110', 'T1078', 'T1548.003', 'T1562.001'],
     description: 'Adversary executes slow-and-low password spraying against Linux server, succeeds with valid account, immediately executes sudo -i interactive shell, and disables auditd.',
     stages: [
       'Stage 1: Repeated SSH authentication failures across accounts (D001)',

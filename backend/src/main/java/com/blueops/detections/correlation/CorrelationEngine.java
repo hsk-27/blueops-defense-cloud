@@ -108,20 +108,29 @@ public class CorrelationEngine {
     }
 
     private void checkC003IocActivity(String assetId, List<FindingDto> findings, List<CorrelatedScenario> results) {
-        boolean hasIoc = findings.stream().anyMatch(f -> "D015".equalsIgnoreCase(f.getRuleId()));
-        if (hasIoc && findings.size() > 1) {
-            if (!isWithinCorrelationWindow(findings)) return;
+        List<FindingDto> d015Findings = findings.stream()
+                .filter(f -> "D015".equalsIgnoreCase(f.getRuleId()))
+                .toList();
 
-            List<String> matchedIds = findings.stream().map(FindingDto::getFindingId).collect(Collectors.toList());
-            results.add(new CorrelatedScenario(
-                    "C003",
-                    "Correlated Threat: Known Threat Intel IOC Activity With Secondary Suspicious Behavior",
-                    "Communication matching high-confidence threat intelligence accompanied by secondary endpoint detections on " + assetId,
-                    IncidentSeverity.HIGH,
-                    assetId,
-                    matchedIds,
-                    "Multi-source correlation: Network threat indicator confirmed by subsequent endpoint execution behavior within 60-minute window."
-            ));
+        for (FindingDto d15 : d015Findings) {
+            List<FindingDto> matched = findings.stream()
+                    .filter(f -> f.getTimestamp() != null && d15.getTimestamp() != null
+                            && Duration.between(f.getTimestamp(), d15.getTimestamp()).abs().compareTo(MAX_CORRELATION_WINDOW) <= 0)
+                    .collect(Collectors.toList());
+
+            if (matched.size() > 1) {
+                List<String> matchedIds = matched.stream().map(FindingDto::getFindingId).collect(Collectors.toList());
+                results.add(new CorrelatedScenario(
+                        "C003",
+                        "Correlated Threat: Known Threat Intel IOC Activity With Secondary Suspicious Behavior",
+                        "Communication matching high-confidence threat intelligence accompanied by secondary endpoint detections on " + assetId,
+                        IncidentSeverity.HIGH,
+                        assetId,
+                        matchedIds,
+                        "Multi-source correlation: Network threat indicator confirmed by subsequent endpoint execution behavior within 60-minute window."
+                ));
+                break;
+            }
         }
     }
 

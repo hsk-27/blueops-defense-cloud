@@ -64,8 +64,8 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/response/actions/*/rollback").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/assets/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/threat-intel/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/v1/detection-rules/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/v1/detection-rules/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/detections/**", "/api/v1/detection-rules/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/v1/detections/**", "/api/v1/detection-rules/**").hasRole("ADMIN")
                 // General authenticated API endpoints
                 .requestMatchers("/api/v1/**").authenticated()
                 .anyRequest().permitAll()

@@ -111,11 +111,10 @@ When an incident involves specific targets (such as remote C2 `198.51.100.23` or
 
 | Advisory ID | Primary Technique / Condition | Advisory Phase | Priority | Reputed Standard Citation | Mapped Playbook |
 |---|---|---|---|---|:---:|
-| `ADV-C2-ISOLATE` | `T1071`, `T1071.001` (C2 Beaconing / Egress) | `CONTAINMENT` | `IMMEDIATE_ACTION` | CISA IR Playbook §3.1 & MITRE D3FEND D3-NTF | `P001` (Isolate Host) |
-| `ADV-C2-NETBLOCK` | Remote Malicious IP / IOC Connection | `CONTAINMENT` | `HIGH_PRIORITY` | CISA IR Playbook §3.3 & NIST SP 800-61R2 §3.3.1 | `P002` (Block IP at Perimeter) |
-| `ADV-CRED-REVOKE` | `T1003`, `T1003.001`, `T1110` (Credential Theft/Dump) | `ERADICATION` | `IMMEDIATE_ACTION` | NIST SP 800-61R2 §3.3.4 & MITRE ATT&CK M1018 | `P003` (Disable User Account) |
-| `ADV-VOLATILE-EV` | `CRITICAL` / `HIGH` Incident Under Active Investigation | `DETECTION_AND_ANALYSIS` | `IMMEDIATE_ACTION` | RFC 3227 §2.1 & NIST SP 800-61R2 §3.3.2 | `P007` (Collect Volatile Evidence) |
-| `ADV-PROCESS-TERM` | `T1059`, `T1059.001`, `T1548` (Malicious Shells) | `ERADICATION` | `HIGH_PRIORITY` | MITRE D3FEND D3-PE (Process Eviction) | — (Manual / Sub-agent) |
+| `ADV-NET-001` | `T1071`, `T1071.001` (C2 Beaconing / High-Port Egress) | `CONTAINMENT` | `IMMEDIATE_ACTION` | CISA IR Playbook §3.3 & MITRE D3FEND D3-NTF | `P001` (Block Suspicious Lab IP) |
+| `ADV-IAM-001` | `T1003.001`, `T1110`, `T1078` (Credential Theft/Dump) | `CONTAINMENT` | `IMMEDIATE_ACTION` | NIST SP 800-61R2 §3.3.1 & MITRE ATT&CK M1018 | `P002` (Disable Compromised Test Account) |
+| `ADV-END-001` | `T1059`, `T1059.001`, `T1036`, `T1543` (Malicious Shells) | `CONTAINMENT` | `IMMEDIATE_ACTION` | CISA IR Playbook §3.1 & SANS PICERL Step 3 | `P003` (Isolate Suspicious Lab Endpoint) |
+| `ADV-FOR-001` | `T1003.001`, `T1070.001`, `T1562.001` (Volatile State) | `DETECTION_AND_ANALYSIS` | `HIGH_PRIORITY` | RFC 3227 §2.1 & NIST SP 800-61R2 §3.3.2 | `P007` (Collect Endpoint Evidence Archive) |
 | `ADV-POST-INCIDENT`| `RESOLVED` / `CLOSED` Incident Status | `POST_INCIDENT` | `STRATEGIC_HARDENING` | NIST SP 800-61R2 §3.4 (Lessons Learned) | — (Post-Mortem Review) |
 
 ---

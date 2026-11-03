@@ -20,7 +20,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const RESULTS_DIR = path.join(__dirname, '..', 'results');
-const SHARED_SECRET = 'c8b9d2a4f6e103579b2468ace013579bdf02468ace13579bdf02468ace13579b';
+const SHARED_SECRET = process.env.RESPONSE_AGENT_SECRET || 'b7c938d10b7f43a99e1d8847e923832c3f59194e432c7e436814041b65b16130';
 
 // Helper: HMAC-SHA256 signature
 function generateHmac(secret, payload) {

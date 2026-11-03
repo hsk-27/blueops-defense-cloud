@@ -144,7 +144,7 @@ public class TelemetryController {
                     "action", "c2_egress_traffic"
             ));
 
-            // Stage 4: Windows Event Log Clearing (D012)
+            // Stage 4: Windows Event Log Clearing (D013)
             events.add(Map.of(
                     "id", "sim-win-" + now + "-4",
                     "hostname", "WIN-WORKSTATION-01",

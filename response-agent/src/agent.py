@@ -43,6 +43,7 @@ PLAYBOOK_TO_ACTION = {
 FORBIDDEN_TARGET_PATTERN = re.compile(r"[;&|`$><\r\n]")
 
 PROCESSED_NONCES = set()
+MAX_NONCES = 10000
 
 def verify_hmac(payload: str, timestamp: int, signature: str) -> bool:
     # 1. Anti-replay expiration window: 60 seconds
@@ -117,6 +118,8 @@ def execute_action():
             "message": "Target parameter contains forbidden characters or exceeds maximum length"
         }), 400
 
+    if len(PROCESSED_NONCES) >= MAX_NONCES:
+        PROCESSED_NONCES.clear()
     PROCESSED_NONCES.add(action_id)
     logger.info(f"Received validated response action request: Action={resolved_action}, Target={target}, ActionId={action_id}")
 

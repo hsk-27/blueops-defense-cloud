@@ -224,7 +224,7 @@ blueops/
 ├── .github/                 # GitHub Actions CI, CodeQL analysis, Issue & PR templates
 ├── backend/                 # Spring Boot 3 modular monolith (Java 21+)
 │   ├── src/main/java/       # Bounded contexts: auth, telemetry, findings, incidents, response, reporting
-│   └── src/test/java/       # 22 JUnit 5 test suites covering state machine, HMAC, detection, limiter
+│   └── src/test/java/       # 30 JUnit 5 tests covering state machine, HMAC, detection, limiter, incidents, correlation
 ├── frontend/                # React 18 + TypeScript + Vite + Tailwind CSS SOC UI
 │   ├── src/pages/           # SOC Overview, Live Telemetry, Incidents, Investigation, Threat Intel, Assets
 │   └── src/tests/           # Vitest component unit tests
@@ -307,7 +307,7 @@ Execute the comprehensive test suites across all layers with a single script:
 
 Or execute suites individually:
 ```bash
-# 1. Backend JUnit 5 Tests (25 / 25 Passing)
+# 1. Backend JUnit 5 Tests (30 / 30 Passing)
 cd backend && ./mvnw test
 
 # 2. Frontend Vitest Tests (5 / 5 Passing) & Production Build

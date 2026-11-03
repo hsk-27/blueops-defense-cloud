@@ -1,5 +1,26 @@
 # BlueOps — Project Changelog
 
+## [1.3.1] - 2026-11-03
+### Fixed & Hardened (Recursive Inconsistency & Bug Remediation Release)
+- **Dynamic Evidence Attachment & Tracking:**
+  - Implemented `attachFinding(Long incidentId, String findingId, String actor)` in `IncidentService.java` and `IncidentController.java` (`POST /api/v1/incidents/{id}/findings`).
+  - Added dedicated unit test suite `IncidentServiceTest.java` (3 tests verifying incident creation, timeline tracking, and duplicate rejection).
+  - Integrated interactive "Attach" modal in `InvestigationWorkspacePage.tsx` allowing analysts to dynamically bind findings as forensic evidence.
+- **Correlation Engine Multi-Stage Scenario Hardening:**
+  - Corrected `checkC003IocActivity` in `CorrelationEngine.java` to compute time deltas relative to the specific threat intel detection rather than entire asset history.
+  - Expanded `CorrelationEngineTest.java` to 4 unit tests, fully validating `C001`, `C002`, `C003`, and `C004`.
+- **Dynamic Asset Resolution in Response Orchestration:**
+  - Added `findByHostnameIgnoreCase` in `AssetRepository.java`.
+  - Updated `ResponseOrchestrationService.java` to resolve target asset by hostname or IP when `targetAssetId` is omitted, ensuring asset status properly transitions to `ISOLATED` or `HEALTHY`.
+- **Security Route Authorization Synchronization:**
+  - Aligned `SecurityConfig.java` to enforce `ROLE_ADMIN` on `/api/v1/detections/**` matching `DetectionRuleController`.
+- **MITRE ATT&CK Matrix Heatmap Complete Coverage:**
+  - Updated `MITRE_TACTICS` in `DetectionManagementPage.tsx` to include `Impact` (`T1565.001`), `T1543.002`, `T1569.002`, `T1562.001`, and `T1071.001`, displaying 100% of the 18 Sigma detection rules.
+- **Pipeline Verification Script Self-Authentication:**
+  - Updated `verify_pipeline.ps1` and `verify_pipeline.sh` to authenticate with default credentials and supply JWT Bearer tokens for telemetry ingestion.
+- **Total Test Metric:**
+  - Backend JUnit 5 test suite expanded to **30 / 30 tests passed** (100% pass rate).
+
 ## [1.3.0] - 2026-11-03
 ### Added & Enhanced (Authoritative Advisory System & GitHub Production Release)
 - **Authoritative Incident Advisory System (AAS) (`backend/src/main/java/com/blueops/advisory/`):**

@@ -70,6 +70,8 @@ export const api = {
     request<Incident>('/incidents', { method: 'POST', body: JSON.stringify(payload) }),
   getTimeline: (id: number) => request<TimelineEntry[]>(`/incidents/${id}/timeline`),
   getIncidentFindings: (id: number) => request<any[]>(`/incidents/${id}/findings`),
+  attachFinding: (id: number, findingId: string) =>
+    request<any>(`/incidents/${id}/findings?findingId=${encodeURIComponent(findingId)}`, { method: 'POST' }),
   addNote: (id: number, noteText: string) =>
     request<void>(`/incidents/${id}/notes`, { method: 'POST', body: JSON.stringify({ noteText }) }),
   assignIncident: (id: number, assignedTo: string) =>

@@ -10,6 +10,17 @@ try {
     Write-Host "[-] Backend Health: OFFLINE or UNREACHABLE ($($_.Exception.Message))" -ForegroundColor Red
 }
 
+# Authenticate
+$token = $null
+try {
+    $loginBody = @{ username = "admin"; password = "AdminPass123!" } | ConvertTo-Json
+    $auth = Invoke-RestMethod -Uri "$BackendUrl/api/v1/auth/login" -Method Post -Body $loginBody -ContentType "application/json" -TimeoutSec 5
+    $token = $auth.data.token
+    Write-Host "[+] Authentication: SUCCESSFUL (Token acquired)" -ForegroundColor Green
+} catch {
+    Write-Host "[-] Authentication: FAILED ($($_.Exception.Message))" -ForegroundColor Yellow
+}
+
 # Verification of sample Sysmon ingestion
 Write-Host "[*] Sending sample verification telemetry payload..." -ForegroundColor Cyan
 $samplePayload = @{
@@ -20,8 +31,13 @@ $samplePayload = @{
     user = "analyst"
 } | ConvertTo-Json
 
+$headers = @{}
+if ($token) {
+    $headers["Authorization"] = "Bearer $token"
+}
+
 try {
-    $response = Invoke-RestMethod -Uri "$BackendUrl/api/v1/telemetry/ingest" -Method Post -Body $samplePayload -ContentType "application/json" -TimeoutSec 5
+    $response = Invoke-RestMethod -Uri "$BackendUrl/api/v1/telemetry/ingest" -Method Post -Headers $headers -Body $samplePayload -ContentType "application/json" -TimeoutSec 5
     Write-Host "[+] Telemetry Pipeline: INGESTION SUCCESSFUL" -ForegroundColor Green
 } catch {
     Write-Host "[-] Telemetry Pipeline: INGESTION FAILED ($($_.Exception.Message))" -ForegroundColor Red

@@ -109,6 +109,10 @@ public class ResponseOrchestrationService {
         if (request.getTargetAssetId() != null) {
             Asset asset = assetRepository.findById(request.getTargetAssetId()).orElse(null);
             action.setTargetAsset(asset);
+        } else if (request.getTargetIdentifier() != null) {
+            assetRepository.findByHostnameIgnoreCase(request.getTargetIdentifier().trim())
+                    .or(() -> assetRepository.findByIpAddress(request.getTargetIdentifier().trim()))
+                    .ifPresent(action::setTargetAsset);
         }
 
         ResponseAction saved = actionRepository.save(action);
@@ -318,8 +322,16 @@ public class ResponseOrchestrationService {
     }
 
     private void updateTargetAssetStatus(ResponseAction action) {
-        if (action.getTargetAsset() == null) return;
         Asset asset = action.getTargetAsset();
+        if (asset == null && action.getTargetIdentifier() != null) {
+            asset = assetRepository.findByHostnameIgnoreCase(action.getTargetIdentifier().trim())
+                    .or(() -> assetRepository.findByIpAddress(action.getTargetIdentifier().trim()))
+                    .orElse(null);
+            if (asset != null) {
+                action.setTargetAsset(asset);
+            }
+        }
+        if (asset == null) return;
         ResponsePlaybook playbook = playbookRepository.findByPlaybookCode(action.getPlaybookCode()).orElse(null);
         String actionType = playbook != null ? playbook.getActionType() : "";
 

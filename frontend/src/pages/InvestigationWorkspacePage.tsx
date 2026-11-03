@@ -13,7 +13,9 @@ import {
   Binary,
   Tag,
   Download,
-  FileText
+  FileText,
+  Plus,
+  Link2
 } from 'lucide-react';
 import { api } from '../services/api';
 import { Incident, TimelineEntry, IncidentStatus, IncidentRecommendation } from '../types';
@@ -48,6 +50,27 @@ export const InvestigationWorkspacePage: React.FC<InvestigationWorkspaceProps> =
   // Status transition state
   const [statusReason, setStatusReason] = useState('');
   const [transitioning, setTransitioning] = useState(false);
+
+  // Evidence / finding attach state
+  const [showAttachInput, setShowAttachInput] = useState(false);
+  const [findingIdToAttach, setFindingIdToAttach] = useState('');
+  const [attachingFinding, setAttachingFinding] = useState(false);
+
+  const handleAttachFinding = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!findingIdToAttach.trim()) return;
+    try {
+      setAttachingFinding(true);
+      await api.attachFinding(incidentId, findingIdToAttach.trim());
+      setFindingIdToAttach('');
+      setShowAttachInput(false);
+      await loadIncidentData();
+    } catch (err: any) {
+      alert(err.message || 'Failed to attach finding to incident');
+    } finally {
+      setAttachingFinding(false);
+    }
+  };
 
   const loadIncidentData = async () => {
     try {
@@ -439,10 +462,43 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
         {/* Associated Telemetry Findings & MITRE (1 Col) */}
         <div className="space-y-6">
           <div className="bg-[#111726] border border-[#1e293b] rounded-xl p-5 shadow-xl">
-            <h3 className="text-sm font-bold text-slate-100 mb-3 flex items-center space-x-2">
-              <Binary className="w-4 h-4 text-red-400" />
-              <span>Associated Detections & Evidence</span>
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-bold text-slate-100 flex items-center space-x-2">
+                <Binary className="w-4 h-4 text-red-400" />
+                <span>Associated Detections & Evidence</span>
+              </h3>
+              <button
+                onClick={() => setShowAttachInput(!showAttachInput)}
+                title="Attach OpenSearch Finding or Telemetry Alert"
+                className="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center space-x-1"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Attach</span>
+              </button>
+            </div>
+
+            {showAttachInput && (
+              <form onSubmit={handleAttachFinding} className="mb-4 bg-[#0a0d14] border border-[#1e293b] p-3 rounded-lg space-y-2">
+                <label className="text-[11px] font-mono text-slate-400 uppercase">Finding ID (e.g. FND-2026-001):</label>
+                <div className="flex space-x-2">
+                  <input
+                    type="text"
+                    required
+                    placeholder="Enter finding ID..."
+                    value={findingIdToAttach}
+                    onChange={(e) => setFindingIdToAttach(e.target.value)}
+                    className="flex-1 bg-[#111726] border border-[#1e293b] rounded px-2.5 py-1 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                  <button
+                    type="submit"
+                    disabled={attachingFinding}
+                    className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1 rounded disabled:opacity-50"
+                  >
+                    {attachingFinding ? 'Attaching...' : 'Link'}
+                  </button>
+                </div>
+              </form>
+            )}
 
             <div className="space-y-3">
               {findings.length > 0 ? (

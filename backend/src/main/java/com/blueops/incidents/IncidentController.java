@@ -73,6 +73,14 @@ public class IncidentController {
         return ResponseEntity.ok(ApiResponse.success(incidentService.getIncidentFindings(id)));
     }
 
+    @PostMapping("/{id}/findings")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST')")
+    @Operation(summary = "Attach an OpenSearch finding or security detection as evidence to this incident")
+    public ResponseEntity<ApiResponse<IncidentFinding>> attachFinding(@PathVariable Long id, @RequestParam String findingId, Authentication auth) {
+        IncidentFinding finding = incidentService.attachFinding(id, findingId, auth.getName());
+        return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.success("Finding attached to incident", finding));
+    }
+
     @PostMapping("/{id}/notes")
     @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST')")
     @Operation(summary = "Add an investigation note")

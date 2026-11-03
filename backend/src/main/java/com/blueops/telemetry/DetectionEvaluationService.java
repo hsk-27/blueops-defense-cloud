@@ -234,12 +234,12 @@ public class DetectionEvaluationService {
                     Map.of("command_line", procCmd)));
         }
 
-        // D014: Outbound Network Connection to Non-Standard High Port (Network/Suricata, T1071)
+        // D014: Outbound Network Connection to Non-Standard High Port (Network/Suricata, T1071.001)
         if (event.getDestination() != null && event.getDestination().getPort() != null) {
             int port = event.getDestination().getPort();
             if (Set.of(4444, 1337, 8888, 9001, 6667, 31337).contains(port)) {
                 findings.add(createFinding("D014", "Outbound Connection to Non-Standard High/Malicious Port (" + port + ")", "MEDIUM",
-                        "Command and Control", "T1071", "Application Layer Protocol", assetId, assetName, event,
+                        "Command and Control", "T1071.001", "Web Protocols", assetId, assetName, event,
                         Map.of("destination_ip", event.getDestination().getIp(), "destination_port", port)));
             }
         }
@@ -305,10 +305,10 @@ public class DetectionEvaluationService {
                     Map.of("command_line", procCmd)));
         }
 
-        // D006: Linux Audit Log Configuration Modification (Linux, T1562.002)
+        // D006: Linux Audit Log Configuration Modification (Linux, T1562.001)
         if (AUDITCTL_DISABLE.matcher(procCmd).find() || procCmd.contains("/etc/audit/audit.rules")) {
             findings.add(createFinding("D006", "Linux Audit Subsystem Tampering (auditctl -D)", "HIGH",
-                    "Defense Evasion", "T1562.002", "Disable Windows/Linux Event Logging", assetId, assetName, event,
+                    "Defense Evasion", "T1562.001", "Disable or Modify Tools", assetId, assetName, event,
                     Map.of("command_line", procCmd)));
         }
 

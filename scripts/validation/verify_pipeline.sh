@@ -13,10 +13,30 @@ else
     echo "[-] Backend Health: OFFLINE or UNREACHABLE (HTTP $HEALTH_STATUS)"
 fi
 
+# Authenticate
+echo "[*] Authenticating with BlueOps Backend..."
+TOKEN=""
+AUTH_RESP=$(curl -s -X POST "$BACKEND_URL/api/v1/auth/login" \
+    -H "Content-Type: application/json" \
+    -d '{"username":"admin","password":"AdminPass123!"}' || true)
+
+if echo "$AUTH_RESP" | grep -q "token"; then
+    TOKEN=$(echo "$AUTH_RESP" | grep -o '"token":"[^"]*' | cut -d'"' -f4)
+    echo "[+] Authentication: SUCCESSFUL (Token acquired)"
+else
+    echo "[-] Authentication: FAILED (Token not acquired)"
+fi
+
 # Verification of sample Sysmon ingestion
 echo "[*] Sending sample verification telemetry payload..."
+AUTH_HEADER=()
+if [ -n "$TOKEN" ]; then
+    AUTH_HEADER=(-H "Authorization: Bearer $TOKEN")
+fi
+
 RESPONSE_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X POST "$BACKEND_URL/api/v1/telemetry/ingest" \
     -H "Content-Type: application/json" \
+    "${AUTH_HEADER[@]}" \
     -d '{"provider":"Sysmon","EventID":1,"hostname":"WIN-TEST-01","CommandLine":"whoami.exe","user":"analyst"}' || echo "FAIL")
 
 if [ "$RESPONSE_CODE" = "200" ] || [ "$RESPONSE_CODE" = "201" ]; then
