@@ -1,5 +1,26 @@
 # BlueOps — Project Changelog
 
+## [1.3.0] - 2026-11-03
+### Added & Enhanced (Authoritative Advisory System & GitHub Production Release)
+- **Authoritative Incident Advisory System (AAS) (`backend/src/main/java/com/blueops/advisory/`):**
+  - Designed and implemented a deterministic next-steps advisory engine grounded strictly in recognized cybersecurity standards (NIST SP 800-61 Rev. 2, CISA Federal IR Playbooks, MITRE ATT&CK & D3FEND, SANS PICERL, RFC 3227).
+  - Built `AdvisoryKnowledgeBase.java` cataloging standard-specific containment, eradication, recovery, and post-incident lessons-learned playbooks.
+  - Built `IncidentAdvisoryService.java` dynamically synthesizing incident severity, status, linked findings, MITRE techniques, and target entities (IPs, hostnames, usernames).
+  - Implemented REST controller `AdvisoryController.java` (`GET /api/v1/advisory/incidents/{incidentId}/recommendations`, `POST /api/v1/advisory/analyze`).
+  - Added unit test suite `IncidentAdvisoryServiceTest.java` (3 unit tests verifying multi-technique synthesis, target parameter injection, priority sorting, and post-incident resolution workflows).
+- **Interactive SOC Frontend Advisory Console (`frontend/src/`):**
+  - Created `AuthoritativeAdvisor.tsx` component with standard authority badges, priority indicators, step-by-step SOP checklist, and 1-click response playbook dispatch.
+  - Integrated `AuthoritativeAdvisor` at the apex of `InvestigationWorkspacePage.tsx`.
+  - Updated incident export features (Markdown and JSON formats) to incorporate authoritative advisory recommendations and SOP execution history for compliance and regulatory reporting.
+  - Added Vitest unit test suite `AuthoritativeAdvisor.test.tsx` (2 tests verifying badge rendering and playbook dispatch).
+- **GitHub Production Deployment Readiness:**
+  - Automated CI pipeline (`.github/workflows/ci.yml`) compiling Java 21, running 25 backend tests, 5 Vitest tests, and Vite production bundle.
+  - Automated GitHub CodeQL SAST workflow (`.github/workflows/codeql.yml`) scanning Java and JavaScript/TypeScript.
+  - Automated Docker build verification (`.github/workflows/docker-build.yml`).
+  - Standardized issue templates (`bug_report.md`, `feature_request.md`, `new_detection_rule.md`, `config.yml`), PR template, `CONTRIBUTING.md`, `SECURITY.md`, `CODE_OF_CONDUCT.md`, and Apache 2.0 `LICENSE`.
+  - Added cross-platform universal test and startup runners (`test.bat`, `start.bat`, `test.sh`, `start.sh`) for Windows, Linux, and macOS.
+  - Added technical runbook [`docs/AUTHORITATIVE_ADVISORY_SYSTEM.md`](AUTHORITATIVE_ADVISORY_SYSTEM.md).
+
 ## [1.2.0] - 2026-11-03
 ### Added & Hardened (Autonomous Deep Audit & Accreditation Release)
 - **Authentication & Brute-Force Defense (DEF-002):**

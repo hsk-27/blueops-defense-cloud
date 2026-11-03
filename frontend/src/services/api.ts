@@ -11,7 +11,8 @@ import {
   ResponseAction,
   ResponseExecution,
   AuditLog,
-  SocOverviewMetrics
+  SocOverviewMetrics,
+  IncidentRecommendation
 } from '../types';
 
 const BASE_URL = '/api/v1';
@@ -116,5 +117,11 @@ export const api = {
   getRecentTelemetry: (limit = 50) => request<any[]>(`/telemetry/events?limit=${limit}`),
   getTelemetryStats: () => request<any>('/telemetry/stats'),
   ingestTelemetry: (events: any) => request<any>('/telemetry/ingest', { method: 'POST', body: JSON.stringify(events) }),
-  simulateAttack: (scenario: string) => request<any>('/telemetry/simulate-attack', { method: 'POST', body: JSON.stringify({ scenario }) })
+  simulateAttack: (scenario: string) => request<any>('/telemetry/simulate-attack', { method: 'POST', body: JSON.stringify({ scenario }) }),
+
+  // Authoritative Advisory & Guidance
+  getIncidentRecommendations: (incidentId: number) =>
+    request<IncidentRecommendation[]>(`/advisory/incidents/${incidentId}/recommendations`),
+  analyzeAdvisory: (payload: any) =>
+    request<IncidentRecommendation[]>('/advisory/analyze', { method: 'POST', body: JSON.stringify(payload) })
 };

@@ -13,6 +13,7 @@
   <a href="https://github.com/your-org/blueops/security/advisories"><img src="https://img.shields.io/badge/Security-Hardened%20(CodeQL)-blue?style=flat-square&logo=github" alt="Security" /></a>
   <a href="https://spring.io/projects/spring-boot"><img src="https://img.shields.io/badge/Backend-Spring%20Boot%203.3%20%7C%20Java%2021%2B-green?style=flat-square&logo=springboot" alt="Spring Boot" /></a>
   <a href="https://react.dev"><img src="https://img.shields.io/badge/Frontend-React%2018%20%7C%20TypeScript-blue?style=flat-square&logo=react" alt="React" /></a>
+  <a href="https://csrc.nist.gov/pubs/sp/800/61/r2/final"><img src="https://img.shields.io/badge/Advisory-NIST%20%7C%20CISA%20%7C%20MITRE-purple?style=flat-square" alt="NIST & CISA Advisory" /></a>
   <a href="https://opensearch.org"><img src="https://img.shields.io/badge/Analytics-OpenSearch%202.x-teal?style=flat-square&logo=opensearch" alt="OpenSearch" /></a>
   <a href="https://attack.mitre.org"><img src="https://img.shields.io/badge/Framework-MITRE%20ATT%26CK%20v14-red?style=flat-square" alt="MITRE ATT&CK" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square" alt="License" /></a>
@@ -25,6 +26,7 @@
 - [Overview & Objectives](#overview--objectives)
 - [System Architecture](#system-architecture)
 - [Key Engineering Capabilities](#key-engineering-capabilities)
+- [Authoritative Incident Advisory System (AAS)](#authoritative-incident-advisory-system-aas)
 - [Detection Engine & Correlation Matrix](#detection-engine--correlation-matrix)
 - [Empirical Research Benchmarks](#empirical-research-benchmarks)
 - [Directory Layout](#directory-layout)
@@ -115,11 +117,40 @@ flowchart TD
 
 - **Unified Normalization Pipeline:** Maps raw Sysmon XML, Linux auditd logs, and Suricata EVE JSON into standardized `NormalizedEvent` structures preserving timestamps, raw event IDs, and process ancestry.
 - **MITRE ATT&CK Detection Catalog:** 18 production-ready Sigma rules covering Credential Access, Execution, Persistence, Privilege Escalation, Defense Evasion, and Command & Control.
+- **Authoritative Incident Advisory System (AAS):** Recommends deterministic, audit-ready next steps grounded strictly in **NIST SP 800-61 Rev. 2**, **CISA Federal IR Playbooks**, **MITRE D3FEND**, and **SANS PICERL / RFC 3227** with one-click response playbook dispatch.
 - **Stateful Attack Chain Correlation:** Evaluates multi-event sequences across a configurable 60-minute window, correlating brute-force attacks with interactive privilege escalation.
 - **Bidirectional Threat Intelligence:** Ingests IP, Domain, URL, and SHA256 indicators with automated matching and historical auditing.
 - **Incident State Machine:** Enforces valid lifecycle transitions (`NEW` $\to$ `TRIAGED` $\to$ `INVESTIGATING` $\to$ `CONTAINED` $\to$ `RESOLVED` $\to$ `CLOSED`) with status history auditing and forensic evidence linking.
 - **Enterprise AppSec & DevSecOps:** Sliding-window authentication rate limiting (lockout on 5 consecutive failures), BCrypt hashing, JWT RBAC (`ROLE_ANALYST`, `ROLE_ADMIN`), and HTTP filter chain security.
 - **Interactive SOC Analyst Console:** Dark-mode UI featuring live telemetry inspector with JSON drawer, adversary simulation triggers, incident reports export (Markdown/JSON), and MITRE matrix heatmaps.
+
+---
+
+## Authoritative Incident Advisory System (AAS)
+
+To eliminate unverified LLM hallucinations and high-stakes SOC errors, BlueOps integrates a deterministic advisory engine that evaluates live incident state, severity, MITRE tactics/techniques, and entity context (hostnames, remote C2 IPs, compromised accounts) against authoritative frameworks:
+
+```
++-----------------------------------------------------------------------------------------+
+|                              AUTHORITATIVE SOURCES REPOSITORY                           |
++----------------------------+-----------------------------+------------------------------+
+| NIST SP 800-61 Rev. 2      | CISA Federal IR Playbook    | MITRE D3FEND & ATT&CK        |
+| - §3.2.6 Prioritization    | - §3.1 Host Containment     | - D3-NTF (Traffic Filtering) |
+| - §3.3.1 Containment Strat | - §3.3 Perimeter Blocking   | - D3-PE (Process Eviction)   |
+| - §3.3.2 Evidence Handling | - Non-repudiation logging   | - M1018 (Account Management) |
++----------------------------+-----------------------------+------------------------------+
+                                          |
+                                          v
++-----------------------------------------------------------------------------------------+
+|                  BLUEOPS DYNAMIC CONTEXT EVALUATION & DISPATCH ENGINE                   |
+|  - Injects target entities (IPs, Hostnames, Users) into deterministic playbooks         |
+|  - Generates step-by-step Standard Operating Procedures (SOPs) for Tier-1/2 analysts    |
+|  - Offers 1-Click Execution: Host Isolation (P001), Perimeter Blocking (P002), etc.    |
+|  - Embeds authoritative citations into Markdown and JSON export reports                |
++-----------------------------------------------------------------------------------------+
+```
+
+*See full specification: [`docs/AUTHORITATIVE_ADVISORY_SYSTEM.md`](docs/AUTHORITATIVE_ADVISORY_SYSTEM.md).*
 
 ---
 
@@ -276,10 +307,10 @@ Execute the comprehensive test suites across all layers with a single script:
 
 Or execute suites individually:
 ```bash
-# 1. Backend JUnit 5 Tests (22 / 22 Passing)
+# 1. Backend JUnit 5 Tests (25 / 25 Passing)
 cd backend && ./mvnw test
 
-# 2. Frontend Vitest Tests (3 / 3 Passing) & Production Build
+# 2. Frontend Vitest Tests (5 / 5 Passing) & Production Build
 cd frontend && npm test && npm run build
 
 # 3. Dynamic Empirical Benchmark Simulation
@@ -293,6 +324,7 @@ node test-lab/adversary-simulation/deceptive_attack_suite.js
 
 ## Documentation Index
 
+- **Authoritative Advisory System Guide:** [`docs/AUTHORITATIVE_ADVISORY_SYSTEM.md`](docs/AUTHORITATIVE_ADVISORY_SYSTEM.md)
 - **Architecture Specification:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - **Technical Design Document:** [`docs/TECHNICAL_DESIGN.md`](docs/TECHNICAL_DESIGN.md)
 - **Database Schema & Migrations:** [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md)

@@ -16,9 +16,10 @@ import {
   FileText
 } from 'lucide-react';
 import { api } from '../services/api';
-import { Incident, TimelineEntry, IncidentStatus } from '../types';
+import { Incident, TimelineEntry, IncidentStatus, IncidentRecommendation } from '../types';
 import { SeverityBadge } from '../components/SeverityBadge';
 import { StatusBadge } from '../components/StatusBadge';
+import { AuthoritativeAdvisor } from '../components/AuthoritativeAdvisor';
 import { useAuth } from '../context/AuthContext';
 
 interface InvestigationWorkspaceProps {
@@ -36,7 +37,9 @@ export const InvestigationWorkspacePage: React.FC<InvestigationWorkspaceProps> =
   const [incident, setIncident] = useState<Incident | null>(null);
   const [timeline, setTimeline] = useState<TimelineEntry[]>([]);
   const [findings, setFindings] = useState<any[]>([]);
+  const [recommendations, setRecommendations] = useState<IncidentRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadingAdvisor, setLoadingAdvisor] = useState(false);
 
   // Note form state
   const [newNote, setNewNote] = useState('');
@@ -49,14 +52,19 @@ export const InvestigationWorkspacePage: React.FC<InvestigationWorkspaceProps> =
   const loadIncidentData = async () => {
     try {
       setLoading(true);
-      const [incData, tlData, findData] = await Promise.all([
+      const [incData, tlData, findData, recData] = await Promise.all([
         api.getIncidentById(incidentId),
         api.getTimeline(incidentId),
-        api.getIncidentFindings(incidentId)
+        api.getIncidentFindings(incidentId),
+        api.getIncidentRecommendations(incidentId).catch((err) => {
+          console.warn('Failed to load incident recommendations:', err);
+          return [] as IncidentRecommendation[];
+        })
       ]);
       setIncident(incData);
       setTimeline(tlData || []);
       setFindings(findData || []);
+      setRecommendations(recData || []);
     } catch (err) {
       console.error('Failed to load incident investigation details:', err);
     } finally {
@@ -90,6 +98,7 @@ export const InvestigationWorkspacePage: React.FC<InvestigationWorkspaceProps> =
         incident,
         timeline,
         findings,
+        recommendations,
         exportedAt: new Date().toISOString(),
         platform: 'BlueOps Enterprise Threat Detection & Incident Response'
       };
@@ -111,6 +120,17 @@ export const InvestigationWorkspacePage: React.FC<InvestigationWorkspaceProps> =
 
 ### Description & Executive Summary
 ${incident.description || 'No description provided.'}
+
+---
+
+### Authoritative Next-Step Recommendations (NIST / CISA / MITRE)
+${recommendations.map((r, i) => `#### ${i + 1}. [${r.priority}] ${r.title}
+- **Authoritative Source:** ${r.authoritativeSource} (${r.citation})
+- **Incident Phase:** ${r.phase}
+${r.suggestedPlaybookCode ? `- **Suggested Playbook:** ${r.suggestedPlaybookCode} (${r.suggestedPlaybookName || 'Playbook'}) -> Target: ${r.suggestedTarget || 'N/A'}` : ''}
+- **Analysis & Rationale:** ${r.rationale}
+- **Actionable Steps:**
+${r.actionableSteps.map(s => `  - ${s}`).join('\n')}`).join('\n\n')}
 
 ---
 
@@ -332,8 +352,17 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
 
       {/* 2-Column Section: Investigation Timeline & Associated Evidence */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Timeline & Notes (2 Cols) */}
+        {/* Timeline, Guidance & Notes (2 Cols) */}
         <div className="lg:col-span-2 space-y-6">
+          {/* Authoritative Incident Advisor (NIST / CISA / MITRE / SANS) */}
+          <AuthoritativeAdvisor
+            recommendations={recommendations}
+            loading={loadingAdvisor}
+            onLaunchPlaybook={(playbookCode, target) =>
+              onNavigateToResponse(playbookCode, target, incident.id)
+            }
+          />
+
           {/* Chronological Timeline */}
           <div className="bg-[#111726] border border-[#1e293b] rounded-xl p-5 shadow-xl">
             <h3 className="text-sm font-bold text-slate-100 mb-4 flex items-center space-x-2">

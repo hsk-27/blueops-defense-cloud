@@ -220,3 +220,39 @@ export interface SocOverviewMetrics {
     count: number;
   }>;
 }
+
+export type AuthoritativeSource =
+  | 'NIST_SP_800_61R2'
+  | 'CISA_IR_PLAYBOOK'
+  | 'MITRE_ATTACK_MITIGATION'
+  | 'MITRE_D3FEND'
+  | 'SANS_PICERL'
+  | 'RFC_3227';
+
+export type AdvisoryPhase =
+  | 'DETECTION_AND_ANALYSIS'
+  | 'CONTAINMENT'
+  | 'ERADICATION'
+  | 'RECOVERY'
+  | 'POST_INCIDENT';
+
+export type AdvisoryPriority =
+  | 'IMMEDIATE_ACTION'
+  | 'HIGH_PRIORITY'
+  | 'RECOMMENDED_FOLLOW_UP'
+  | 'STRATEGIC_HARDENING';
+
+export interface IncidentRecommendation {
+  id: string;
+  title: string;
+  phase: AdvisoryPhase;
+  priority: AdvisoryPriority;
+  authoritativeSource: AuthoritativeSource;
+  citation: string;
+  rationale: string;
+  actionableSteps: string[];
+  suggestedPlaybookCode?: string;
+  suggestedPlaybookName?: string;
+  suggestedTarget?: string;
+  applicableTechniques: string[];
+}
