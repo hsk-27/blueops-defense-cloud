@@ -9,6 +9,8 @@ Desktop.ini
 .vscode/
 *.suo
 *.user
+*.swp
+*.swo
 
 # Environment and secrets
 .env
@@ -37,6 +39,11 @@ response-agent/__pycache__/
 response-agent/*.pyc
 response-agent/venv/
 response-agent/.venv/
+.pytest_cache/
+__pycache__/
+*.py[cod]
+.coverage
+htmlcov/
 
 # Docker volumes and logs
 infrastructure/data/
