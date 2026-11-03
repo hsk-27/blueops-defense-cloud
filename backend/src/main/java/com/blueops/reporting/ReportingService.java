@@ -50,19 +50,13 @@ public class ReportingService {
         dto.setLowIncidents(incidentRepository.countBySeverity(IncidentSeverity.LOW));
 
         dto.setTotalAssets(assetRepository.count());
-        dto.setAssetsWithAlerts(incidentRepository.findAll().stream()
-                .map(Incident::getPrimaryAsset)
-                .filter(Objects::nonNull)
-                .distinct()
-                .count());
+        dto.setAssetsWithAlerts(incidentRepository.countAssetsWithActiveIncidents());
 
         dto.setTotalDetectionRules(detectionRuleRepository.count());
         dto.setActiveDetectionRules(detectionRuleRepository.countByStatus("ACTIVE"));
 
         // Calculate MTTR (Mean Time to Respond/Contain) from resolved/contained incidents
-        List<Incident> contained = incidentRepository.findAll().stream()
-                .filter(i -> i.getContainedAt() != null && i.getCreatedAt() != null)
-                .collect(Collectors.toList());
+        List<Incident> contained = incidentRepository.findByContainedAtIsNotNullAndCreatedAtIsNotNull();
 
         if (!contained.isEmpty()) {
             double avgMttrSeconds = contained.stream()
@@ -99,9 +93,7 @@ public class ReportingService {
         dto.setDetectionTacticDistribution(tactics);
 
         // Recent Incidents
-        List<Map<String, Object>> recentIncs = incidentRepository.findAll().stream()
-                .sorted(Comparator.comparing(Incident::getCreatedAt).reversed())
-                .limit(5)
+        List<Map<String, Object>> recentIncs = incidentRepository.findTop5ByOrderByCreatedAtDesc().stream()
                 .map(i -> {
                     Map<String, Object> m = new HashMap<>();
                     m.put("id", i.getId());

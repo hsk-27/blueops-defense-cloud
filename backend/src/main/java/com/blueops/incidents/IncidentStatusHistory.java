@@ -1,5 +1,6 @@
 package com.blueops.incidents;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import java.time.Instant;
 
@@ -11,6 +12,7 @@ public class IncidentStatusHistory {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "incident_id", nullable = false)
     private Incident incident;

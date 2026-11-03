@@ -22,6 +22,7 @@ public class AuthService {
     private final JwtTokenProvider tokenProvider;
     private final UserRepository userRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final LoginRateLimiter rateLimiter;
     private final long jwtExpirationMs;
 
     public AuthService(
@@ -29,11 +30,13 @@ public class AuthService {
             JwtTokenProvider tokenProvider,
             UserRepository userRepository,
             JdbcTemplate jdbcTemplate,
+            LoginRateLimiter rateLimiter,
             @Value("${blueops.jwt.expiration-ms:3600000}") long jwtExpirationMs) {
         this.authenticationManager = authenticationManager;
         this.tokenProvider = tokenProvider;
         this.userRepository = userRepository;
         this.jdbcTemplate = jdbcTemplate;
+        this.rateLimiter = rateLimiter;
         this.jwtExpirationMs = jwtExpirationMs;
     }
 
@@ -42,6 +45,11 @@ public class AuthService {
         String clientIp = httpRequest != null ? httpRequest.getRemoteAddr() : "127.0.0.1";
         String userAgent = httpRequest != null ? httpRequest.getHeader("User-Agent") : "unknown";
 
+        if (rateLimiter.isBlocked(request.getUsername()) || rateLimiter.isBlocked(clientIp)) {
+            recordLoginAttempt(request.getUsername(), clientIp, userAgent, "LOCKED_OUT");
+            throw new UnauthorizedException("Account is temporarily locked due to repeated failed login attempts. Please try again after 15 minutes.");
+        }
+
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getUsername(), request.getPassword())
@@ -49,6 +57,9 @@ public class AuthService {
 
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
             User user = userDetails.getUser();
+
+            rateLimiter.recordSuccess(user.getUsername());
+            rateLimiter.recordSuccess(clientIp);
 
             String accessToken = tokenProvider.generateAccessToken(authentication);
             String refreshToken = tokenProvider.generateRefreshToken(user.getUsername());
@@ -65,6 +76,8 @@ public class AuthService {
                     user.getFullName()
             );
         } catch (AuthenticationException ex) {
+            rateLimiter.recordFailure(request.getUsername());
+            rateLimiter.recordFailure(clientIp);
             recordLoginAttempt(request.getUsername(), clientIp, userAgent, "FAILED_CREDENTIALS");
             throw new UnauthorizedException("Invalid username or password");
         }

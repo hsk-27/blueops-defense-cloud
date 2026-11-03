@@ -212,6 +212,109 @@ class TelemetryNormalizationAndDetectionTest {
         assertTrue(findings.isEmpty());
     }
 
+    @Test
+    @DisplayName("Detection: Should trigger D007 on suspicious systemd service installation")
+    void shouldDetectSystemdServiceCreation() {
+        Map<String, Object> raw = Map.of(
+                "provider", "auditd",
+                "hostname", "LAB-LNX-01",
+                "file_path", "/etc/systemd/system/backdoor.service",
+                "command", "cp /tmp/backdoor.service /etc/systemd/system/backdoor.service"
+        );
+
+        NormalizedEvent event = normalizationService.normalize(raw);
+        List<FindingDto> findings = evaluationService.evaluate(event);
+
+        assertFalse(findings.isEmpty());
+        assertTrue(findings.stream().anyMatch(f -> "D007".equals(f.getRuleId())));
+    }
+
+    @Test
+    @DisplayName("Detection: Should trigger D012 on unexpected kernel driver loading")
+    void shouldDetectDriverLoading() {
+        Map<String, Object> raw = Map.of(
+                "provider", "Sysmon",
+                "hostname", "WIN-WORKSTATION-01",
+                "action", "driver_loaded",
+                "file_path", "C:\\Temp\\evil_driver.sys"
+        );
+
+        NormalizedEvent event = normalizationService.normalize(raw);
+        List<FindingDto> findings = evaluationService.evaluate(event);
+
+        assertFalse(findings.isEmpty());
+        assertTrue(findings.stream().anyMatch(f -> "D012".equals(f.getRuleId())));
+    }
+
+    @Test
+    @DisplayName("Detection: Should trigger D013 on security event log clearing")
+    void shouldDetectEventLogClearing() {
+        Map<String, Object> raw = Map.of(
+                "provider", "Sysmon",
+                "hostname", "WIN-WORKSTATION-01",
+                "Image", "C:\\Windows\\System32\\wevtutil.exe",
+                "CommandLine", "wevtutil.exe cl Security"
+        );
+
+        NormalizedEvent event = normalizationService.normalize(raw);
+        List<FindingDto> findings = evaluationService.evaluate(event);
+
+        assertFalse(findings.isEmpty());
+        assertTrue(findings.stream().anyMatch(f -> "D013".equals(f.getRuleId())));
+        assertEquals("CRITICAL", findings.get(0).getRuleSeverity());
+    }
+
+    @Test
+    @DisplayName("Detection: Should trigger D016 on hosts file modification")
+    void shouldDetectProtectedFileModification() {
+        Map<String, Object> raw = Map.of(
+                "provider", "Sysmon",
+                "hostname", "WIN-WORKSTATION-01",
+                "file_path", "C:\\Windows\\System32\\drivers\\etc\\hosts",
+                "CommandLine", "echo '1.2.3.4 updates.microsoft.com' >> /etc/hosts"
+        );
+
+        NormalizedEvent event = normalizationService.normalize(raw);
+        List<FindingDto> findings = evaluationService.evaluate(event);
+
+        assertFalse(findings.isEmpty());
+        assertTrue(findings.stream().anyMatch(f -> "D016".equals(f.getRuleId())));
+    }
+
+    @Test
+    @DisplayName("Detection: Should trigger D017 on repeated authentication failures")
+    void shouldDetectRepeatedAuthenticationFailures() {
+        Map<String, Object> raw = Map.of(
+                "provider", "auditd",
+                "hostname", "LAB-LNX-01",
+                "action", "failed_login",
+                "src_ip", "10.0.0.55"
+        );
+
+        NormalizedEvent event = normalizationService.normalize(raw);
+        List<FindingDto> findings = evaluationService.evaluate(event);
+
+        assertFalse(findings.isEmpty());
+        assertTrue(findings.stream().anyMatch(f -> "D017".equals(f.getRuleId())));
+    }
+
+    @Test
+    @DisplayName("Detection: Should trigger D018 on unusual administrative service activity")
+    void shouldDetectUnusualAdministrativeServiceCreation() {
+        Map<String, Object> raw = Map.of(
+                "provider", "Sysmon",
+                "hostname", "WIN-WORKSTATION-01",
+                "Image", "C:\\Windows\\System32\\sc.exe",
+                "CommandLine", "sc.exe create MaliciousService binpath= C:\\Temp\\evil.exe start= auto"
+        );
+
+        NormalizedEvent event = normalizationService.normalize(raw);
+        List<FindingDto> findings = evaluationService.evaluate(event);
+
+        assertFalse(findings.isEmpty());
+        assertTrue(findings.stream().anyMatch(f -> "D018".equals(f.getRuleId())));
+    }
+
     // --- Lightweight Test Double Implementations ---
 
     private static class StubIocIndicatorRepository implements IocIndicatorRepository {
@@ -341,6 +444,9 @@ class TelemetryNormalizationAndDetectionTest {
         @Override public Page<Incident> findFiltered(IncidentStatus status, IncidentSeverity severity, Pageable pageable) { return Page.empty(); }
         @Override public long countActiveIncidents() { return 0; }
         @Override public List<Incident> findActiveByTitleAndAsset(String title, Long assetId) { return Collections.emptyList(); }
+        @Override public long countAssetsWithActiveIncidents() { return 0; }
+        @Override public List<Incident> findTop5ByOrderByCreatedAtDesc() { return Collections.emptyList(); }
+        @Override public List<Incident> findByContainedAtIsNotNullAndCreatedAtIsNotNull() { return Collections.emptyList(); }
         @Override public <S extends Incident> S save(S entity) { entity.setId(100L); return entity; }
         @Override public <S extends Incident> List<S> saveAll(Iterable<S> entities) { return Collections.emptyList(); }
         @Override public Optional<Incident> findById(Long aLong) { return Optional.empty(); }

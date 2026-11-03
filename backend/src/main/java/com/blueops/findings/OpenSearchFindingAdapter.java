@@ -111,7 +111,22 @@ public class OpenSearchFindingAdapter {
                             dto.setAssetName((String) src.get("asset_name"));
                             dto.setStatus((String) src.getOrDefault("status", "UNASSIGNED"));
                             dto.setRelatedDocId((String) src.get("related_doc_ids"));
-                            dto.setTimestamp(Instant.now());
+
+                            Object tsVal = src.get("timestamp");
+                            if (tsVal == null) {
+                                tsVal = src.get("@timestamp");
+                            }
+                            if (tsVal instanceof String tsStr) {
+                                try {
+                                    dto.setTimestamp(Instant.parse(tsStr));
+                                } catch (Exception ignored) {
+                                    dto.setTimestamp(Instant.now());
+                                }
+                            } else if (tsVal instanceof Number tsNum) {
+                                dto.setTimestamp(Instant.ofEpochMilli(tsNum.longValue()));
+                            } else {
+                                dto.setTimestamp(Instant.now());
+                            }
                             list.add(dto);
                         }
                     }

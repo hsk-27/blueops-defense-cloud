@@ -60,8 +60,12 @@ public class SecurityConfig {
                 // Admin-restricted operations
                 .requestMatchers(HttpMethod.POST, "/api/v1/response/actions/*/approve").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/response/actions/*/reject").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/response/actions/*/execute").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/response/actions/*/rollback").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/assets/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/threat-intel/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.DELETE, "/api/v1/detection-rules/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/v1/detection-rules/**").hasRole("ADMIN")
                 // General authenticated API endpoints
                 .requestMatchers("/api/v1/**").authenticated()
                 .anyRequest().permitAll()

@@ -178,6 +178,15 @@ public class DetectionEvaluationService {
         String action = event.getEvent() != null && event.getEvent().getAction() != null ? event.getEvent().getAction() : "";
         String original = event.getEvent() != null && event.getEvent().getOriginal() != null ? event.getEvent().getOriginal() : "";
 
+        // D007: Suspicious System Service Creation (Linux, T1543.002)
+        if ((event.getFile() != null && event.getFile().getPath() != null && event.getFile().getPath().contains("/etc/systemd/system"))
+                || procCmd.contains("/etc/systemd/system")
+                || (procCmd.contains("systemctl") && procCmd.contains("enable") && !procCmd.contains("/lib/systemd"))) {
+            findings.add(createFinding("D007", "Suspicious System Service Creation in /etc/systemd/system", "MEDIUM",
+                    "Persistence", "T1543.002", "Systemd Service", assetId, assetName, event,
+                    Map.of("command_line", procCmd)));
+        }
+
         // D008: Suspicious Encoded PowerShell Execution (Windows, T1059.001)
         if (POWERSHELL_ENCODED.matcher(procCmd).find() || (procCmd.toLowerCase().contains("powershell") && procCmd.contains("-e ") && procCmd.length() > 30)) {
             findings.add(createFinding("D008", "Suspicious Encoded PowerShell Execution", "HIGH",
@@ -206,17 +215,22 @@ public class DetectionEvaluationService {
                     Map.of("command_line", procCmd, "tool_pattern", "Mimikatz/ProcDump signature")));
         }
 
-        // D012: Windows Event Log Clearing Activity (Windows, T1070.001)
-        if (LOG_CLEARING.matcher(procCmd).find()) {
-            findings.add(createFinding("D012", "Windows Event Log Clearing Activity", "HIGH",
-                    "Defense Evasion", "T1070.001", "Clear Windows Event Logs", assetId, assetName, event,
-                    Map.of("command_line", procCmd)));
+        // D012: Unexpected Driver Loading (Windows/Linux, T1543.003)
+        if ("driver_loaded".equalsIgnoreCase(action)
+                || (event.getFile() != null && event.getFile().getPath() != null && event.getFile().getPath().toLowerCase().endsWith(".sys")
+                    && !event.getFile().getPath().toLowerCase().contains("c:\\windows\\system32\\drivers"))
+                || procCmd.toLowerCase().contains("fltmc load")
+                || procCmd.toLowerCase().contains("insmod ")
+                || procCmd.toLowerCase().contains("modprobe ")) {
+            findings.add(createFinding("D012", "Unexpected Kernel Driver Loading Activity", "HIGH",
+                    "Persistence", "T1543.003", "Kernel Drivers", assetId, assetName, event,
+                    Map.of("action", action, "command_line", procCmd)));
         }
 
-        // D013: Suspicious Service Installation (Windows, T1543.003)
-        if (SC_CREATE.matcher(procCmd).find()) {
-            findings.add(createFinding("D013", "Suspicious Service Creation via SC.exe", "MEDIUM",
-                    "Persistence", "T1543.003", "Windows Service", assetId, assetName, event,
+        // D013: Security Event Log Clearing (Windows, T1070.001)
+        if (LOG_CLEARING.matcher(procCmd).find() || procCmd.contains("wevtutil cl") || procCmd.contains("Clear-EventLog")) {
+            findings.add(createFinding("D013", "Security Event Log Clearing Activity", "CRITICAL",
+                    "Defense Evasion", "T1070.001", "Clear Windows Event Logs", assetId, assetName, event,
                     Map.of("command_line", procCmd)));
         }
 
@@ -230,14 +244,30 @@ public class DetectionEvaluationService {
             }
         }
 
-        // D016: Registry Run Key Persistence Addition (Windows, T1547.001)
-        if (event.getRegistry() != null && event.getRegistry().getPath() != null) {
-            String reg = event.getRegistry().getPath().toLowerCase();
-            if (reg.contains("currentversion\\run") || reg.contains("currentversion\\runonce")) {
-                findings.add(createFinding("D016", "Registry Run/RunOnce Key Persistence", "MEDIUM",
-                        "Persistence", "T1547.001", "Registry Run Keys", assetId, assetName, event,
-                        Map.of("registry_path", event.getRegistry().getPath(), "value", event.getRegistry().getValue())));
-            }
+        // D016: Protected-File Modification (Windows/Linux, T1565.001 / T1547.001)
+        boolean isHostsMod = (event.getFile() != null && event.getFile().getPath() != null
+                && (event.getFile().getPath().toLowerCase().contains("drivers\\etc\\hosts") || event.getFile().getPath().contains("/etc/hosts")))
+                || procCmd.toLowerCase().contains("drivers\\etc\\hosts") || procCmd.contains("/etc/hosts");
+        boolean isRegistryRun = (event.getRegistry() != null && event.getRegistry().getPath() != null
+                && (event.getRegistry().getPath().toLowerCase().contains("currentversion\\run")
+                    || event.getRegistry().getPath().toLowerCase().contains("currentversion\\runonce")));
+
+        if (isHostsMod || isRegistryRun) {
+            findings.add(createFinding("D016", "Protected-File / System Key Modification", "HIGH",
+                    "Impact", "T1565.001", "Stored Data Manipulation", assetId, assetName, event,
+                    Map.of("target", isHostsMod ? "hosts_file" : "registry_run_key", "command_line", procCmd)));
+        }
+
+        // D017: Repeated Authentication Failures From a Single Source (Network/Auth, T1110)
+        boolean isAuthCategory = event.getEvent() != null && event.getEvent().getCategory() != null
+                && event.getEvent().getCategory().contains("authentication");
+        boolean isAuthFail = action.contains("failed_login") || original.contains("res=failed")
+                || original.contains("authentication failure") || action.contains("failure");
+
+        if ((isAuthCategory && isAuthFail) || (event.getSource() != null && event.getSource().getIp() != null && isAuthFail)) {
+            findings.add(createFinding("D017", "Repeated Authentication Failures From Single Source", "MEDIUM",
+                    "Credential Access", "T1110", "Brute Force", assetId, assetName, event,
+                    Map.of("source_ip", event.getSource() != null ? event.getSource().getIp() : "unknown", "action", action)));
         }
 
         // D001: Repeated SSH Authentication Failures (Linux, T1110)
@@ -282,11 +312,12 @@ public class DetectionEvaluationService {
                     Map.of("command_line", procCmd)));
         }
 
-        // D018: Defense Evasion via Binary Masquerading (Windows/Linux, T1036)
-        if (procName.equalsIgnoreCase("svchost.exe") && procCmd.length() > 0 && !procCmd.toLowerCase().contains("c:\\windows\\system32")) {
-            findings.add(createFinding("D018", "Defense Evasion: Binary Masquerading (svchost outside System32)", "HIGH",
-                    "Defense Evasion", "T1036", "Masquerading", assetId, assetName, event,
-                    Map.of("process_name", procName, "command_line", procCmd)));
+        // D018: Defense Evasion / Administrative Service Activity (Windows, T1569.002 / T1036)
+        if (SC_CREATE.matcher(procCmd).find() || procCmd.toLowerCase().contains("sc.exe create") || procCmd.toLowerCase().contains("new-service")
+                || (procName.equalsIgnoreCase("svchost.exe") && procCmd.length() > 0 && !procCmd.toLowerCase().contains("c:\\windows\\system32"))) {
+            findings.add(createFinding("D018", "Unusual Administrative Service Activity or Service Masquerading", "HIGH",
+                    "Persistence", "T1569.002", "Service Execution", assetId, assetName, event,
+                    Map.of("command_line", procCmd, "process_name", procName)));
         }
     }
 

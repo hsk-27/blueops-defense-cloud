@@ -1,7 +1,9 @@
 package com.blueops.detections;
 
+import com.blueops.audit.AuditService;
 import com.blueops.common.exceptions.InvalidActionException;
 import com.blueops.common.exceptions.ResourceNotFoundException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,9 +17,16 @@ import java.util.stream.Collectors;
 public class DetectionRuleService {
 
     private final DetectionRuleRepository ruleRepository;
+    private final AuditService auditService;
+
+    @Autowired
+    public DetectionRuleService(DetectionRuleRepository ruleRepository, @Autowired(required = false) AuditService auditService) {
+        this.ruleRepository = ruleRepository;
+        this.auditService = auditService;
+    }
 
     public DetectionRuleService(DetectionRuleRepository ruleRepository) {
-        this.ruleRepository = ruleRepository;
+        this(ruleRepository, null);
     }
 
     @Transactional(readOnly = true)
@@ -45,7 +54,12 @@ public class DetectionRuleService {
 
         rule.setStatus(status);
         rule.setUpdatedAt(Instant.now());
-        return new DetectionRuleDto(ruleRepository.save(rule));
+        DetectionRule saved = ruleRepository.save(rule);
+        if (auditService != null) {
+            auditService.recordEvent("system", "DETECTION_RULE_STATUS_CHANGE", "DetectionRule", String.valueOf(saved.getId()), null,
+                    "Rule " + saved.getRuleCode() + " (" + saved.getName() + ") changed status to " + status);
+        }
+        return new DetectionRuleDto(saved);
     }
 
     @Transactional(readOnly = true)

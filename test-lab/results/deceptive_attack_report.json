@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-02T11:50:44.636Z",
+  "generatedAt": "2026-11-03T08:13:29.072Z",
   "adversarySimulationSuite": "BlueOps Advanced Deceptive Attack Suite v1.0",
   "totalAttacks": 8,
   "detectedAttacks": 8,
@@ -72,8 +72,8 @@
       "name": "Adversary Defense Evasion: Windows Event Log Clearing",
       "mitreTactic": "Defense Evasion",
       "mitreId": "T1070.001",
-      "expectedRule": "D012",
-      "severity": "HIGH",
+      "expectedRule": "D013",
+      "severity": "CRITICAL",
       "evasionTechnique": "Tampering with forensic event traces",
       "status": "DETECTED",
       "simulatedTelemetry": {

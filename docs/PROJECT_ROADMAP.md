@@ -11,16 +11,18 @@
 
 | Phase | Description | Status | Exit Criteria |
 |---|---|---|---|
-| **Phase 0** | Workspace Audit & Planning | **IN PROGRESS** | Environment audited, directory skeleton initialized, memory files established |
-| **Phase 1** | Infrastructure Foundation | Planned | Docker Compose, PostgreSQL, OpenSearch cluster, Dashboards, volume persistence |
-| **Phase 2** | Backend Foundation | Planned | Spring Boot 3 modular monolith, JPA, Flyway, Spring Security, JWT RBAC, Actuator |
-| **Phase 3** | Telemetry & Normalization | Planned | Fluent Bit pipelines, BlueOps Common Event Schema, Sysmon/Auditd/Suricata mappings |
-| **Phase 4** | Detection Engineering | Planned | 18 Sigma-compatible rules (Windows/Linux/Network), 4 correlation scenarios |
-| **Phase 5** | Operational Backend | Planned | Asset, Detection, Incident lifecycle, IOC threat intel, Findings sync, Audit log |
-| **Phase 6** | Frontend SOC Dashboard | Planned | React 18 + TS + Tailwind SOC dashboard, Incident Center, Investigation workspace |
-| **Phase 7** | Response Orchestration | Planned | Signed HMAC simulation & restricted lab agent, P001/P002/P003 playbooks, rollback |
-| **Phase 8** | Validation & Testing | Planned | Atomic Red Team T001-T010 scenarios, benign baseline, precision/recall/MTTD metrics |
-| **Phase 9** | Documentation & Release | Planned | Comprehensive documentation, architecture diagrams, runbooks, portfolio delivery |
+| **Phase 0** | Workspace Audit & Planning | **COMPLETED** | Environment audited, directory skeleton initialized, memory files established |
+| **Phase 1** | Infrastructure Foundation | **COMPLETED** | Docker Compose, PostgreSQL, OpenSearch cluster, Dashboards, volume persistence |
+| **Phase 2** | Backend Foundation | **COMPLETED** | Spring Boot 3 modular monolith, JPA, Flyway, Spring Security, JWT RBAC, Actuator |
+| **Phase 3** | Telemetry & Normalization | **COMPLETED** | Fluent Bit pipelines, BlueOps Common Event Schema, Sysmon/Auditd/Suricata mappings |
+| **Phase 4** | Detection Engineering | **COMPLETED** | 18 Sigma-compatible rules (Windows/Linux/Network), 4 correlation scenarios |
+| **Phase 5** | Operational Backend | **COMPLETED** | Asset, Detection, Incident lifecycle, IOC threat intel, Findings sync, Audit log |
+| **Phase 6** | Frontend SOC Dashboard | **COMPLETED** | React 18 + TS + Tailwind SOC dashboard, Incident Center, Investigation workspace |
+| **Phase 7** | Response Orchestration | **COMPLETED** | Signed HMAC simulation & restricted lab agent, P001-P007 playbooks, rollback |
+| **Phase 8** | Validation & Testing | **COMPLETED** | Atomic Red Team T001-T010 scenarios, benign baseline, precision/recall/MTTD metrics |
+| **Phase 9** | Documentation & Release | **COMPLETED** | Comprehensive documentation, architecture diagrams, runbooks, portfolio delivery |
+| **Phase 10** | Master Audit & Remediation | **COMPLETED** | 24-Dimension accreditation, AppSec hardening, dynamic benchmarks (95.0 / 100) |
+| **Phase 11** | IEEE Research Submission | Horizon | Camera-ready manuscript based on empirical benchmark datasets in `test-lab/results/` |
 
 ---
 

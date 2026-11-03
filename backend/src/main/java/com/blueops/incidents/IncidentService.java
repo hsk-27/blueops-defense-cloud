@@ -2,10 +2,12 @@ package com.blueops.incidents;
 
 import com.blueops.assets.Asset;
 import com.blueops.assets.AssetRepository;
+import com.blueops.audit.AuditService;
 import com.blueops.common.exceptions.InvalidActionException;
 import com.blueops.common.exceptions.ResourceNotFoundException;
 import com.blueops.findings.FindingDto;
 import com.blueops.findings.OpenSearchFindingAdapter;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -23,12 +25,19 @@ public class IncidentService {
     private final IncidentRepository incidentRepository;
     private final AssetRepository assetRepository;
     private final OpenSearchFindingAdapter findingAdapter;
+    private final AuditService auditService;
     private final AtomicLong incidentSequence = new AtomicLong(100);
 
-    public IncidentService(IncidentRepository incidentRepository, AssetRepository assetRepository, OpenSearchFindingAdapter findingAdapter) {
+    @Autowired
+    public IncidentService(IncidentRepository incidentRepository, AssetRepository assetRepository, OpenSearchFindingAdapter findingAdapter, @Autowired(required = false) AuditService auditService) {
         this.incidentRepository = incidentRepository;
         this.assetRepository = assetRepository;
         this.findingAdapter = findingAdapter;
+        this.auditService = auditService;
+    }
+
+    public IncidentService(IncidentRepository incidentRepository, AssetRepository assetRepository, OpenSearchFindingAdapter findingAdapter) {
+        this(incidentRepository, assetRepository, findingAdapter, null);
     }
 
     @Transactional(readOnly = true)
@@ -85,6 +94,10 @@ public class IncidentService {
         incident.getStatusHistory().add(history);
 
         Incident saved = incidentRepository.save(incident);
+        if (auditService != null) {
+            auditService.recordEvent(creator, "INCIDENT_CREATED", "Incident", String.valueOf(saved.getId()), null,
+                    "Created incident " + saved.getIncidentNumber() + ": " + saved.getTitle() + " (" + saved.getSeverity() + ")");
+        }
         return new IncidentDto(saved);
     }
 
@@ -118,7 +131,12 @@ public class IncidentService {
         );
         incident.getStatusHistory().add(history);
 
-        return new IncidentDto(incidentRepository.save(incident));
+        Incident saved = incidentRepository.save(incident);
+        if (auditService != null) {
+            auditService.recordEvent(actor, "INCIDENT_STATUS_CHANGE", "Incident", String.valueOf(saved.getId()), null,
+                    "Transitioned from " + current + " to " + target + ". Reason: " + request.getReason());
+        }
+        return new IncidentDto(saved);
     }
 
     @Transactional
@@ -139,7 +157,12 @@ public class IncidentService {
         );
         incident.getStatusHistory().add(history);
 
-        return new IncidentDto(incidentRepository.save(incident));
+        Incident saved = incidentRepository.save(incident);
+        if (auditService != null) {
+            auditService.recordEvent(actor, "INCIDENT_REOPENED", "Incident", String.valueOf(saved.getId()), null,
+                    "Incident reopened from " + prev + ". Reason: " + reason);
+        }
+        return new IncidentDto(saved);
     }
 
     @Transactional
@@ -153,7 +176,12 @@ public class IncidentService {
         IncidentNote note = new IncidentNote(incident, actor, "Assigned incident to " + request.getAssignedTo());
         incident.getNotes().add(note);
 
-        return new IncidentDto(incidentRepository.save(incident));
+        Incident saved = incidentRepository.save(incident);
+        if (auditService != null) {
+            auditService.recordEvent(actor, "INCIDENT_ASSIGNED", "Incident", String.valueOf(saved.getId()), null,
+                    "Assigned incident to: " + request.getAssignedTo());
+        }
+        return new IncidentDto(saved);
     }
 
     @Transactional

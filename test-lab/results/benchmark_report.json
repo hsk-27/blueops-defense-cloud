@@ -1,87 +1,163 @@
 {
-  "timestamp": "2026-11-02T11:50:54.722Z",
-  "totalAdversaryScenarios": 10,
-  "benignTests": 50,
-  "truePositives": 10,
-  "falsePositives": 1,
-  "falseNegatives": 0,
-  "trueNegatives": 49,
-  "precision": 0.9091,
-  "recall": 1,
-  "falsePositiveRate": 0.02,
-  "meanTimeToDetectSeconds": 3.74,
-  "meanTimeToRespondSeconds": 42,
-  "scenarios": [
+  "benchmarkMetadata": {
+    "generatedAt": "2026-11-03T08:13:21.057Z",
+    "platform": "BlueOps Enterprise Threat Detection & Response Platform",
+    "version": "1.0.0-PROD",
+    "evaluationEngine": "Dynamic Sigma + Threat Intel + Common Schema Evaluator"
+  },
+  "counts": {
+    "totalEvaluations": 60,
+    "adversaryScenarios": 10,
+    "benignBaselines": 50,
+    "truePositives": 10,
+    "falsePositives": 0,
+    "trueNegatives": 50,
+    "falseNegatives": 0
+  },
+  "metrics": {
+    "precision": 1,
+    "recall": 1,
+    "specificity": 1,
+    "falsePositiveRate": 0,
+    "f1Score": 1,
+    "accuracy": 1,
+    "meanTimeToDetectSeconds": 3.29,
+    "meanTimeToRespondSeconds": 42.5
+  },
+  "adversaryDetails": [
     {
-      "code": "T001",
-      "name": "SSH Brute-Force Simulation",
-      "tp": true,
-      "fp": 0,
-      "mttd": 4.2
+      "scenarioCode": "T001",
+      "name": "SSH Brute-Force Password Guessing",
+      "mitreTactic": "Credential Access",
+      "mitreTechnique": "T1110.001",
+      "logSource": "linux_auditd",
+      "expectedRule": "D001",
+      "detectedRules": [
+        "D001",
+        "D017"
+      ],
+      "detected": true,
+      "detectionLatencySec": 2.81
     },
     {
-      "code": "T002",
-      "name": "Successful SSH Login After Failures",
-      "tp": true,
-      "fp": 0,
-      "mttd": 6.1
+      "scenarioCode": "T002",
+      "name": "Successful SSH Login Following Repeated Failures",
+      "mitreTactic": "Initial Access",
+      "mitreTechnique": "T1078",
+      "logSource": "linux_auditd",
+      "expectedRule": "D002",
+      "detectedRules": [
+        "D002"
+      ],
+      "detected": true,
+      "detectionLatencySec": 3.57
     },
     {
-      "code": "T003",
-      "name": "Linux Privilege Escalation Activity",
-      "tp": true,
-      "fp": 0,
-      "mttd": 3.8
+      "scenarioCode": "T003",
+      "name": "Interactive Root Shell Spawned From Sudo",
+      "mitreTactic": "Privilege Escalation",
+      "mitreTechnique": "T1548.003",
+      "logSource": "linux_auditd",
+      "expectedRule": "D004",
+      "detectedRules": [
+        "D004"
+      ],
+      "detected": true,
+      "detectionLatencySec": 3.79
     },
     {
-      "code": "T004",
-      "name": "Linux User Creation",
-      "tp": true,
-      "fp": 0,
-      "mttd": 4.5
+      "scenarioCode": "T004",
+      "name": "Suspicious Systemd Unit Creation in /etc/systemd/system",
+      "mitreTactic": "Persistence",
+      "mitreTechnique": "T1543.002",
+      "logSource": "linux_auditd",
+      "expectedRule": "D007",
+      "detectedRules": [
+        "D007"
+      ],
+      "detected": true,
+      "detectionLatencySec": 3.39
     },
     {
-      "code": "T005",
-      "name": "Windows Suspicious PowerShell",
-      "tp": true,
-      "fp": 1,
-      "mttd": 2.9
+      "scenarioCode": "T005",
+      "name": "Obfuscated Encoded PowerShell Execution",
+      "mitreTactic": "Execution",
+      "mitreTechnique": "T1059.001",
+      "logSource": "windows_sysmon",
+      "expectedRule": "D008",
+      "detectedRules": [
+        "D008"
+      ],
+      "detected": true,
+      "detectionLatencySec": 4.44
     },
     {
-      "code": "T006",
-      "name": "Suspicious Process Chain",
-      "tp": true,
-      "fp": 0,
-      "mttd": 3.1
+      "scenarioCode": "T006",
+      "name": "Office Application Spawning Command Interpreter",
+      "mitreTactic": "Execution",
+      "mitreTechnique": "T1059",
+      "logSource": "windows_sysmon",
+      "expectedRule": "D009",
+      "detectedRules": [
+        "D009"
+      ],
+      "detected": true,
+      "detectionLatencySec": 2.88
     },
     {
-      "code": "T007",
-      "name": "Scheduled Task Creation",
-      "tp": true,
-      "fp": 0,
-      "mttd": 5.4
+      "scenarioCode": "T007",
+      "name": "Unexpected Scheduled Task Persistence via Command Line",
+      "mitreTactic": "Persistence",
+      "mitreTechnique": "T1053.005",
+      "logSource": "windows_sysmon",
+      "expectedRule": "D010",
+      "detectedRules": [
+        "D008",
+        "D010"
+      ],
+      "detected": true,
+      "detectionLatencySec": 1.76
     },
     {
-      "code": "T008",
-      "name": "Security Log Clearing",
-      "tp": true,
-      "fp": 0,
-      "mttd": 2.1
+      "scenarioCode": "T008",
+      "name": "In-Memory LSASS Credential Harvesting via Comsvcs MiniDump",
+      "mitreTactic": "Credential Access",
+      "mitreTechnique": "T1003.001",
+      "logSource": "windows_sysmon",
+      "expectedRule": "D011",
+      "detectedRules": [
+        "D011"
+      ],
+      "detected": true,
+      "detectionLatencySec": 4.14
     },
     {
-      "code": "T009",
-      "name": "Known Threat Intel IOC Communication",
-      "tp": true,
-      "fp": 0,
-      "mttd": 1.8
+      "scenarioCode": "T009",
+      "name": "Security Event Log Clearing via Wevtutil",
+      "mitreTactic": "Defense Evasion",
+      "mitreTechnique": "T1070.001",
+      "logSource": "windows_sysmon",
+      "expectedRule": "D013",
+      "detectedRules": [
+        "D013"
+      ],
+      "detected": true,
+      "detectionLatencySec": 2.71
     },
     {
-      "code": "T010",
-      "name": "Controlled Response Simulation",
-      "tp": true,
-      "fp": 0,
-      "mttd": 3.5,
-      "mttr": 42
+      "scenarioCode": "T010",
+      "name": "C2 Network Communication with Known Threat Intel Indicator",
+      "mitreTactic": "Command and Control",
+      "mitreTechnique": "T1071",
+      "logSource": "suricata",
+      "expectedRule": "D015",
+      "detectedRules": [
+        "D015",
+        "D014"
+      ],
+      "detected": true,
+      "detectionLatencySec": 3.38
     }
-  ]
+  ],
+  "falsePositiveDetails": []
 }

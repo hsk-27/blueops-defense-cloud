@@ -101,8 +101,8 @@ const ATTACK_TESTS = [
       CommandLine: 'wevtutil cl Security',
       username: 'SYSTEM'
     },
-    expectedRule: 'D012',
-    expectedSeverity: 'HIGH',
+    expectedRule: 'D013',
+    expectedSeverity: 'CRITICAL',
     evasionTechnique: 'Tampering with forensic event traces'
   },
   {

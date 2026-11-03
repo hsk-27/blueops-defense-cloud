@@ -3,12 +3,14 @@ package com.blueops.response;
 import com.blueops.assets.Asset;
 import com.blueops.assets.AssetRepository;
 import com.blueops.assets.AssetStatus;
+import com.blueops.audit.AuditService;
 import com.blueops.common.exceptions.InvalidActionException;
 import com.blueops.common.exceptions.ResourceNotFoundException;
 import com.blueops.incidents.Incident;
 import com.blueops.incidents.IncidentRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
@@ -32,6 +34,7 @@ public class ResponseOrchestrationService {
     private final IncidentRepository incidentRepository;
     private final AssetRepository assetRepository;
     private final HmacSignatureService hmacSignatureService;
+    private final AuditService auditService;
     private final RestTemplate restTemplate;
 
     @Value("${blueops.response-agent.url:http://localhost:5000}")
@@ -39,6 +42,29 @@ public class ResponseOrchestrationService {
 
     @Value("${blueops.response-agent.simulation-mode:true}")
     private boolean defaultSimulationMode;
+
+    @Autowired
+    public ResponseOrchestrationService(
+            ResponsePlaybookRepository playbookRepository,
+            ResponseActionRepository actionRepository,
+            ResponseExecutionRepository executionRepository,
+            IncidentRepository incidentRepository,
+            AssetRepository assetRepository,
+            HmacSignatureService hmacSignatureService,
+            RestTemplateBuilder restTemplateBuilder,
+            @Autowired(required = false) AuditService auditService) {
+        this.playbookRepository = playbookRepository;
+        this.actionRepository = actionRepository;
+        this.executionRepository = executionRepository;
+        this.incidentRepository = incidentRepository;
+        this.assetRepository = assetRepository;
+        this.hmacSignatureService = hmacSignatureService;
+        this.auditService = auditService;
+        this.restTemplate = restTemplateBuilder
+                .setConnectTimeout(Duration.ofSeconds(3))
+                .setReadTimeout(Duration.ofSeconds(5))
+                .build();
+    }
 
     public ResponseOrchestrationService(
             ResponsePlaybookRepository playbookRepository,
@@ -48,16 +74,7 @@ public class ResponseOrchestrationService {
             AssetRepository assetRepository,
             HmacSignatureService hmacSignatureService,
             RestTemplateBuilder restTemplateBuilder) {
-        this.playbookRepository = playbookRepository;
-        this.actionRepository = actionRepository;
-        this.executionRepository = executionRepository;
-        this.incidentRepository = incidentRepository;
-        this.assetRepository = assetRepository;
-        this.hmacSignatureService = hmacSignatureService;
-        this.restTemplate = restTemplateBuilder
-                .setConnectTimeout(Duration.ofSeconds(3))
-                .setReadTimeout(Duration.ofSeconds(5))
-                .build();
+        this(playbookRepository, actionRepository, executionRepository, incidentRepository, assetRepository, hmacSignatureService, restTemplateBuilder, null);
     }
 
     @Transactional(readOnly = true)
@@ -96,6 +113,11 @@ public class ResponseOrchestrationService {
 
         ResponseAction saved = actionRepository.save(action);
 
+        if (auditService != null) {
+            auditService.recordEvent(requestedBy, "RESPONSE_ACTION_REQUESTED", "ResponseAction", saved.getActionUuid(), null,
+                    "Playbook: " + playbook.getPlaybookCode() + ", Target: " + saved.getTargetIdentifier());
+        }
+
         if (!playbook.isRequiresApproval()) {
             executeActionInternal(saved);
         }
@@ -117,6 +139,11 @@ public class ResponseOrchestrationService {
         action.setApprovedAt(Instant.now());
         action.setUpdatedAt(Instant.now());
 
+        if (auditService != null) {
+            auditService.recordEvent(approvedBy, "RESPONSE_ACTION_APPROVED", "ResponseAction", action.getActionUuid(), null,
+                    "Approved playbook: " + action.getPlaybookCode() + " for target: " + action.getTargetIdentifier());
+        }
+
         executeActionInternal(action);
 
         return new ResponseActionDto(actionRepository.save(action));
@@ -131,6 +158,11 @@ public class ResponseOrchestrationService {
         action.setApprovedBy(rejectedBy);
         action.setExecutionStatus("CANCELLED");
         action.setUpdatedAt(Instant.now());
+
+        if (auditService != null) {
+            auditService.recordEvent(rejectedBy, "RESPONSE_ACTION_REJECTED", "ResponseAction", action.getActionUuid(), null,
+                    "Reason: " + (reason != null ? reason : "Analyst rejected action"));
+        }
 
         return new ResponseActionDto(actionRepository.save(action));
     }
@@ -191,6 +223,11 @@ public class ResponseOrchestrationService {
         originalAction.setExecutionStatus("ROLLED_BACK");
         originalAction.setReversalAction(savedRollback);
         actionRepository.save(originalAction);
+
+        if (auditService != null) {
+            auditService.recordEvent(requestedBy, "RESPONSE_ACTION_ROLLBACK", "ResponseAction", savedRollback.getActionUuid(), null,
+                    "Rollback executed for original action: " + originalAction.getActionUuid() + " via playbook: " + reversalPlaybook.getPlaybookCode());
+        }
 
         return new ResponseActionDto(savedRollback);
     }

@@ -1,7 +1,9 @@
 package com.blueops.assets;
 
+import com.blueops.audit.AuditService;
 import com.blueops.common.exceptions.InvalidActionException;
 import com.blueops.common.exceptions.ResourceNotFoundException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,10 +18,17 @@ public class AssetService {
 
     private final AssetRepository assetRepository;
     private final JdbcTemplate jdbcTemplate;
+    private final AuditService auditService;
 
-    public AssetService(AssetRepository assetRepository, JdbcTemplate jdbcTemplate) {
+    @Autowired
+    public AssetService(AssetRepository assetRepository, JdbcTemplate jdbcTemplate, @Autowired(required = false) AuditService auditService) {
         this.assetRepository = assetRepository;
         this.jdbcTemplate = jdbcTemplate;
+        this.auditService = auditService;
+    }
+
+    public AssetService(AssetRepository assetRepository, JdbcTemplate jdbcTemplate) {
+        this(assetRepository, jdbcTemplate, null);
     }
 
     @Transactional(readOnly = true)
@@ -61,6 +70,10 @@ public class AssetService {
 
         Asset saved = assetRepository.save(asset);
         recordStatusHistory(saved.getId(), "NONE", saved.getStatus().name(), "Asset onboarding", actor);
+        if (auditService != null) {
+            auditService.recordEvent(actor, "ASSET_CREATED", "Asset", String.valueOf(saved.getId()), null,
+                    "Onboarded asset: " + saved.getHostname() + " (" + saved.getIpAddress() + ")");
+        }
         return new AssetDto(saved);
     }
 
@@ -116,13 +129,21 @@ public class AssetService {
         }
         asset.setUpdatedAt(Instant.now());
 
-        return new AssetDto(assetRepository.save(asset));
+        Asset updated = assetRepository.save(asset);
+        if (auditService != null) {
+            auditService.recordEvent(actor, "ASSET_UPDATED", "Asset", String.valueOf(updated.getId()), null,
+                    "Updated asset: " + updated.getHostname() + ", Status: " + updated.getStatus());
+        }
+        return new AssetDto(updated);
     }
 
     @Transactional
     public void deleteAsset(Long id) {
-        if (!assetRepository.existsById(id)) {
-            throw new ResourceNotFoundException("Asset", "id", id);
+        Asset asset = assetRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Asset", "id", id));
+        if (auditService != null) {
+            auditService.recordEvent("admin", "ASSET_DELETED", "Asset", String.valueOf(id), null,
+                    "Deleted asset: " + asset.getHostname() + " (" + asset.getIpAddress() + ")");
         }
         assetRepository.deleteById(id);
     }
