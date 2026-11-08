@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-11-03T16:46:46.484Z",
+  "generatedAt": "2026-11-08T07:05:53.725Z",
   "adversarySimulationSuite": "BlueOps Advanced Deceptive Attack Suite v1.0",
   "totalAttacks": 8,
   "detectedAttacks": 8,
@@ -18,6 +18,9 @@
       "severity": "HIGH",
       "evasionTechnique": "Mixed-case parameter obfuscation (-eNCoDeDCoMmAnD)",
       "status": "DETECTED",
+      "triggeredRules": [
+        "D008"
+      ],
       "simulatedTelemetry": {
         "provider": "Sysmon",
         "EventID": 1,
@@ -37,6 +40,10 @@
       "severity": "HIGH",
       "evasionTechnique": "Parent-process spoofing / Macro execution chain",
       "status": "DETECTED",
+      "triggeredRules": [
+        "D008",
+        "D009"
+      ],
       "simulatedTelemetry": {
         "provider": "Sysmon",
         "EventID": 1,
@@ -57,6 +64,9 @@
       "severity": "CRITICAL",
       "evasionTechnique": "Native LOLBAS DLL abuse (comsvcs.dll) without touching disk with mimikatz binary",
       "status": "DETECTED",
+      "triggeredRules": [
+        "D011"
+      ],
       "simulatedTelemetry": {
         "provider": "Sysmon",
         "EventID": 1,
@@ -76,6 +86,9 @@
       "severity": "CRITICAL",
       "evasionTechnique": "Tampering with forensic event traces",
       "status": "DETECTED",
+      "triggeredRules": [
+        "D013"
+      ],
       "simulatedTelemetry": {
         "provider": "Sysmon",
         "EventID": 1,
@@ -95,6 +108,9 @@
       "severity": "HIGH",
       "evasionTechnique": "Disabling kernel audit logging",
       "status": "DETECTED",
+      "triggeredRules": [
+        "D006"
+      ],
       "simulatedTelemetry": {
         "provider": "Linux-auditd",
         "hostname": "LNX-PROD-SRV-01",
@@ -113,6 +129,9 @@
       "severity": "HIGH",
       "evasionTechnique": "Session hijacking to persistent root shell",
       "status": "DETECTED",
+      "triggeredRules": [
+        "D004"
+      ],
       "simulatedTelemetry": {
         "provider": "Linux-auditd",
         "hostname": "LNX-PROD-SRV-01",
@@ -131,6 +150,9 @@
       "severity": "HIGH",
       "evasionTechnique": "C2 channel matching known adversary threat infrastructure",
       "status": "DETECTED",
+      "triggeredRules": [
+        "D015"
+      ],
       "simulatedTelemetry": {
         "provider": "Suricata",
         "hostname": "WIN-WORKSTATION-01",
@@ -150,6 +172,9 @@
       "severity": "HIGH",
       "evasionTechnique": "Process masquerading as trusted Windows Service Host",
       "status": "DETECTED",
+      "triggeredRules": [
+        "D018"
+      ],
       "simulatedTelemetry": {
         "provider": "Sysmon",
         "EventID": 1,

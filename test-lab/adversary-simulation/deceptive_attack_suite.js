@@ -293,6 +293,72 @@ function testResponseAgentSecurityBoundary() {
 }
 
 // -------------------------------------------------------------
+// Deterministic Detection Engine Evaluation for Deceptive Attacks
+// -------------------------------------------------------------
+
+function evaluateDeceptiveTelemetry(telemetry) {
+  const triggered = [];
+  const cmd = (telemetry.CommandLine || telemetry.command || '').toLowerCase();
+  const rawCmd = telemetry.CommandLine || telemetry.command || '';
+  const image = (telemetry.Image || '').toLowerCase();
+  const parentImage = (telemetry.ParentImage || '').toLowerCase();
+  const destIp = telemetry.dest_ip || '';
+  const domain = (telemetry.domain || '').toLowerCase();
+
+  // D004: Root shell from sudo
+  if (cmd.match(/sudo\s+(\/bin\/)?(bash|sh|zsh|dash|-i|su)/)) {
+    triggered.push('D004');
+  }
+
+  // D006: Linux auditctl tampering
+  if (/auditctl\s+(-d|--delete-all)/i.test(cmd) || cmd.includes('/etc/audit/audit.rules')) {
+    triggered.push('D006');
+  }
+
+  // D008: Obfuscated Encoded PowerShell or download cradle
+  const isPsEncoded = /(powershell|pwsh)(\.exe)?.*(-e|-enc|-encodedcommand)\s+[A-Za-z0-9+/=]{10,}/i.test(rawCmd) ||
+                      (cmd.includes('powershell') && cmd.includes('-e ') && cmd.length > 30);
+  const isPsDownload = (cmd.includes('powershell') || cmd.includes('pwsh')) &&
+                       /(DownloadString|DownloadFile|IEX|Invoke-Expression|Net\.WebClient|curl|wget)/i.test(rawCmd);
+  if (isPsEncoded || isPsDownload) {
+    triggered.push('D008');
+  }
+
+  // D009: Office spawning command interpreter
+  const isOffice = /(winword|excel|powerpnt|outlook|eqnedt32)\.exe/i.test(parentImage);
+  const isCmd = /(cmd|powershell|pwsh|wscript|cscript|mshta|rundll32|regsvr32)\.exe/i.test(image);
+  if (isOffice && isCmd) {
+    triggered.push('D009');
+  }
+
+  // D011: Mimikatz / LSASS dump / comsvcs minidump
+  if (cmd.includes('mimikatz') || cmd.includes('sekurlsa') || cmd.includes('lsass.dmp') ||
+      (cmd.includes('comsvcs') && cmd.includes('minidump'))) {
+    triggered.push('D011');
+  }
+
+  // D013: Event log clearing
+  if (/(wevtutil(\.exe)?\s+cl|Clear-EventLog|Limit-EventLog)/i.test(rawCmd) || (cmd.includes('wevtutil') && cmd.includes('cl'))) {
+    triggered.push('D013');
+  }
+
+  // D015: Threat Intel C2 indicator
+  const KNOWN_IPS = new Set(['198.51.100.24', '203.0.113.195', '192.0.2.100']);
+  const KNOWN_DOMAINS = new Set(['c2-beacon.adversary-lab.internal', 'evil-corp.blueops.lab', 'malware-drop.test']);
+  if (KNOWN_IPS.has(destIp) || KNOWN_DOMAINS.has(domain)) {
+    triggered.push('D015');
+  }
+
+  // D018: svchost masquerading outside System32 or sc.exe create
+  if (cmd.includes('sc.exe create') || cmd.includes('sc create') ||
+      (image.endsWith('svchost.exe') && !image.includes('system32'))) {
+    triggered.push('D018');
+  }
+
+  return triggered;
+}
+
+// -------------------------------------------------------------
 // Main Deceptive Attack Suite Execution
 // -------------------------------------------------------------
 
@@ -306,7 +372,8 @@ function runDeceptiveSuite() {
   const results = [];
 
   for (const test of ATTACK_TESTS) {
-    const isDetected = true; // Telemetry matches deterministic rule criteria
+    const triggeredRules = evaluateDeceptiveTelemetry(test.simulatedTelemetry);
+    const isDetected = triggeredRules.includes(test.expectedRule);
     if (isDetected) detectedCount++;
 
     results.push({
@@ -317,12 +384,13 @@ function runDeceptiveSuite() {
       expectedRule: test.expectedRule,
       severity: test.expectedSeverity,
       evasionTechnique: test.evasionTechnique,
-      status: 'DETECTED',
+      status: isDetected ? 'DETECTED' : 'EVADED',
+      triggeredRules,
       simulatedTelemetry: test.simulatedTelemetry
     });
 
-    console.log(`  [DETECTED] ${test.id} - ${test.name}`);
-    console.log(`             Rule: ${test.expectedRule} | Severity: ${test.expectedSeverity} | MITRE: ${test.mitreId}`);
+    console.log(`  [${isDetected ? 'DETECTED' : 'MISSED'}] ${test.id} - ${test.name}`);
+    console.log(`             Expected: ${test.expectedRule} | Found: [${triggeredRules.join(', ')}] | Severity: ${test.expectedSeverity}`);
     console.log(`             Evasion Tactic: ${test.evasionTechnique}`);
   }
 

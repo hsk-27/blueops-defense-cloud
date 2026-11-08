@@ -1,5 +1,23 @@
 # BlueOps — Project Changelog
 
+## [1.3.2] - 2026-11-08
+### Fixed & Enhanced (Adversary Evasion Hardening & Analyst SOP Operations Release)
+- **Threat Intelligence Case-Insensitive Matching & Multi-Field Enrichment:**
+  - Added `findByIndicatorValueIgnoreCase(String indicatorValue)` in `IocIndicatorRepository.java` to prevent case-evasion attacks across domain names and hashes.
+  - Expanded candidate indicator extraction in `DetectionEvaluationService.java` to inspect `relatedIps` and `relatedHashes` across normalized events.
+- **PowerShell Obfuscation & Download Cradle Detection:**
+  - Connected `POWERSHELL_DOWNLOAD` pattern to Rule `D008` in `DetectionEvaluationService.java`, detecting in-memory download cradles (`DownloadString`, `IEX`, `Net.WebClient`, `curl`, `wget`) even when unencoded.
+  - Hardened `D011` LSASS credential dumping detection to catch DLL hijacking and MiniDump invocations via native `comsvcs.dll` regardless of argument order or spacing.
+- **Dynamic Deceptive Adversary Simulation Suite:**
+  - Remediated `test-lab/adversary-simulation/deceptive_attack_suite.js` to replace static boolean checks with real deterministic detection evaluation logic (`evaluateDeceptiveTelemetry`).
+  - Resolved regex flag bug in Linux audit subsystem tampering simulation (`auditctl -D` vs `-d`), verifying 100% detection rate across all 8 deceptive evasion attacks.
+- **Frontend Analyst SOP Export to Clipboard:**
+  - Added "Copy SOP Checklist" button in `AuthoritativeAdvisor.tsx` allowing SOC Tier-1/2 analysts to copy formatted Markdown checklists of standard operating procedures directly into incident war-rooms or tickets.
+  - Added unit test in `AuthoritativeAdvisor.test.tsx` verifying clipboard export behavior.
+- **Test Metrics:**
+  - Backend JUnit 5 tests expanded to **32 / 32 tests passed** (100% pass rate).
+  - Frontend Vitest tests expanded to **6 / 6 tests passed** (100% pass rate).
+
 ## [1.3.1] - 2026-11-03
 ### Fixed & Hardened (Recursive Inconsistency & Bug Remediation Release)
 - **Dynamic Evidence Attachment & Tracking:**

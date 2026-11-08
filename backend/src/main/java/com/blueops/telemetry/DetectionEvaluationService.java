@@ -137,11 +137,21 @@ public class DetectionEvaluationService {
         if (event.getFile() != null && event.getFile().getHashSha256() != null) {
             candidateIndicators.add(event.getFile().getHashSha256().trim());
         }
+        if (event.getRelatedIps() != null) {
+            for (String ip : event.getRelatedIps()) {
+                if (ip != null && !ip.isBlank()) candidateIndicators.add(ip.trim());
+            }
+        }
+        if (event.getRelatedHashes() != null) {
+            for (String hash : event.getRelatedHashes()) {
+                if (hash != null && !hash.isBlank()) candidateIndicators.add(hash.trim());
+            }
+        }
 
         for (String cand : candidateIndicators) {
             if (cand.isEmpty() || "127.0.0.1".equals(cand) || "0.0.0.0".equals(cand)) continue;
 
-            Optional<IocIndicator> iocOpt = iocRepository.findByIndicatorValue(cand);
+            Optional<IocIndicator> iocOpt = iocRepository.findByIndicatorValueIgnoreCase(cand);
             if (iocOpt.isPresent()) {
                 IocIndicator ioc = iocOpt.get();
                 if ("ACTIVE".equalsIgnoreCase(ioc.getStatus())) {
@@ -187,11 +197,16 @@ public class DetectionEvaluationService {
                     Map.of("command_line", procCmd)));
         }
 
-        // D008: Suspicious Encoded PowerShell Execution (Windows, T1059.001)
-        if (POWERSHELL_ENCODED.matcher(procCmd).find() || (procCmd.toLowerCase().contains("powershell") && procCmd.contains("-e ") && procCmd.length() > 30)) {
-            findings.add(createFinding("D008", "Suspicious Encoded PowerShell Execution", "HIGH",
+        // D008: Suspicious Encoded PowerShell Execution or Download Cradle (Windows, T1059.001)
+        boolean isPowerShellProc = procCmd.toLowerCase().contains("powershell") || procName.toLowerCase().contains("powershell")
+                || procCmd.toLowerCase().contains("pwsh") || procName.toLowerCase().contains("pwsh");
+        boolean isEncodedPs = POWERSHELL_ENCODED.matcher(procCmd).find() || (procCmd.toLowerCase().contains("powershell") && procCmd.contains("-e ") && procCmd.length() > 30);
+        boolean isDownloadCradle = isPowerShellProc && POWERSHELL_DOWNLOAD.matcher(procCmd).find();
+
+        if (isEncodedPs || isDownloadCradle) {
+            findings.add(createFinding("D008", isDownloadCradle && !isEncodedPs ? "PowerShell Download Cradle / Unencoded Execution" : "Suspicious Encoded PowerShell Execution", "HIGH",
                     "Execution", "T1059.001", "PowerShell", assetId, assetName, event,
-                    Map.of("command_line", procCmd, "process_name", procName)));
+                    Map.of("command_line", procCmd, "process_name", procName, "cradle_detected", isDownloadCradle)));
         }
 
         // D009: Office Application Spawning Command Interpreter (Windows, T1059)
@@ -209,10 +224,11 @@ public class DetectionEvaluationService {
         }
 
         // D011: Local Security Authority Subsystem Service (LSASS) Memory Access (Windows, T1003.001)
-        if (MIMIKATZ_LSASS.matcher(procCmd).find() || MIMIKATZ_LSASS.matcher(procName).find()) {
+        if (MIMIKATZ_LSASS.matcher(procCmd).find() || MIMIKATZ_LSASS.matcher(procName).find()
+                || (procCmd.toLowerCase().contains("comsvcs") && procCmd.toLowerCase().contains("minidump"))) {
             findings.add(createFinding("D011", "LSASS Memory Dumping / Credential Harvesting", "CRITICAL",
                     "Credential Access", "T1003.001", "LSASS Memory", assetId, assetName, event,
-                    Map.of("command_line", procCmd, "tool_pattern", "Mimikatz/ProcDump signature")));
+                    Map.of("command_line", procCmd, "tool_pattern", "Mimikatz/ProcDump/Comsvcs signature")));
         }
 
         // D012: Unexpected Driver Loading (Windows/Linux, T1543.003)

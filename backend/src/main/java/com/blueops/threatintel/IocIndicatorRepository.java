@@ -10,6 +10,7 @@ import java.util.Optional;
 public interface IocIndicatorRepository extends JpaRepository<IocIndicator, Long> {
     Optional<IocIndicator> findByIndicatorValueAndIndicatorType(String indicatorValue, IocType indicatorType);
     Optional<IocIndicator> findByIndicatorValue(String indicatorValue);
+    Optional<IocIndicator> findByIndicatorValueIgnoreCase(String indicatorValue);
     List<IocIndicator> findByStatus(String status);
     List<IocIndicator> findByIndicatorType(IocType indicatorType);
     boolean existsByIndicatorValueAndIndicatorType(String indicatorValue, IocType indicatorType);

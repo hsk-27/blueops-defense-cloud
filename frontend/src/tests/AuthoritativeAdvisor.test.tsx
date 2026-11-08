@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { describe, it, expect, vi } from 'vitest';
 import { AuthoritativeAdvisor } from '../components/AuthoritativeAdvisor';
 import { IncidentRecommendation } from '../types';
@@ -58,5 +58,23 @@ describe('AuthoritativeAdvisor Component', () => {
 
     fireEvent.click(launchButtons[0]);
     expect(handleLaunch).toHaveBeenCalledWith('P001', '198.51.100.24');
+  });
+
+  it('handles copying SOP checklist to clipboard', async () => {
+    const writeTextMock = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, {
+      clipboard: {
+        writeText: writeTextMock
+      }
+    });
+
+    render(<AuthoritativeAdvisor recommendations={mockRecommendations} />);
+    const copyButton = screen.getByText('Copy SOP Checklist');
+    expect(copyButton).toBeDefined();
+
+    await act(async () => {
+      fireEvent.click(copyButton);
+    });
+    expect(writeTextMock).toHaveBeenCalled();
   });
 });

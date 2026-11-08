@@ -10,7 +10,9 @@ import {
   FileCheck,
   ExternalLink,
   Layers,
-  Sparkles
+  Sparkles,
+  Copy,
+  Check
 } from 'lucide-react';
 import { IncidentRecommendation, AuthoritativeSource, AdvisoryPriority } from '../types';
 
@@ -28,6 +30,41 @@ export const AuthoritativeAdvisor: React.FC<AuthoritativeAdvisorProps> = ({
   const [expandedId, setExpandedId] = useState<string | null>(
     recommendations.length > 0 ? recommendations[0].id : null
   );
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyChecklist = () => {
+    if (!recommendations || recommendations.length === 0) return;
+
+    let text = `# Incident Response Action Plan: Authoritative Standard Operating Procedures\n`;
+    text += `Generated: ${new Date().toUTCString()}\n`;
+    text += `Frameworks: NIST SP 800-61 Rev. 2, CISA Federal IR Playbooks, MITRE D3FEND, SANS PICERL\n\n`;
+
+    recommendations.forEach((rec, idx) => {
+      text += `## ${idx + 1}. [${rec.priority}] ${rec.title}\n`;
+      text += `- **Authoritative Source:** ${rec.citation}\n`;
+      text += `- **Operational Phase:** ${rec.phase.replace(/_/g, ' ')}\n`;
+      text += `- **Analysis & Rationale:** ${rec.rationale}\n`;
+      if (rec.suggestedPlaybookCode) {
+        text += `- **Mapped Playbook:** ${rec.suggestedPlaybookName || rec.suggestedPlaybookCode} (Target: ${rec.suggestedTarget || 'N/A'})\n`;
+      }
+      if (rec.actionableSteps && rec.actionableSteps.length > 0) {
+        text += `- **Standard Operating Procedure Steps:**\n`;
+        rec.actionableSteps.forEach(step => {
+          text += `  - [ ] ${step}\n`;
+        });
+      }
+      text += `\n`;
+    });
+
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2500);
+      }).catch(err => {
+        console.warn('Clipboard write failed:', err);
+      });
+    }
+  };
 
   const toggleExpand = (id: string) => {
     setExpandedId(prev => (prev === id ? null : id));
@@ -153,6 +190,25 @@ export const AuthoritativeAdvisor: React.FC<AuthoritativeAdvisorProps> = ({
             </p>
           </div>
         </div>
+
+        <button
+          type="button"
+          onClick={handleCopyChecklist}
+          className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-[#1e293b] hover:border-slate-700 transition"
+          title="Copy authoritative incident SOP checklist to clipboard"
+        >
+          {copied ? (
+            <>
+              <Check className="w-3.5 h-3.5 text-emerald-400" />
+              <span className="text-emerald-400">Copied SOP!</span>
+            </>
+          ) : (
+            <>
+              <Copy className="w-3.5 h-3.5 text-slate-300" />
+              <span>Copy SOP Checklist</span>
+            </>
+          )}
+        </button>
       </div>
 
       {/* Recommendations List */}
