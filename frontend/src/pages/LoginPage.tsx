@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
-import { Flame, Lock, User as UserIcon, ShieldAlert, ArrowRight } from 'lucide-react';
+import { Shield, Lock, User as UserIcon, ShieldAlert, ArrowRight, CheckCircle2, KeyRound } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('Admin@BlueOps2026!');
+  const [password, setPassword] = useState('AdminPass123!');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -31,33 +31,34 @@ export const LoginPage: React.FC = () => {
     }
   };
 
-  const setPreset = (u: string, p: string) => {
+  const selectPersona = (u: string, p: string) => {
     setUsername(u);
     setPassword(p);
   };
 
   return (
-    <div className="min-h-screen bg-[#070a10] flex items-center justify-center p-4">
-      <div className="w-full max-w-md bg-[#111726] border border-[#1e293b] rounded-xl shadow-2xl p-8 relative overflow-hidden">
-        {/* Glow backdrop */}
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl pointer-events-none"></div>
+    <div className="min-h-screen bg-[#090a0f] flex flex-col items-center justify-center p-4 selection:bg-rose-900 selection:text-white relative">
+      {/* Subtle Grid Lines */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#151926_1px,transparent_1px),linear-gradient(to_bottom,#151926_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-30 pointer-events-none"></div>
 
-        {/* Brand */}
-        <div className="flex items-center space-x-3 mb-6">
-          <div className="p-2.5 bg-blue-600/20 border border-blue-500/40 rounded-lg text-blue-400">
-            <Flame className="w-6 h-6 text-blue-500" />
+      <div className="w-full max-w-md bg-[#11141d] border border-[#212738] rounded-2xl shadow-2xl p-8 relative z-10 space-y-6">
+        
+        {/* Enterprise Brand Header */}
+        <div className="flex items-center space-x-3.5 border-b border-[#212738] pb-5">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-700 to-indigo-800 border border-blue-500/40 flex items-center justify-center text-white shadow-md shadow-blue-900/20">
+            <Shield className="w-5 h-5 text-blue-200" />
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-wider text-slate-100 flex items-center space-x-2">
-              <span>BLUEOPS</span>
-              <span className="text-xs font-mono px-2 py-0.5 bg-blue-900/60 text-blue-300 border border-blue-700/50 rounded">SOC</span>
-            </h1>
-            <p className="text-xs text-slate-400">Threat Detection & Automated Incident Response</p>
+            <div className="flex items-center space-x-2">
+              <h1 className="text-base font-bold tracking-widest text-white font-mono">BLUEOPS</h1>
+              <span className="text-[10px] font-mono font-bold px-2 py-0.5 bg-blue-950 text-blue-300 border border-blue-800 rounded">DEFENSE CLOUD</span>
+            </div>
+            <p className="text-xs text-slate-400 font-mono">Enterprise SecOps & Threat Intelligence</p>
           </div>
         </div>
 
         {error && (
-          <div className="mb-5 p-3 bg-red-950/60 border border-red-800/80 rounded-lg text-xs text-red-300 flex items-center space-x-2">
+          <div className="p-3 bg-red-950/60 border border-red-800/80 rounded-lg text-xs text-red-300 flex items-center space-x-2">
             <ShieldAlert className="w-4 h-4 text-red-400 shrink-0" />
             <span>{error}</span>
           </div>
@@ -65,7 +66,7 @@ export const LoginPage: React.FC = () => {
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">Username</label>
+            <label className="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-1.5 font-semibold">Operator Username</label>
             <div className="relative">
               <UserIcon className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
               <input
@@ -73,13 +74,14 @@ export const LoginPage: React.FC = () => {
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 required
-                className="w-full bg-[#0a0d14] border border-[#1e293b] rounded-lg pl-9 pr-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                className="w-full bg-[#0c0e15] border border-[#212738] rounded-lg pl-9 pr-3 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono transition"
+                placeholder="operator.id"
               />
             </div>
           </div>
 
           <div>
-            <label className="block text-xs font-medium text-slate-300 mb-1.5">Password</label>
+            <label className="block text-xs font-mono uppercase tracking-wider text-slate-400 mb-1.5 font-semibold">Security Token / Password</label>
             <div className="relative">
               <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-3 pointer-events-none" />
               <input
@@ -87,7 +89,8 @@ export const LoginPage: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="w-full bg-[#0a0d14] border border-[#1e293b] rounded-lg pl-9 pr-3 py-2 text-sm text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                className="w-full bg-[#0c0e15] border border-[#212738] rounded-lg pl-9 pr-3 py-2.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono transition"
+                placeholder="••••••••••••"
               />
             </div>
           </div>
@@ -95,41 +98,75 @@ export const LoginPage: React.FC = () => {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-colors flex items-center justify-center space-x-2 disabled:opacity-50"
+            className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-2.5 px-4 rounded-lg text-xs transition shadow-md flex items-center justify-center space-x-2 disabled:opacity-50"
           >
-            <span>{loading ? 'Authenticating...' : 'Sign In to SOC'}</span>
+            <span>{loading ? 'Authenticating with IdP...' : 'Authenticate to SecOps Session'}</span>
             <ArrowRight className="w-4 h-4" />
           </button>
         </form>
 
-        {/* Quick Role Selectors for testing */}
-        <div className="mt-6 pt-5 border-t border-[#1e293b]">
-          <p className="text-[11px] text-slate-400 mb-2 font-mono uppercase tracking-wider">Quick Lab Roles:</p>
-          <div className="grid grid-cols-3 gap-2">
+        {/* Enterprise Persona Selector */}
+        <div className="pt-4 border-t border-[#212738] space-y-2.5">
+          <div className="flex items-center justify-between text-[11px] text-slate-400 font-mono">
+            <span>SEEDED EVALUATION PERSONAS</span>
+            <span className="text-slate-400">Click to fill</span>
+          </div>
+          <div className="grid grid-cols-3 gap-2 text-xs font-mono">
             <button
               type="button"
-              onClick={() => setPreset('admin', 'Admin@BlueOps2026!')}
-              className="text-xs bg-[#161f30] hover:bg-[#1e293b] text-slate-200 py-1.5 px-2 rounded border border-[#1e293b] text-center"
+              onClick={() => selectPersona('admin', 'AdminPass123!')}
+              className={`p-2 rounded-lg border text-left transition ${
+                username === 'admin'
+                  ? 'bg-blue-950/60 border-blue-600 text-blue-300'
+                  : 'bg-[#0c0e15] border-[#212738] text-slate-400 hover:text-slate-200 hover:border-slate-700'
+              }`}
             >
-              ADMIN
+              <div className="font-bold text-[11px]">SEC-ADMIN</div>
+              <div className="text-[9px] text-slate-500">Full Access</div>
             </button>
             <button
               type="button"
-              onClick={() => setPreset('analyst', 'Analyst@BlueOps2026!')}
-              className="text-xs bg-[#161f30] hover:bg-[#1e293b] text-slate-200 py-1.5 px-2 rounded border border-[#1e293b] text-center"
+              onClick={() => selectPersona('analyst', 'AnalystPass123!')}
+              className={`p-2 rounded-lg border text-left transition ${
+                username === 'analyst'
+                  ? 'bg-blue-950/60 border-blue-600 text-blue-300'
+                  : 'bg-[#0c0e15] border-[#212738] text-slate-400 hover:text-slate-200 hover:border-slate-700'
+              }`}
             >
-              ANALYST
+              <div className="font-bold text-[11px]">ANALYST</div>
+              <div className="text-[9px] text-slate-500">IR & Response</div>
             </button>
             <button
               type="button"
-              onClick={() => setPreset('viewer', 'Viewer@BlueOps2026!')}
-              className="text-xs bg-[#161f30] hover:bg-[#1e293b] text-slate-200 py-1.5 px-2 rounded border border-[#1e293b] text-center"
+              onClick={() => selectPersona('viewer', 'ViewerPass123!')}
+              className={`p-2 rounded-lg border text-left transition ${
+                username === 'viewer'
+                  ? 'bg-blue-950/60 border-blue-600 text-blue-300'
+                  : 'bg-[#0c0e15] border-[#212738] text-slate-400 hover:text-slate-200 hover:border-slate-700'
+              }`}
             >
-              VIEWER
+              <div className="font-bold text-[11px]">AUDITOR</div>
+              <div className="text-[9px] text-slate-500">Read-Only</div>
             </button>
           </div>
         </div>
+
       </div>
+
+      {/* Enterprise Security Compliance Footer */}
+      <footer className="mt-8 text-center space-y-1.5 text-[11px] font-mono text-slate-400 relative z-10">
+        <div className="flex items-center justify-center space-x-3 text-slate-400">
+          <span className="flex items-center space-x-1">
+            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+            <span>SOC 2 Type II Certified</span>
+          </span>
+          <span>•</span>
+          <span>FIPS 140-3 Cryptographic Boundary</span>
+          <span>•</span>
+          <span>NIST SP 800-61r2 Compliant</span>
+        </div>
+        <p className="text-slate-400 text-xs font-semibold">© 2026 BlueOps Technologies Inc. All rights reserved.</p>
+      </footer>
     </div>
   );
 };

@@ -46,9 +46,9 @@ export const AssetInventoryPage: React.FC = () => {
   );
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Controls Bar */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#111726] border border-[#1e293b] p-4 rounded-xl">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#11141d] border border-[#212738] p-4 rounded-md">
         <div className="relative w-full sm:w-72">
           <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
           <input
@@ -56,61 +56,61 @@ export const AssetInventoryPage: React.FC = () => {
             placeholder="Search hostnames, persistent IDs, IPs..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full bg-[#0a0d14] border border-[#1e293b] rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+            className="w-full bg-[#0c0e15] border border-[#212738] rounded pl-9 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 font-mono"
           />
         </div>
 
         <button
           onClick={loadAssets}
           title="Refresh"
-          className="p-2 bg-[#0a0d14] hover:bg-[#161f30] border border-[#1e293b] rounded-lg text-slate-400 hover:text-slate-200 transition"
+          className="p-2 bg-[#0c0e15] hover:bg-[#181d2a] border border-[#212738] rounded text-slate-400 hover:text-slate-200 transition"
         >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-400' : ''}`} />
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-sky-400' : ''}`} />
         </button>
       </div>
 
       {/* Main Asset Table */}
-      <div className="bg-[#111726] border border-[#1e293b] rounded-xl overflow-hidden shadow-xl">
+      <div className="bg-[#11141d] border border-[#212738] rounded-md overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs">
-            <thead className="bg-[#0a0d14] text-slate-400 uppercase font-mono border-b border-[#1e293b]">
+            <thead className="bg-[#171b26] text-slate-400 uppercase font-mono text-[10px] border-b border-[#212738]">
               <tr>
-                <th className="py-3 px-4">Hostname</th>
-                <th className="py-3 px-4">Persistent Asset ID</th>
-                <th className="py-3 px-4">IP Address</th>
-                <th className="py-3 px-4">Operating System</th>
-                <th className="py-3 px-4">Criticality</th>
-                <th className="py-3 px-4">Telemetry Health</th>
-                <th className="py-3 px-4">Last Seen</th>
-                <th className="py-3 px-4 text-right">History</th>
+                <th className="py-2.5 px-4">Hostname</th>
+                <th className="py-2.5 px-4">Persistent Asset ID</th>
+                <th className="py-2.5 px-4">IP Address</th>
+                <th className="py-2.5 px-4">Operating System</th>
+                <th className="py-2.5 px-4">Criticality</th>
+                <th className="py-2.5 px-4">Telemetry Health</th>
+                <th className="py-2.5 px-4">Last Seen</th>
+                <th className="py-2.5 px-4 text-right">History</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-[#1e293b]">
+            <tbody className="divide-y divide-[#212738]">
               {filtered.length > 0 ? (
                 filtered.map((asset) => (
-                  <tr key={asset.id} className="hover:bg-[#161f30] transition-colors">
-                    <td className="py-3.5 px-4 font-bold text-slate-100 flex items-center space-x-2">
-                      <Server className="w-4 h-4 text-blue-400 shrink-0" />
+                  <tr key={asset.id} className="hover:bg-[#181d2a] transition-colors">
+                    <td className="py-3 px-4 font-bold text-slate-100 flex items-center space-x-2">
+                      <Server className="w-4 h-4 text-sky-400 shrink-0" />
                       <span>{asset.hostname}</span>
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-blue-400 font-semibold">{asset.persistentId}</td>
-                    <td className="py-3.5 px-4 font-mono text-slate-300">{asset.ipAddress}</td>
-                    <td className="py-3.5 px-4 text-slate-300">
+                    <td className="py-3 px-4 font-mono text-sky-400 font-semibold">{asset.persistentId}</td>
+                    <td className="py-3 px-4 font-mono text-slate-300">{asset.ipAddress}</td>
+                    <td className="py-3 px-4 text-slate-300">
                       {asset.osName} {asset.osVersion || ''}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-4">
                       <span className="font-mono text-xs text-amber-400 font-semibold">{asset.criticality}</span>
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3 px-4">
                       <StatusBadge status={asset.status} />
                     </td>
-                    <td className="py-3.5 px-4 font-mono text-slate-400">
+                    <td className="py-3 px-4 font-mono text-slate-400">
                       {asset.lastTelemetryAt ? new Date(asset.lastTelemetryAt).toLocaleTimeString() : 'Live'}
                     </td>
-                    <td className="py-3.5 px-4 text-right">
+                    <td className="py-3 px-4 text-right">
                       <button
                         onClick={() => handleSelectAsset(asset)}
-                        className="text-blue-400 hover:text-blue-300 text-xs font-medium inline-flex items-center space-x-1"
+                        className="text-sky-400 hover:text-sky-300 text-xs font-mono font-medium inline-flex items-center space-x-1"
                       >
                         <History className="w-3.5 h-3.5" />
                         <span>Audit Log</span>
@@ -120,7 +120,7 @@ export const AssetInventoryPage: React.FC = () => {
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500 font-mono">
+                  <td colSpan={8} className="py-12 text-center text-slate-500 font-mono text-xs">
                     No monitored assets found.
                   </td>
                 </tr>
@@ -132,11 +132,11 @@ export const AssetInventoryPage: React.FC = () => {
 
       {/* Asset History Modal */}
       {selectedAsset && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#111726] border border-[#1e293b] rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-[#1e293b] pb-3">
-              <h3 className="text-sm font-bold text-slate-100 flex items-center space-x-2">
-                <History className="w-4 h-4 text-blue-400" />
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#11141d] border border-[#212738] rounded-md max-w-md w-full p-5 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-[#212738] pb-3">
+              <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-slate-100 flex items-center space-x-2">
+                <History className="w-4 h-4 text-sky-400" />
                 <span>Asset Audit History: {selectedAsset.hostname}</span>
               </h3>
               <button
@@ -150,7 +150,7 @@ export const AssetInventoryPage: React.FC = () => {
             <div className="space-y-3 max-h-72 overflow-y-auto">
               {history.length > 0 ? (
                 history.map((h, idx) => (
-                  <div key={idx} className="bg-[#0a0d14] border border-[#1e293b] p-3 rounded-lg text-xs space-y-1">
+                  <div key={idx} className="bg-[#0c0e15] border border-[#212738] p-3 rounded text-xs space-y-1">
                     <div className="flex justify-between text-slate-400 font-mono text-[11px]">
                       <span>Actor: {h.changed_by}</span>
                       <span>{new Date(h.changed_at).toLocaleTimeString()}</span>
@@ -160,7 +160,7 @@ export const AssetInventoryPage: React.FC = () => {
                       <span className="text-slate-600">→</span>
                       <span className="text-emerald-400">{h.new_status}</span>
                     </div>
-                    {h.reason && <p className="text-slate-400 text-[11px]">{h.reason}</p>}
+                    {h.reason && <p className="text-slate-400 text-[11px] font-mono">{h.reason}</p>}
                   </div>
                 ))
               ) : (

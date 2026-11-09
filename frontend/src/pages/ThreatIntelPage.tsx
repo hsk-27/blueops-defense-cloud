@@ -107,14 +107,14 @@ export const ThreatIntelPage: React.FC = () => {
   );
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Tab Switcher */}
-      <div className="flex border-b border-[#1e293b] space-x-2">
+      <div className="flex border-b border-[#212738] space-x-2">
         <button
           onClick={() => setActiveTab('INDICATORS')}
           className={`pb-3 px-4 text-xs font-mono font-semibold flex items-center space-x-2 border-b-2 transition ${
             activeTab === 'INDICATORS'
-              ? 'border-blue-500 text-blue-400'
+              ? 'border-sky-500 text-sky-400'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -125,7 +125,7 @@ export const ThreatIntelPage: React.FC = () => {
           onClick={() => setActiveTab('MATCHES')}
           className={`pb-3 px-4 text-xs font-mono font-semibold flex items-center space-x-2 border-b-2 transition ${
             activeTab === 'MATCHES'
-              ? 'border-blue-500 text-blue-400'
+              ? 'border-sky-500 text-sky-400'
               : 'border-transparent text-slate-400 hover:text-slate-200'
           }`}
         >
@@ -137,7 +137,7 @@ export const ThreatIntelPage: React.FC = () => {
       {activeTab === 'INDICATORS' ? (
         <>
           {/* Header and Controls */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#111726] border border-[#1e293b] p-4 rounded-xl">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-[#11141d] border border-[#212738] p-4 rounded-md">
             <div className="flex items-center space-x-3 w-full sm:w-auto">
               <div className="relative w-full sm:w-72">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
@@ -146,14 +146,14 @@ export const ThreatIntelPage: React.FC = () => {
                   placeholder="Search IOCs, domains, hashes..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full bg-[#0a0d14] border border-[#1e293b] rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#0c0e15] border border-[#212738] rounded pl-9 pr-3 py-1.5 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 font-mono"
                 />
               </div>
 
               <select
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
-                className="bg-[#0a0d14] border border-[#1e293b] rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-blue-500"
+                className="bg-[#0c0e15] border border-[#212738] rounded px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-sky-500 font-mono"
               >
                 <option value="">All Types</option>
                 <option value="IP">IP Address</option>
@@ -168,72 +168,72 @@ export const ThreatIntelPage: React.FC = () => {
               <button
                 onClick={loadIocs}
                 title="Refresh"
-                className="p-2 bg-[#0a0d14] hover:bg-[#161f30] border border-[#1e293b] rounded-lg text-slate-400 hover:text-slate-200 transition"
+                className="p-2 bg-[#0c0e15] hover:bg-[#181d2a] border border-[#212738] rounded text-slate-400 hover:text-slate-200 transition"
               >
-                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-400' : ''}`} />
+                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-sky-400' : ''}`} />
               </button>
               <button
                 onClick={() => setShowImportModal(true)}
-                className="bg-[#161f30] hover:bg-[#1e293b] border border-[#1e293b] text-slate-200 font-medium text-xs px-3 py-2 rounded-lg flex items-center space-x-1.5 transition"
+                className="bg-[#0c0e15] hover:bg-[#181d2a] border border-[#212738] text-slate-200 font-mono text-xs px-3 py-1.5 rounded flex items-center space-x-1.5 transition"
               >
-                <Upload className="w-4 h-4" />
+                <Upload className="w-3.5 h-3.5" />
                 <span>Import CSV</span>
               </button>
               <button
                 onClick={() => setShowCreateModal(true)}
-                className="bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs px-3 py-2 rounded-lg flex items-center space-x-1.5 transition"
+                className="bg-sky-600 hover:bg-sky-500 text-white font-mono font-medium text-xs px-3 py-1.5 rounded flex items-center space-x-1.5 transition"
               >
-                <Plus className="w-4 h-4" />
+                <Plus className="w-3.5 h-3.5" />
                 <span>Add Indicator</span>
               </button>
             </div>
           </div>
 
           {/* Main IOC Table */}
-          <div className="bg-[#111726] border border-[#1e293b] rounded-xl overflow-hidden shadow-xl">
+          <div className="bg-[#11141d] border border-[#212738] rounded-md overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
-                <thead className="bg-[#0a0d14] text-slate-400 uppercase font-mono border-b border-[#1e293b]">
+                <thead className="bg-[#171b26] text-slate-400 uppercase font-mono text-[10px] border-b border-[#212738]">
                   <tr>
-                    <th className="py-3 px-4">Indicator Value</th>
-                    <th className="py-3 px-4">Type</th>
-                    <th className="py-3 px-4">Confidence</th>
-                    <th className="py-3 px-4">Severity</th>
-                    <th className="py-3 px-4">Source Provenance</th>
-                    <th className="py-3 px-4">Status</th>
-                    {isAdmin && <th className="py-3 px-4 text-right">Actions</th>}
+                    <th className="py-2.5 px-4">Indicator Value</th>
+                    <th className="py-2.5 px-4">Type</th>
+                    <th className="py-2.5 px-4">Confidence</th>
+                    <th className="py-2.5 px-4">Severity</th>
+                    <th className="py-2.5 px-4">Source Provenance</th>
+                    <th className="py-2.5 px-4">Status</th>
+                    {isAdmin && <th className="py-2.5 px-4 text-right">Actions</th>}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-[#1e293b]">
+                <tbody className="divide-y divide-[#212738]">
                   {filtered.length > 0 ? (
                     filtered.map((ioc) => (
-                      <tr key={ioc.id} className="hover:bg-[#161f30] transition-colors">
-                        <td className="py-3.5 px-4 font-mono font-semibold text-blue-400 break-all max-w-xs">
+                      <tr key={ioc.id} className="hover:bg-[#181d2a] transition-colors">
+                        <td className="py-3 px-4 font-mono font-semibold text-sky-400 break-all max-w-xs">
                           {ioc.indicatorValue}
                         </td>
-                        <td className="py-3.5 px-4">
-                          <span className="font-mono text-slate-300 bg-[#0a0d14] border border-[#1e293b] px-2 py-0.5 rounded">
+                        <td className="py-3 px-4">
+                          <span className="font-mono text-slate-300 bg-[#0c0e15] border border-[#212738] px-2 py-0.5 rounded text-[11px]">
                             {ioc.indicatorType}
                           </span>
                         </td>
-                        <td className="py-3.5 px-4 font-mono">
+                        <td className="py-3 px-4 font-mono">
                           <span className="text-emerald-400 font-bold">{ioc.confidence}%</span>
                         </td>
-                        <td className="py-3.5 px-4">
+                        <td className="py-3 px-4">
                           <SeverityBadge severity={ioc.severity} />
                         </td>
-                        <td className="py-3.5 px-4 font-mono text-slate-300">{ioc.source}</td>
+                        <td className="py-3 px-4 font-mono text-slate-300">{ioc.source}</td>
                         <td className="py-3.5 px-4">
                           <StatusBadge status={ioc.status} />
                         </td>
                         {isAdmin && (
-                          <td className="py-3.5 px-4 text-right">
+                          <td className="py-3 px-4 text-right">
                             <button
                               onClick={() => handleDelete(ioc.id)}
-                              className="text-red-400 hover:text-red-300 p-1 rounded"
+                              className="text-rose-400 hover:text-rose-300 p-1 rounded"
                               title="Delete indicator"
                             >
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-3.5 h-3.5" />
                             </button>
                           </td>
                         )}
@@ -241,7 +241,7 @@ export const ThreatIntelPage: React.FC = () => {
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={7} className="py-12 text-center text-slate-500 font-mono">
+                      <td colSpan={7} className="py-12 text-center text-slate-500 font-mono text-xs">
                         No threat intelligence indicators found.
                       </td>
                     </tr>
@@ -253,47 +253,47 @@ export const ThreatIntelPage: React.FC = () => {
         </>
       ) : (
         /* Matches Table */
-        <div className="bg-[#111726] border border-[#1e293b] rounded-xl overflow-hidden shadow-xl space-y-4">
-          <div className="p-4 bg-[#0a0d14] border-b border-[#1e293b] flex justify-between items-center">
+        <div className="bg-[#11141d] border border-[#212738] rounded-md overflow-hidden space-y-4">
+          <div className="p-4 bg-[#171b26] border-b border-[#212738] flex justify-between items-center">
             <div>
-              <h3 className="text-sm font-bold text-slate-100 flex items-center space-x-2">
+              <h3 className="text-xs font-bold font-mono uppercase text-slate-100 flex items-center space-x-2 tracking-wider">
                 <AlertTriangle className="w-4 h-4 text-amber-400" />
-                <span>Real-Time Threat Intelligence Telemetry Hits</span>
+                <span>Threat Intelligence Ingestion Matches</span>
               </h3>
-              <p className="text-xs text-slate-400 font-mono mt-0.5">
-                Ingested network and endpoint telemetry evaluated against active threat feeds
+              <p className="text-[11px] text-slate-400 font-mono mt-0.5">
+                Evaluated against AlienVault OTX, CISA KEV, and custom indicators
               </p>
             </div>
             <button
               onClick={loadIocs}
               title="Refresh"
-              className="p-2 bg-[#111726] hover:bg-[#161f30] border border-[#1e293b] rounded-lg text-slate-400 hover:text-slate-200 transition"
+              className="p-1.5 bg-[#0c0e15] hover:bg-[#181d2a] border border-[#212738] rounded text-slate-400 hover:text-slate-200 transition"
             >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-blue-400' : ''}`} />
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin text-sky-400' : ''}`} />
             </button>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#0a0d14] text-slate-400 uppercase font-mono border-b border-[#1e293b]">
+              <thead className="bg-[#171b26] text-slate-400 uppercase font-mono text-[10px] border-b border-[#212738]">
                 <tr>
-                  <th className="py-3 px-4">Matched Value</th>
-                  <th className="py-3 px-4">Telemetry Field</th>
-                  <th className="py-3 px-4">Target Hostname</th>
-                  <th className="py-3 px-4">Event Timestamp</th>
-                  <th className="py-3 px-4">Doc Reference</th>
-                  <th className="py-3 px-4">Incident Link</th>
+                  <th className="py-2.5 px-4">Matched Value</th>
+                  <th className="py-2.5 px-4">Telemetry Field</th>
+                  <th className="py-2.5 px-4">Target Hostname</th>
+                  <th className="py-2.5 px-4">Event Timestamp</th>
+                  <th className="py-2.5 px-4">Doc Reference</th>
+                  <th className="py-2.5 px-4">Incident Link</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1e293b]">
+              <tbody className="divide-y divide-[#212738]">
                 {matches.length > 0 ? (
                   matches.map((m) => (
-                    <tr key={m.id} className="hover:bg-[#161f30] transition-colors">
+                    <tr key={m.id} className="hover:bg-[#181d2a] transition-colors">
                       <td className="py-3 px-4 font-mono font-semibold text-rose-400 break-all">
                         {m.matchedValue}
                       </td>
                       <td className="py-3 px-4 font-mono text-slate-300">
-                        <span className="bg-[#0a0d14] border border-[#1e293b] px-2 py-0.5 rounded text-[11px]">
+                        <span className="bg-[#0c0e15] border border-[#212738] px-2 py-0.5 rounded text-[11px]">
                           {m.matchedField}
                         </span>
                       </td>
@@ -308,7 +308,7 @@ export const ThreatIntelPage: React.FC = () => {
                       </td>
                       <td className="py-3 px-4 font-mono">
                         {m.incidentId ? (
-                          <span className="text-blue-400 font-semibold">INC-{m.incidentId}</span>
+                          <span className="text-sky-400 font-semibold">INC-{m.incidentId}</span>
                         ) : (
                           <span className="text-slate-500">Unlinked</span>
                         )}
@@ -317,7 +317,7 @@ export const ThreatIntelPage: React.FC = () => {
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={6} className="py-12 text-center text-slate-500 font-mono">
+                    <td colSpan={6} className="py-12 text-center text-slate-500 font-mono text-xs">
                       No telemetry events have matched active threat intelligence indicators yet.
                     </td>
                   </tr>
@@ -330,33 +330,33 @@ export const ThreatIntelPage: React.FC = () => {
 
       {/* Create Modal */}
       {showCreateModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#111726] border border-[#1e293b] rounded-xl max-w-md w-full p-6 space-y-4 shadow-2xl">
-            <h3 className="text-base font-bold text-slate-100 flex items-center space-x-2">
-              <Radio className="w-5 h-5 text-blue-500" />
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#11141d] border border-[#212738] rounded-md max-w-md w-full p-5 space-y-4 shadow-2xl">
+            <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-slate-100 flex items-center space-x-2">
+              <Radio className="w-4 h-4 text-sky-400" />
               <span>Add Threat Intelligence Indicator</span>
             </h3>
 
             <form onSubmit={handleCreateIoc} className="space-y-3">
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Indicator Value *</label>
+                <label className="block text-[11px] font-mono uppercase text-slate-400 mb-1">Indicator Value *</label>
                 <input
                   type="text"
                   required
                   placeholder="198.51.100.24 or evil-corp.blueops.lab"
                   value={val}
                   onChange={(e) => setVal(e.target.value)}
-                  className="w-full bg-[#0a0d14] border border-[#1e293b] rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
+                  className="w-full bg-[#0c0e15] border border-[#212738] rounded px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500 font-mono"
                 />
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Type *</label>
+                  <label className="block text-[11px] font-mono uppercase text-slate-400 mb-1">Type *</label>
                   <select
                     value={type}
                     onChange={(e) => setType(e.target.value as any)}
-                    className="w-full bg-[#0a0d14] border border-[#1e293b] rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#0c0e15] border border-[#212738] rounded px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500 font-mono"
                   >
                     <option value="IP">IP Address</option>
                     <option value="DOMAIN">Domain</option>
@@ -367,7 +367,7 @@ export const ThreatIntelPage: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Confidence (0-100) *</label>
+                  <label className="block text-[11px] font-mono uppercase text-slate-400 mb-1">Confidence (0-100) *</label>
                   <input
                     type="number"
                     min={0}
@@ -375,29 +375,29 @@ export const ThreatIntelPage: React.FC = () => {
                     required
                     value={confidence}
                     onChange={(e) => setConfidence(parseInt(e.target.value) || 0)}
-                    className="w-full bg-[#0a0d14] border border-[#1e293b] rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500 font-mono"
+                    className="w-full bg-[#0c0e15] border border-[#212738] rounded px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500 font-mono"
                   />
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Source Provenance</label>
+                  <label className="block text-[11px] font-mono uppercase text-slate-400 mb-1">Source Provenance</label>
                   <input
                     type="text"
                     required
                     value={source}
                     onChange={(e) => setSource(e.target.value)}
-                    className="w-full bg-[#0a0d14] border border-[#1e293b] rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#0c0e15] border border-[#212738] rounded px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500 font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Severity *</label>
+                  <label className="block text-[11px] font-mono uppercase text-slate-400 mb-1">Severity *</label>
                   <select
                     value={severity}
                     onChange={(e) => setSeverity(e.target.value)}
-                    className="w-full bg-[#0a0d14] border border-[#1e293b] rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+                    className="w-full bg-[#0c0e15] border border-[#212738] rounded px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500 font-mono"
                   >
                     <option value="CRITICAL">Critical</option>
                     <option value="HIGH">High</option>
@@ -408,13 +408,13 @@ export const ThreatIntelPage: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1">Threat Context / Attribution</label>
+                <label className="block text-[11px] font-mono uppercase text-slate-400 mb-1">Threat Context / Attribution</label>
                 <textarea
                   rows={2}
-                  placeholder="e.g., C2 infrastructure observed in Atomic simulation test T009..."
+                  placeholder="e.g., C2 infrastructure observed in BAS validation test..."
                   value={description}
                   onChange={(e) => setDescription(e.target.value)}
-                  className="w-full bg-[#0a0d14] border border-[#1e293b] rounded-lg px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#0c0e15] border border-[#212738] rounded px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500 font-mono"
                 />
               </div>
 
@@ -422,13 +422,13 @@ export const ThreatIntelPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShowCreateModal(false)}
-                  className="px-4 py-2 bg-[#0a0d14] hover:bg-[#161f30] text-slate-400 hover:text-slate-200 text-xs rounded-lg border border-[#1e293b]"
+                  className="px-3 py-1.5 bg-[#0c0e15] hover:bg-[#181d2a] text-slate-400 hover:text-slate-200 text-xs font-mono rounded border border-[#212738]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg"
+                  className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-mono font-medium rounded transition"
                 >
                   Register Indicator
                 </button>
@@ -440,15 +440,15 @@ export const ThreatIntelPage: React.FC = () => {
 
       {/* CSV Import Modal */}
       {showImportModal && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#111726] border border-[#1e293b] rounded-xl max-w-lg w-full p-6 space-y-4 shadow-2xl">
-            <h3 className="text-base font-bold text-slate-100 flex items-center space-x-2">
-              <Upload className="w-5 h-5 text-blue-500" />
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#11141d] border border-[#212738] rounded-md max-w-lg w-full p-5 space-y-4 shadow-2xl">
+            <h3 className="text-xs font-bold font-mono uppercase tracking-wider text-slate-100 flex items-center space-x-2">
+              <Upload className="w-4 h-4 text-sky-400" />
               <span>Import Indicators via CSV</span>
             </h3>
 
-            <p className="text-xs text-slate-400">
-              Format: <code className="font-mono text-blue-300">indicator_value,indicator_type,source,confidence,severity</code>
+            <p className="text-xs text-slate-400 font-mono">
+              Format: <code className="font-mono text-sky-300">indicator_value,indicator_type,source,confidence,severity</code>
             </p>
 
             <form onSubmit={handleImportCsv} className="space-y-4">
@@ -458,20 +458,20 @@ export const ThreatIntelPage: React.FC = () => {
                 placeholder="198.51.100.24,IP,CISA,90,CRITICAL&#10;evil-corp.blueops.lab,DOMAIN,OTX,85,HIGH"
                 value={csvContent}
                 onChange={(e) => setCsvContent(e.target.value)}
-                className="w-full bg-[#0a0d14] border border-[#1e293b] rounded-lg p-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-blue-500"
+                className="w-full bg-[#0c0e15] border border-[#212738] rounded p-3 text-xs text-slate-100 font-mono focus:outline-none focus:border-sky-500"
               />
 
               <div className="flex justify-end space-x-3">
                 <button
                   type="button"
                   onClick={() => setShowImportModal(false)}
-                  className="px-4 py-2 bg-[#0a0d14] hover:bg-[#161f30] text-slate-400 hover:text-slate-200 text-xs rounded-lg border border-[#1e293b]"
+                  className="px-3 py-1.5 bg-[#0c0e15] hover:bg-[#181d2a] text-slate-400 hover:text-slate-200 text-xs font-mono rounded border border-[#212738]"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold rounded-lg"
+                  className="px-3 py-1.5 bg-sky-600 hover:bg-sky-500 text-white text-xs font-mono font-medium rounded transition"
                 >
                   Import Indicators
                 </button>

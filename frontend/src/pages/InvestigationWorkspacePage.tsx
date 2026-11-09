@@ -246,20 +246,20 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
                 incident.id
               )
             }
-            className="bg-purple-900/60 hover:bg-purple-800/80 border border-purple-700/60 text-purple-200 text-xs font-semibold px-3 py-1.5 rounded-lg flex items-center space-x-1.5 transition"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-mono font-medium px-3 py-1.5 rounded flex items-center space-x-1.5 transition"
           >
-            <Zap className="w-3.5 h-3.5 text-purple-400" />
+            <Zap className="w-3.5 h-3.5" />
             <span>Launch Response Playbook</span>
           </button>
         </div>
       </div>
 
       {/* Incident Summary Card */}
-      <div className="bg-[#111726] border border-[#1e293b] rounded-xl p-6 shadow-xl space-y-4">
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[#1e293b] pb-4">
+      <div className="bg-[#11141d] border border-[#212738] rounded-md p-5 space-y-4">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-[#212738] pb-4">
           <div>
             <div className="flex items-center space-x-3 mb-1">
-              <span className="font-mono text-sm text-blue-400 font-bold">{incident.incidentNumber}</span>
+              <span className="font-mono text-sm text-sky-400 font-bold">{incident.incidentNumber}</span>
               <SeverityBadge severity={incident.severity} />
               <StatusBadge status={incident.status} />
             </div>
@@ -268,13 +268,13 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
 
           {/* Quick Details Pills */}
           <div className="flex flex-wrap items-center gap-3 text-xs font-mono">
-            <div className="bg-[#0a0d14] border border-[#1e293b] px-3 py-1.5 rounded-lg flex items-center space-x-2">
-              <Server className="w-3.5 h-3.5 text-blue-400" />
+            <div className="bg-[#0c0e15] border border-[#212738] px-3 py-1.5 rounded flex items-center space-x-2">
+              <Server className="w-3.5 h-3.5 text-sky-400" />
               <span className="text-slate-400">Target Asset:</span>
               <span className="text-slate-100 font-semibold">{incident.primaryAssetHostname || 'None'}</span>
             </div>
 
-            <div className="bg-[#0a0d14] border border-[#1e293b] px-3 py-1.5 rounded-lg flex items-center space-x-2">
+            <div className="bg-[#0c0e15] border border-[#212738] px-3 py-1.5 rounded flex items-center space-x-2">
               <UserIcon className="w-3.5 h-3.5 text-emerald-400" />
               <span className="text-slate-400">Assigned:</span>
               <span className="text-slate-100 font-semibold">{incident.assignedTo || 'Unassigned'}</span>
@@ -283,28 +283,28 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
         </div>
 
         {incident.description && (
-          <p className="text-xs text-slate-300 leading-relaxed bg-[#0a0d14] p-3 rounded-lg border border-[#1e293b]">
+          <p className="text-xs text-slate-300 leading-relaxed bg-[#0c0e15] p-3 rounded border border-[#212738]">
             {incident.description}
           </p>
         )}
 
         {/* State Machine Transition Bar */}
         <div className="pt-2 flex flex-wrap items-center justify-between gap-3">
-          <div className="flex items-center space-x-2">
-            <span className="text-xs font-mono text-slate-400 uppercase">Triage Workflow:</span>
+          <div className="flex items-center space-x-2 font-mono text-xs">
+            <span className="text-slate-400 uppercase tracking-wider text-[11px]">Workflow Phase:</span>
             {incident.status === 'NEW' && (
               <>
                 <button
                   onClick={() => handleStatusChange('TRIAGED')}
                   disabled={transitioning}
-                  className="px-3 py-1 bg-amber-950/60 hover:bg-amber-900 border border-amber-800 text-amber-300 text-xs rounded transition"
+                  className="px-2.5 py-1 bg-amber-950/60 hover:bg-amber-900 border border-amber-800 text-amber-300 text-xs rounded transition"
                 >
                   Mark Triaged
                 </button>
                 <button
                   onClick={() => handleStatusChange('INVESTIGATING')}
                   disabled={transitioning}
-                  className="px-3 py-1 bg-blue-950/60 hover:bg-blue-900 border border-blue-800 text-blue-300 text-xs rounded transition"
+                  className="px-2.5 py-1 bg-sky-950/60 hover:bg-sky-900 border border-sky-800 text-sky-300 text-xs rounded transition"
                 >
                   Start Investigation
                 </button>
@@ -315,7 +315,7 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
               <button
                 onClick={() => handleStatusChange('INVESTIGATING')}
                 disabled={transitioning}
-                className="px-3 py-1 bg-blue-950/60 hover:bg-blue-900 border border-blue-800 text-blue-300 text-xs rounded transition"
+                className="px-2.5 py-1 bg-sky-950/60 hover:bg-sky-900 border border-sky-800 text-sky-300 text-xs rounded transition"
               >
                 Investigate
               </button>
@@ -326,14 +326,14 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
                 <button
                   onClick={() => handleStatusChange('CONTAINMENT_PENDING')}
                   disabled={transitioning}
-                  className="px-3 py-1 bg-purple-950/60 hover:bg-purple-900 border border-purple-800 text-purple-300 text-xs rounded transition"
+                  className="px-2.5 py-1 bg-purple-950/60 hover:bg-purple-900 border border-purple-800 text-purple-300 text-xs rounded transition"
                 >
                   Request Containment
                 </button>
                 <button
                   onClick={() => handleStatusChange('CONTAINED')}
                   disabled={transitioning}
-                  className="px-3 py-1 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-xs rounded transition"
+                  className="px-2.5 py-1 bg-emerald-950/60 hover:bg-emerald-900 border border-emerald-800 text-emerald-300 text-xs rounded transition"
                 >
                   Mark Contained
                 </button>
@@ -344,7 +344,7 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
               <button
                 onClick={() => handleStatusChange('RESOLVED')}
                 disabled={transitioning}
-                className="px-3 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded transition"
+                className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs rounded transition"
               >
                 Resolve Incident
               </button>
@@ -354,7 +354,7 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
               <button
                 onClick={() => handleStatusChange('REOPENED')}
                 disabled={transitioning}
-                className="px-3 py-1 bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 text-xs rounded transition"
+                className="px-2.5 py-1 bg-rose-950/60 hover:bg-rose-900 border border-rose-800 text-rose-300 text-xs rounded transition"
               >
                 Reopen Incident
               </button>
@@ -364,7 +364,7 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
               <button
                 onClick={() => handleStatusChange('FALSE_POSITIVE')}
                 disabled={transitioning}
-                className="px-3 py-1 bg-slate-800/80 hover:bg-slate-700 border border-slate-600 text-slate-300 text-xs rounded transition"
+                className="px-2.5 py-1 bg-[#181d2a] hover:bg-[#212738] border border-slate-700 text-slate-300 text-xs rounded transition"
               >
                 Mark False Positive
               </button>
@@ -387,28 +387,28 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
           />
 
           {/* Chronological Timeline */}
-          <div className="bg-[#111726] border border-[#1e293b] rounded-xl p-5 shadow-xl">
-            <h3 className="text-sm font-bold text-slate-100 mb-4 flex items-center space-x-2">
-              <Clock className="w-4 h-4 text-blue-400" />
+          <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
+            <h3 className="text-xs font-mono uppercase font-bold text-slate-200 mb-4 flex items-center space-x-2 tracking-wider">
+              <Clock className="w-4 h-4 text-sky-400" />
               <span>Chronological Investigation Timeline</span>
             </h3>
 
-            <div className="space-y-4 relative before:absolute before:inset-0 before:left-3 before:w-0.5 before:bg-[#1e293b]">
+            <div className="space-y-4 relative before:absolute before:inset-0 before:left-3 before:w-0.5 before:bg-[#212738]">
               {timeline.length > 0 ? (
                 timeline.map((entry, idx) => (
                   <div key={idx} className="relative flex items-start space-x-4 pl-8">
                     {/* Circle icon */}
                     <div
-                      className={`absolute left-1.5 top-1 w-3.5 h-3.5 rounded-full border-2 bg-[#111726] ${
+                      className={`absolute left-1.5 top-1 w-3.5 h-3.5 rounded-full border-2 bg-[#11141d] ${
                         entry.type === 'FINDING'
-                          ? 'border-red-500'
+                          ? 'border-rose-500'
                           : entry.type === 'STATUS_CHANGE'
-                          ? 'border-blue-500'
+                          ? 'border-sky-500'
                           : 'border-emerald-500'
                       }`}
                     ></div>
 
-                    <div className="w-full bg-[#0a0d14] border border-[#1e293b] p-3 rounded-lg space-y-1">
+                    <div className="w-full bg-[#0c0e15] border border-[#212738] p-3 rounded space-y-1">
                       <div className="flex items-center justify-between">
                         <span className="text-xs font-semibold text-slate-200">{entry.title}</span>
                         <span className="text-[10px] font-mono text-slate-500">
@@ -431,8 +431,8 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
           </div>
 
           {/* Add Investigation Note */}
-          <div className="bg-[#111726] border border-[#1e293b] rounded-xl p-5 shadow-xl">
-            <h3 className="text-sm font-bold text-slate-100 mb-3 flex items-center space-x-2">
+          <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
+            <h3 className="text-xs font-mono uppercase font-bold text-slate-200 mb-3 flex items-center space-x-2 tracking-wider">
               <MessageSquare className="w-4 h-4 text-emerald-400" />
               <span>Add Analyst Investigation Note</span>
             </h3>
@@ -444,13 +444,13 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
                 placeholder="Document containment steps, memory artifacts, command hashes, or external pivots..."
                 value={newNote}
                 onChange={(e) => setNewNote(e.target.value)}
-                className="w-full bg-[#0a0d14] border border-[#1e293b] rounded-lg p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                className="w-full bg-[#0c0e15] border border-[#212738] rounded p-3 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 font-mono"
               />
               <div className="flex justify-end">
                 <button
                   type="submit"
                   disabled={submittingNote}
-                  className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-4 py-2 rounded-lg disabled:opacity-50"
+                  className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-mono font-medium px-3 py-1.5 rounded disabled:opacity-50 transition"
                 >
                   {submittingNote ? 'Saving...' : 'Append Note to Timeline'}
                 </button>
@@ -461,16 +461,16 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
 
         {/* Associated Telemetry Findings & MITRE (1 Col) */}
         <div className="space-y-6">
-          <div className="bg-[#111726] border border-[#1e293b] rounded-xl p-5 shadow-xl">
+          <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-bold text-slate-100 flex items-center space-x-2">
-                <Binary className="w-4 h-4 text-red-400" />
-                <span>Associated Detections & Evidence</span>
+              <h3 className="text-xs font-mono uppercase font-bold text-slate-200 flex items-center space-x-2 tracking-wider">
+                <Binary className="w-4 h-4 text-rose-500" />
+                <span>Associated Telemetry Findings</span>
               </h3>
               <button
                 onClick={() => setShowAttachInput(!showAttachInput)}
                 title="Attach OpenSearch Finding or Telemetry Alert"
-                className="text-xs text-blue-400 hover:text-blue-300 font-semibold flex items-center space-x-1"
+                className="text-xs font-mono text-sky-400 hover:text-sky-300 font-medium flex items-center space-x-1"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Attach</span>
@@ -478,8 +478,8 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
             </div>
 
             {showAttachInput && (
-              <form onSubmit={handleAttachFinding} className="mb-4 bg-[#0a0d14] border border-[#1e293b] p-3 rounded-lg space-y-2">
-                <label className="text-[11px] font-mono text-slate-400 uppercase">Finding ID (e.g. FND-2026-001):</label>
+              <form onSubmit={handleAttachFinding} className="mb-4 bg-[#0c0e15] border border-[#212738] p-3 rounded space-y-2">
+                <label className="text-[10px] font-mono text-slate-400 uppercase">Finding ID (e.g. FND-2026-001):</label>
                 <div className="flex space-x-2">
                   <input
                     type="text"
@@ -487,12 +487,12 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
                     placeholder="Enter finding ID..."
                     value={findingIdToAttach}
                     onChange={(e) => setFindingIdToAttach(e.target.value)}
-                    className="flex-1 bg-[#111726] border border-[#1e293b] rounded px-2.5 py-1 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                    className="flex-1 bg-[#11141d] border border-[#212738] rounded px-2.5 py-1 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-sky-500 font-mono"
                   />
                   <button
                     type="submit"
                     disabled={attachingFinding}
-                    className="bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold px-3 py-1 rounded disabled:opacity-50"
+                    className="bg-sky-600 hover:bg-sky-500 text-white text-xs font-mono px-3 py-1 rounded disabled:opacity-50"
                   >
                     {attachingFinding ? 'Attaching...' : 'Link'}
                   </button>
@@ -503,9 +503,9 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entr
             <div className="space-y-3">
               {findings.length > 0 ? (
                 findings.map((f, idx) => (
-                  <div key={idx} className="bg-[#0a0d14] border border-[#1e293b] p-3 rounded-lg space-y-1.5">
+                  <div key={idx} className="bg-[#0c0e15] border border-[#212738] p-3 rounded space-y-1.5">
                     <div className="flex items-center justify-between">
-                      <span className="font-mono text-xs font-bold text-blue-400">{f.ruleCode}</span>
+                      <span className="font-mono text-xs font-bold text-sky-400">{f.ruleCode}</span>
                       <SeverityBadge severity={f.severity} />
                     </div>
                     <p className="text-xs font-semibold text-slate-200">{f.ruleName}</p>

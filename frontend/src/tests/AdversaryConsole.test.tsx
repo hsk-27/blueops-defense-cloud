@@ -18,9 +18,9 @@ vi.mock('../services/api', () => ({
 describe('AdversaryConsolePage', () => {
   it('renders adversary console title and scenarios list', () => {
     render(<AdversaryConsolePage />);
-    expect(screen.getByText('Adversary Simulation Console')).toBeDefined();
+    expect(screen.getByText('Adversary Emulation Engine (BAS)')).toBeDefined();
     expect(screen.getAllByText('Windows Multi-Stage APT Execution Chain').length).toBeGreaterThan(0);
     expect(screen.getByText('Linux Account Compromise & Privilege Escalation')).toBeDefined();
-    expect(screen.getByText('Launch Simulation')).toBeDefined();
+    expect(screen.getByText('Execute Emulation')).toBeDefined();
   });
 });

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { 
-  Skull, Play, ShieldCheck, Terminal, AlertTriangle, 
+  Crosshair, Play, ShieldCheck, Terminal, AlertTriangle, 
   CheckCircle2, Clock, Zap, ExternalLink, ArrowRight, RefreshCw 
 } from 'lucide-react';
 import { api } from '../services/api';
@@ -117,21 +117,21 @@ export const AdversaryConsolePage: React.FC<AdversaryConsoleProps> = ({ onNaviga
   return (
     <div className="space-y-6">
       {/* Banner */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-[#212738]">
         <div>
-          <h1 className="text-2xl font-bold text-white flex items-center gap-2">
-            <Skull className="w-6 h-6 text-rose-500" />
-            Adversary Simulation Console
+          <h1 className="text-xl font-bold font-mono uppercase tracking-wider text-white flex items-center gap-2">
+            <Crosshair className="w-5 h-5 text-rose-500" />
+            Adversary Emulation Engine (BAS)
           </h1>
-          <p className="text-sm text-slate-400 mt-1">
-            Empirical attack testing & deterministic detection verification using MITRE ATT&CK scenarios
+          <p className="text-xs text-slate-400 mt-1 font-mono">
+            Automated MITRE ATT&CK adversary emulation & continuous detection validation
           </p>
         </div>
         <div className="flex items-center gap-3">
           {onNavigateTab && (
             <button
               onClick={() => onNavigateTab('incidents')}
-              className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 border border-slate-700 hover:border-slate-600 text-slate-300 rounded text-xs font-semibold transition-colors"
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0c0e15] border border-[#212738] hover:border-slate-600 text-slate-300 rounded text-xs font-mono font-medium transition-colors"
             >
               Incident Center
               <ArrowRight className="w-3.5 h-3.5" />
@@ -142,25 +142,25 @@ export const AdversaryConsolePage: React.FC<AdversaryConsoleProps> = ({ onNaviga
 
       {/* Benchmark Summary Metrics */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-slate-900/60 border border-slate-800/80 rounded-lg p-4">
-          <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Detection Precision</div>
-          <div className="text-2xl font-bold text-emerald-400 mt-1">90.9%</div>
-          <div className="text-xs text-slate-500 mt-0.5">Empirical benchmark test</div>
+        <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Detection Precision</div>
+          <div className="text-2xl font-bold text-emerald-400 mt-1 font-mono">90.9%</div>
+          <div className="text-[11px] text-slate-500 mt-0.5 font-mono">Empirical benchmark test</div>
         </div>
-        <div className="bg-slate-900/60 border border-slate-800/80 rounded-lg p-4">
-          <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Adversary Recall</div>
-          <div className="text-2xl font-bold text-blue-400 mt-1">100.0%</div>
-          <div className="text-xs text-slate-500 mt-0.5">Zero false negatives</div>
+        <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Adversary Recall</div>
+          <div className="text-2xl font-bold text-sky-400 mt-1 font-mono">100.0%</div>
+          <div className="text-[11px] text-slate-500 mt-0.5 font-mono">Zero false negatives</div>
         </div>
-        <div className="bg-slate-900/60 border border-slate-800/80 rounded-lg p-4">
-          <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Mean Time to Detect (MTTD)</div>
-          <div className="text-2xl font-bold text-amber-400 mt-1">3.43s</div>
-          <div className="text-xs text-slate-500 mt-0.5">End-to-end ingestion latency</div>
+        <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Mean Time to Detect (MTTD)</div>
+          <div className="text-2xl font-bold text-amber-400 mt-1 font-mono">3.43s</div>
+          <div className="text-[11px] text-slate-500 mt-0.5 font-mono">End-to-end ingestion latency</div>
         </div>
-        <div className="bg-slate-900/60 border border-slate-800/80 rounded-lg p-4">
-          <div className="text-xs text-slate-400 uppercase tracking-wider font-semibold">Mean Time to Respond (MTTR)</div>
-          <div className="text-2xl font-bold text-purple-400 mt-1">42.0s</div>
-          <div className="text-xs text-slate-500 mt-0.5">Automated approval & execution</div>
+        <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Mean Time to Respond (MTTR)</div>
+          <div className="text-2xl font-bold text-indigo-400 mt-1 font-mono">42.0s</div>
+          <div className="text-[11px] text-slate-500 mt-0.5 font-mono">Automated execution</div>
         </div>
       </div>
 
@@ -168,8 +168,8 @@ export const AdversaryConsolePage: React.FC<AdversaryConsoleProps> = ({ onNaviga
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* Left: Scenario Selector */}
         <div className="lg:col-span-5 space-y-4">
-          <h2 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
-            Available Adversary Scenarios
+          <h2 className="text-xs font-mono font-bold text-slate-300 uppercase tracking-wider">
+            Available Emulation Scenarios
           </h2>
           <div className="space-y-3">
             {SCENARIOS.map((sc) => {
@@ -178,25 +178,25 @@ export const AdversaryConsolePage: React.FC<AdversaryConsoleProps> = ({ onNaviga
                 <div
                   key={sc.id}
                   onClick={() => !running && setSelectedScenario(sc)}
-                  className={`p-4 rounded-lg border cursor-pointer transition-all ${
+                  className={`p-3.5 rounded-md border cursor-pointer transition-all ${
                     isSelected
-                      ? 'bg-rose-950/20 border-rose-500/60 shadow-lg shadow-rose-950/20'
-                      : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+                      ? 'bg-rose-950/20 border-rose-500/70 shadow-lg shadow-rose-950/20'
+                      : 'bg-[#11141d] border-[#212738] hover:border-slate-700'
                   }`}
                 >
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono font-semibold px-2 py-0.5 bg-slate-800 text-rose-400 rounded">
+                    <span className="text-[10px] font-mono font-semibold px-1.5 py-0.5 bg-[#0c0e15] border border-[#212738] text-rose-400 rounded">
                       {sc.id}
                     </span>
-                    <span className="text-[10px] font-bold px-2 py-0.5 bg-rose-950 text-rose-300 border border-rose-800/40 rounded uppercase">
+                    <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 bg-rose-950/60 text-rose-300 border border-rose-800/40 rounded uppercase">
                       {sc.severity}
                     </span>
                   </div>
-                  <h3 className="font-semibold text-white text-sm mt-2">{sc.name}</h3>
-                  <p className="text-xs text-slate-400 mt-1 leading-relaxed">{sc.description}</p>
+                  <h3 className="font-semibold text-white text-xs mt-2">{sc.name}</h3>
+                  <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">{sc.description}</p>
                   <div className="flex flex-wrap gap-1 mt-3">
                     {sc.mitreTechniques.map((tech) => (
-                      <span key={tech} className="text-[10px] font-mono px-1.5 py-0.5 bg-slate-950 text-slate-300 border border-slate-800 rounded">
+                      <span key={tech} className="text-[10px] font-mono px-1.5 py-0.5 bg-[#0c0e15] text-slate-300 border border-[#212738] rounded">
                         {tech}
                       </span>
                     ))}
@@ -209,33 +209,33 @@ export const AdversaryConsolePage: React.FC<AdversaryConsoleProps> = ({ onNaviga
 
         {/* Right: Execution Console */}
         <div className="lg:col-span-7 space-y-4">
-          <div className="bg-slate-900/60 border border-slate-800/80 rounded-lg p-5">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-800">
+          <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
+            <div className="flex items-center justify-between pb-3 border-b border-[#212738]">
               <div>
-                <span className="text-xs font-mono text-rose-400 font-semibold">{selectedScenario.id}</span>
-                <h2 className="text-lg font-bold text-white mt-0.5">{selectedScenario.name}</h2>
+                <span className="text-[10px] font-mono text-rose-400 font-semibold">{selectedScenario.id}</span>
+                <h2 className="text-sm font-bold text-white mt-0.5">{selectedScenario.name}</h2>
               </div>
               <button
                 onClick={handleRunSimulation}
                 disabled={running}
-                className={`px-4 py-2 rounded-lg font-semibold text-xs flex items-center gap-2 transition-all shadow-md ${
+                className={`px-3 py-1.5 rounded font-mono text-xs font-semibold flex items-center gap-2 transition-all ${
                   running
-                    ? 'bg-slate-800 text-slate-500 cursor-not-allowed'
-                    : 'bg-rose-600 hover:bg-rose-500 text-white shadow-rose-900/40'
+                    ? 'bg-[#0c0e15] text-slate-500 border border-[#212738] cursor-not-allowed'
+                    : 'bg-rose-600 hover:bg-rose-500 text-white'
                 }`}
               >
-                {running ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
-                {running ? 'Simulating Attack...' : 'Launch Simulation'}
+                {running ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                {running ? 'Running Emulation...' : 'Execute Emulation'}
               </button>
             </div>
 
             {/* Stages Breakdown */}
             <div className="mt-4 space-y-2">
-              <div className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Attack Sequence Stages:</div>
+              <div className="text-[10px] font-mono uppercase font-semibold text-slate-400 tracking-wider">Attack Sequence Stages:</div>
               <div className="space-y-1.5">
                 {selectedScenario.stages.map((stg, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs text-slate-300 font-mono bg-slate-950/50 px-3 py-1.5 rounded border border-slate-800/60">
-                    <span className="w-5 h-5 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center text-[10px] font-bold">
+                  <div key={idx} className="flex items-center gap-2 text-xs text-slate-300 font-mono bg-[#0c0e15] px-3 py-1.5 rounded border border-[#212738]">
+                    <span className="w-4 h-4 rounded-full bg-[#181d2a] text-slate-400 flex items-center justify-center text-[10px] font-bold">
                       {idx + 1}
                     </span>
                     {stg}
@@ -245,18 +245,18 @@ export const AdversaryConsolePage: React.FC<AdversaryConsoleProps> = ({ onNaviga
             </div>
 
             {/* Terminal Live Output */}
-            <div className="mt-5">
-              <div className="flex items-center justify-between text-xs font-semibold text-slate-400 mb-2">
+            <div className="mt-4">
+              <div className="flex items-center justify-between text-xs font-mono text-slate-400 mb-2">
                 <span className="flex items-center gap-1.5">
                   <Terminal className="w-3.5 h-3.5 text-emerald-400" />
-                  Simulation Execution Terminal
+                  Execution Terminal Stream
                 </span>
-                <span className="text-[10px] text-slate-500 font-mono">STDOUT / TELEMETRY BUS</span>
+                <span className="text-[10px] text-slate-500 font-mono">TELEMETRY INGESTION BUS</span>
               </div>
-              <div className="bg-slate-950 border border-slate-800 rounded-lg p-3.5 font-mono text-xs text-emerald-400 h-64 overflow-y-auto space-y-1">
+              <div className="bg-[#0c0e15] border border-[#212738] rounded p-3 font-mono text-xs text-emerald-400 h-64 overflow-y-auto space-y-1">
                 {executionLogs.length === 0 ? (
                   <div className="text-slate-600 italic">
-                    Simulation console ready. Select a scenario on the left and click "Launch Simulation" to trigger the automated attack pipeline.
+                    Adversary validation engine idle. Select an attack scenario and click "Execute Emulation" to trigger verification.
                   </div>
                 ) : (
                   executionLogs.map((l, i) => <div key={i}>{l}</div>)
@@ -266,29 +266,29 @@ export const AdversaryConsolePage: React.FC<AdversaryConsoleProps> = ({ onNaviga
 
             {/* Simulation Findings Result Box */}
             {simulationResult && (
-              <div className="mt-4 p-4 bg-emerald-950/40 border border-emerald-500/50 rounded-lg space-y-2">
-                <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs uppercase tracking-wider">
+              <div className="mt-4 p-3.5 bg-emerald-950/30 border border-emerald-500/50 rounded space-y-2">
+                <div className="flex items-center gap-2 text-emerald-400 font-mono font-bold text-xs uppercase tracking-wider">
                   <CheckCircle2 className="w-4 h-4" />
-                  Simulation Successful: {simulationResult.findingsGenerated} Findings Triggered
+                  Validation Complete: {simulationResult.findingsGenerated} Finding(s) Generated
                 </div>
-                <p className="text-xs text-slate-300">
+                <p className="text-xs text-slate-300 font-mono">
                   {simulationResult.message}
                 </p>
-                <div className="flex items-center gap-3 pt-2">
+                <div className="flex items-center gap-3 pt-1">
                   {onNavigateTab && (
                     <>
                       <button
                         onClick={() => onNavigateTab('incidents')}
-                        className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-semibold flex items-center gap-1.5 transition-colors"
+                        className="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-xs font-mono font-medium flex items-center gap-1.5 transition-colors"
                       >
-                        View Correlated Incident in SOC Center
+                        Inspect Correlated Incident
                         <ExternalLink className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => onNavigateTab('telemetry')}
-                        className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-semibold transition-colors"
+                        className="px-2.5 py-1 bg-[#0c0e15] hover:bg-[#181d2a] border border-[#212738] text-slate-200 rounded text-xs font-mono transition-colors"
                       >
-                        Inspect Ingested Events
+                        Inspect Raw Events
                       </button>
                     </>
                   )}

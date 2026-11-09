@@ -42,24 +42,24 @@ const MainLayout: React.FC = () => {
 
   const getPageTitle = () => {
     switch (currentTab) {
-      case 'overview': return { title: 'Security Operations Center Overview', subtitle: 'Live Telemetry Analytics & Metrics' };
-      case 'telemetry': return { title: 'Live Telemetry Event Stream', subtitle: 'Ingestion & Normalization into Common Event Schema (CES v1.0.0)' };
-      case 'simulation': return { title: 'Adversary Simulation Console', subtitle: 'Empirical Attack Testing & Detection Benchmark' };
-      case 'incidents': return { title: 'Incident Center', subtitle: 'Threat Triage & Lifecycle Queue' };
-      case 'investigation': return { title: 'Incident Investigation Workspace', subtitle: `Deep-Dive Case Analysis #${selectedIncidentId}` };
-      case 'threat-intel': return { title: 'Threat Intelligence & IOC Hub', subtitle: 'Indicator Management & Telemetry Matching' };
-      case 'assets': return { title: 'Asset Inventory & Telemetry Health', subtitle: 'Monitored Endpoints & Perimeter Sensors' };
-      case 'detections': return { title: 'Detection Rule Management', subtitle: 'Sigma Analytics & MITRE ATT&CK Mapping' };
-      case 'response': return { title: 'Automated Incident Response Hub', subtitle: 'Constrained Reversible Playbooks' };
-      case 'audit': return { title: 'Compliance Audit & Reports', subtitle: 'System Audit Logs & Empirical Attack Coverage' };
-      default: return { title: 'BlueOps SOC Platform', subtitle: 'Enterprise Security' };
+      case 'overview': return { title: 'Executive Security Dashboard', subtitle: 'Enterprise Threat Telemetry & SecOps Health' };
+      case 'telemetry': return { title: 'Live Telemetry Ingestion Pipeline', subtitle: 'Real-Time Common Event Schema (CES v1.0.0) Normalization' };
+      case 'simulation': return { title: 'Breach & Attack Simulation (BAS) Engine', subtitle: 'Continuous Adversary Validation & MITRE ATT&CK Evaluation' };
+      case 'incidents': return { title: 'Threat Triage & Incident Queue', subtitle: 'Correlated Security Cases & Forensic Lifecycle' };
+      case 'investigation': return { title: 'Forensic Investigation Workspace', subtitle: `Case #${selectedIncidentId} • Authoritative Incident Advisory System` };
+      case 'threat-intel': return { title: 'Threat Intelligence & IOC Management', subtitle: 'Global Indicator Feeds & In-Stream Hash/IP Matching' };
+      case 'assets': return { title: 'Attack Surface & Asset Inventory', subtitle: 'Monitored Host Telemetry, Kernel Sensors & Perimeter TAPs' };
+      case 'detections': return { title: 'Detection Engineering & Sigma Analytics', subtitle: 'Production Sigma Detection Rules & ATT&CK Heatmap' };
+      case 'response': return { title: 'Autonomous Response Orchestration', subtitle: 'Cryptographically Signed & Reversible Remediation Playbooks' };
+      case 'audit': return { title: 'Forensic Audit & Compliance Ledger', subtitle: 'Immutable Event Trail & Regulatory Reporting' };
+      default: return { title: 'BlueOps Enterprise SecOps Cloud', subtitle: 'Autonomous Threat Detection & Response' };
     }
   };
 
   const { title, subtitle } = getPageTitle();
 
   return (
-    <div className="flex bg-[#0a0d14] min-h-screen text-slate-100 font-sans">
+    <div className="flex bg-[#090a0f] min-h-screen text-slate-100 font-sans selection:bg-rose-900 selection:text-white">
       <Sidebar
         currentTab={currentTab === 'investigation' ? 'incidents' : currentTab}
         onSelectTab={(tab) => {

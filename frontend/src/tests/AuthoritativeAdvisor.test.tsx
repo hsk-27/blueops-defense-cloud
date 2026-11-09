@@ -38,8 +38,8 @@ describe('AuthoritativeAdvisor Component', () => {
 
   it('renders advisor header and recommendations count', () => {
     render(<AuthoritativeAdvisor recommendations={mockRecommendations} />);
-    expect(screen.getByText('Authoritative Incident Advisor')).toBeDefined();
-    expect(screen.getByText('2 Actionable Steps')).toBeDefined();
+    expect(screen.getByText('Authoritative SecOps Advisor')).toBeDefined();
+    expect(screen.getByText('2 Steps')).toBeDefined();
     expect(screen.getByText('NIST SP 800-61r2')).toBeDefined();
     expect(screen.getByText('CISA Federal IR')).toBeDefined();
   });
@@ -69,7 +69,7 @@ describe('AuthoritativeAdvisor Component', () => {
     });
 
     render(<AuthoritativeAdvisor recommendations={mockRecommendations} />);
-    const copyButton = screen.getByText('Copy SOP Checklist');
+    const copyButton = screen.getByText('Copy SOP');
     expect(copyButton).toBeDefined();
 
     await act(async () => {

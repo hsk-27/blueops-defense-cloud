@@ -41,41 +41,41 @@ export const OverviewPage: React.FC<{ onNavigateToIncident: (id: number) => void
   if (loading && !metrics) {
     return (
       <div className="p-8 flex items-center justify-center min-h-[60vh] text-slate-400 space-x-3">
-        <RefreshCw className="w-5 h-5 animate-spin text-blue-500" />
-        <span>Loading SOC Overview Telemetry...</span>
+        <RefreshCw className="w-4 h-4 animate-spin text-sky-400" />
+        <span className="font-mono text-xs uppercase tracking-wider text-slate-400">Loading Telemetry & SecOps State...</span>
       </div>
     );
   }
 
   return (
-    <div className="p-8 space-y-6 max-w-7xl mx-auto">
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
       {/* Top Banner: Key Operations Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Active Incidents */}
-        <div className="bg-[#111726] border border-[#1e293b] rounded-xl p-5 relative overflow-hidden">
+        <div className="bg-[#11141d] border border-[#212738] rounded-md p-4 relative overflow-hidden">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-mono uppercase tracking-wider">Active Incidents</span>
-            <ShieldAlert className="w-4 h-4 text-red-400" />
+            <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400">Active Incidents</span>
+            <ShieldAlert className="w-4 h-4 text-rose-500" />
           </div>
-          <div className="text-3xl font-extrabold text-slate-100 mb-2">
+          <div className="text-3xl font-extrabold text-slate-100 mb-2 font-mono">
             {metrics?.activeIncidents || 0}
           </div>
           <div className="flex items-center space-x-2 text-[11px] font-mono">
-            <span className="text-red-400 font-semibold">{metrics?.criticalIncidents || 0} Critical</span>
-            <span className="text-slate-600">|</span>
-            <span className="text-orange-400 font-semibold">{metrics?.highIncidents || 0} High</span>
-            <span className="text-slate-600">|</span>
+            <span className="text-rose-400 font-semibold">{metrics?.criticalIncidents || 0} Critical</span>
+            <span className="text-slate-700">|</span>
+            <span className="text-amber-400 font-semibold">{metrics?.highIncidents || 0} High</span>
+            <span className="text-slate-700">|</span>
             <span className="text-yellow-400">{metrics?.mediumIncidents || 0} Med</span>
           </div>
         </div>
 
         {/* Assets Monitored */}
-        <div className="bg-[#111726] border border-[#1e293b] rounded-xl p-5">
+        <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-mono uppercase tracking-wider">Monitored Assets</span>
-            <Server className="w-4 h-4 text-blue-400" />
+            <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400">Monitored Assets</span>
+            <Server className="w-4 h-4 text-sky-400" />
           </div>
-          <div className="text-3xl font-extrabold text-slate-100 mb-2">
+          <div className="text-3xl font-extrabold text-slate-100 mb-2 font-mono">
             {metrics?.totalAssets || 0}
           </div>
           <p className="text-[11px] text-slate-400 font-mono">
@@ -84,33 +84,33 @@ export const OverviewPage: React.FC<{ onNavigateToIncident: (id: number) => void
         </div>
 
         {/* MTTD */}
-        <div className="bg-[#111726] border border-[#1e293b] rounded-xl p-5">
+        <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-mono uppercase tracking-wider">Mean Time to Detect (MTTD)</span>
+            <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400">Mean Time to Detect (MTTD)</span>
             <Clock className="w-4 h-4 text-emerald-400" />
           </div>
-          <div className="text-3xl font-extrabold text-emerald-400 mb-2">
+          <div className="text-3xl font-extrabold text-emerald-400 mb-2 font-mono">
             {metrics?.meanTimeToDetectSeconds || 4.8}s
           </div>
-          <p className="text-[11px] text-slate-400 font-mono">Real-time OpenSearch Security Analytics</p>
+          <p className="text-[11px] text-slate-500 font-mono">Real-time OpenSearch Analytics</p>
         </div>
 
         {/* MTTR */}
-        <div className="bg-[#111726] border border-[#1e293b] rounded-xl p-5">
+        <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
           <div className="flex items-center justify-between text-slate-400 mb-2">
-            <span className="text-xs font-mono uppercase tracking-wider">Mean Time to Respond (MTTR)</span>
-            <Activity className="w-4 h-4 text-blue-400" />
+            <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400">Mean Time to Respond (MTTR)</span>
+            <Activity className="w-4 h-4 text-indigo-400" />
           </div>
-          <div className="text-3xl font-extrabold text-blue-400 mb-2">
+          <div className="text-3xl font-extrabold text-indigo-400 mb-2 font-mono">
             {Math.round(metrics?.meanTimeToRespondSeconds || 120)}s
           </div>
-          <p className="text-[11px] text-slate-400 font-mono">Orchestrated Playbook Remediation</p>
+          <p className="text-[11px] text-slate-500 font-mono">Orchestrated Playbook Remediation</p>
         </div>
       </div>
 
       {/* Subsystem Health Grid */}
-      <div className="bg-[#111726] border border-[#1e293b] rounded-xl p-5">
-        <h3 className="text-xs font-mono uppercase text-slate-400 tracking-wider mb-4 flex items-center space-x-2">
+      <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
+        <h3 className="text-[11px] font-mono uppercase text-slate-400 tracking-wider mb-3 flex items-center space-x-2">
           <span>Infrastructure & Telemetry Collector Health</span>
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
@@ -121,8 +121,8 @@ export const OverviewPage: React.FC<{ onNavigateToIncident: (id: number) => void
               const isDegraded = upper.includes('DEGRADED') || upper.includes('WARN');
 
               return (
-                <div key={key} className="bg-[#0a0d14] border border-[#1e293b] rounded-lg p-3">
-                  <div className="text-[11px] text-slate-400 font-mono uppercase truncate">{key}</div>
+                <div key={key} className="bg-[#0c0e15] border border-[#212738] rounded p-2.5">
+                  <div className="text-[10px] text-slate-400 font-mono uppercase truncate">{key}</div>
                   <div className="flex items-center space-x-1.5 mt-1">
                     {isHealthy ? (
                       <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
@@ -148,18 +148,18 @@ export const OverviewPage: React.FC<{ onNavigateToIncident: (id: number) => void
       {/* 2-Column Section: Recent Incidents & MITRE Tactics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Recent Incidents (2 cols) */}
-        <div className="lg:col-span-2 bg-[#111726] border border-[#1e293b] rounded-xl p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-bold text-slate-100 flex items-center space-x-2">
-              <ShieldAlert className="w-4 h-4 text-blue-400" />
-              <span>Recent Security Incidents</span>
+        <div className="lg:col-span-2 bg-[#11141d] border border-[#212738] rounded-md p-4">
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-xs font-mono uppercase font-bold text-slate-200 flex items-center space-x-2 tracking-wider">
+              <ShieldAlert className="w-4 h-4 text-rose-500" />
+              <span>Active Security Incidents</span>
             </h3>
-            <span className="text-xs text-slate-400 font-mono">Live Ingestion Stream</span>
+            <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider">Live Pipeline Queue</span>
           </div>
 
           <div className="overflow-x-auto">
             <table className="w-full text-left text-xs">
-              <thead className="bg-[#0a0d14] text-slate-400 uppercase font-mono border-b border-[#1e293b]">
+              <thead className="bg-[#171b26] text-slate-400 uppercase font-mono text-[10px] border-b border-[#212738]">
                 <tr>
                   <th className="py-2.5 px-3">Incident</th>
                   <th className="py-2.5 px-3">Title</th>
@@ -168,22 +168,22 @@ export const OverviewPage: React.FC<{ onNavigateToIncident: (id: number) => void
                   <th className="py-2.5 px-3">Action</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-[#1e293b]">
+              <tbody className="divide-y divide-[#212738]">
                 {metrics?.recentIncidents && metrics.recentIncidents.length > 0 ? (
                   metrics.recentIncidents.map((inc) => (
-                    <tr key={inc.id} className="hover:bg-[#161f30] transition-colors">
-                      <td className="py-3 px-3 font-mono text-blue-400 font-medium">{inc.incidentNumber}</td>
-                      <td className="py-3 px-3 text-slate-200 font-medium truncate max-w-xs">{inc.title}</td>
-                      <td className="py-3 px-3">
+                    <tr key={inc.id} className="hover:bg-[#181d2a] transition-colors">
+                      <td className="py-2.5 px-3 font-mono text-sky-400 font-medium">{inc.incidentNumber}</td>
+                      <td className="py-2.5 px-3 text-slate-200 font-medium truncate max-w-xs">{inc.title}</td>
+                      <td className="py-2.5 px-3">
                         <SeverityBadge severity={inc.severity} />
                       </td>
-                      <td className="py-3 px-3">
+                      <td className="py-2.5 px-3">
                         <StatusBadge status={inc.status} />
                       </td>
-                      <td className="py-3 px-3">
+                      <td className="py-2.5 px-3">
                         <button
                           onClick={() => onNavigateToIncident(inc.id)}
-                          className="text-blue-400 hover:text-blue-300 font-medium flex items-center space-x-1"
+                          className="text-sky-400 hover:text-sky-300 font-medium flex items-center space-x-1 font-mono text-[11px]"
                         >
                           <span>Investigate</span>
                           <ArrowUpRight className="w-3.5 h-3.5" />
@@ -193,8 +193,8 @@ export const OverviewPage: React.FC<{ onNavigateToIncident: (id: number) => void
                   ))
                 ) : (
                   <tr>
-                    <td colSpan={5} className="py-8 text-center text-slate-500 font-mono">
-                      No active incidents reported. Telemetry normal.
+                    <td colSpan={5} className="py-8 text-center text-slate-500 font-mono text-xs">
+                      No active incidents reported. Telemetry pipeline normal.
                     </td>
                   </tr>
                 )}
@@ -204,8 +204,8 @@ export const OverviewPage: React.FC<{ onNavigateToIncident: (id: number) => void
         </div>
 
         {/* MITRE ATT&CK Tactic Distribution (1 col) */}
-        <div className="bg-[#111726] border border-[#1e293b] rounded-xl p-5">
-          <h3 className="text-sm font-bold text-slate-100 mb-4 flex items-center space-x-2">
+        <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
+          <h3 className="text-xs font-mono uppercase font-bold text-slate-200 mb-3 flex items-center space-x-2 tracking-wider">
             <Binary className="w-4 h-4 text-emerald-400" />
             <span>Detection Tactic Coverage</span>
           </h3>
@@ -216,11 +216,11 @@ export const OverviewPage: React.FC<{ onNavigateToIncident: (id: number) => void
                 <div key={idx} className="space-y-1">
                   <div className="flex justify-between text-xs font-mono">
                     <span className="text-slate-300">{t.tactic}</span>
-                    <span className="text-blue-400 font-bold">{t.count} rules</span>
+                    <span className="text-sky-400 font-bold">{t.count} rules</span>
                   </div>
-                  <div className="w-full bg-[#0a0d14] h-2 rounded-full overflow-hidden border border-[#1e293b]">
+                  <div className="w-full bg-[#0c0e15] h-1.5 rounded-full overflow-hidden border border-[#212738]">
                     <div
-                      className="bg-blue-500 h-full rounded-full"
+                      className="bg-indigo-500 h-full rounded-full"
                       style={{ width: `${Math.min(100, t.count * 25)}%` }}
                     ></div>
                   </div>

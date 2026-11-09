@@ -155,8 +155,8 @@ export const AuthoritativeAdvisor: React.FC<AuthoritativeAdvisorProps> = ({
 
   if (loading) {
     return (
-      <div className="bg-[#111726] border border-[#1e293b] rounded-xl p-6 text-center text-slate-400 space-y-3">
-        <Sparkles className="w-5 h-5 text-blue-400 animate-spin mx-auto" />
+      <div className="bg-[#11141d] border border-[#212738] rounded-md p-6 text-center text-slate-400 space-y-3">
+        <Sparkles className="w-4 h-4 text-sky-400 animate-spin mx-auto" />
         <p className="text-xs font-mono">Analyzing telemetry against NIST SP 800-61r2 and CISA advisories...</p>
       </div>
     );
@@ -164,29 +164,29 @@ export const AuthoritativeAdvisor: React.FC<AuthoritativeAdvisorProps> = ({
 
   if (recommendations.length === 0) {
     return (
-      <div className="bg-[#111726] border border-[#1e293b] rounded-xl p-6 text-center text-slate-500 font-mono text-xs">
+      <div className="bg-[#11141d] border border-[#212738] rounded-md p-6 text-center text-slate-500 font-mono text-xs">
         No active authoritative recommendations recorded for this incident.
       </div>
     );
   }
 
   return (
-    <div className="bg-[#111726] border border-[#1e293b] rounded-xl p-5 shadow-xl space-y-4">
+    <div className="bg-[#11141d] border border-[#212738] rounded-md p-4 space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-[#1e293b] pb-3">
+      <div className="flex items-center justify-between border-b border-[#212738] pb-3">
         <div className="flex items-center space-x-2.5">
-          <div className="p-1.5 bg-blue-950/70 border border-blue-800/80 rounded-lg">
-            <ShieldCheck className="w-4 h-4 text-blue-400" />
+          <div className="p-1.5 bg-sky-950/70 border border-sky-800/80 rounded">
+            <ShieldCheck className="w-4 h-4 text-sky-400" />
           </div>
           <div>
-            <h3 className="text-sm font-bold text-slate-100 flex items-center space-x-2">
-              <span>Authoritative Incident Advisor</span>
-              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-blue-900/40 text-blue-300 border border-blue-800/60">
-                {recommendations.length} Actionable Steps
+            <h3 className="text-xs font-bold font-mono uppercase text-slate-200 flex items-center space-x-2 tracking-wider">
+              <span>Authoritative SecOps Advisor</span>
+              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-sky-900/40 text-sky-300 border border-sky-800/60">
+                {recommendations.length} Steps
               </span>
             </h3>
             <p className="text-[11px] text-slate-400">
-              Procedural guidance analyzed strictly from NIST SP 800-61r2, CISA KEV/CSA, MITRE D3FEND, and SANS PICERL.
+              Procedural guidance synthesized from NIST SP 800-61r2, CISA KEV/CSA, MITRE D3FEND, and SANS PICERL.
             </p>
           </div>
         </div>
@@ -194,18 +194,18 @@ export const AuthoritativeAdvisor: React.FC<AuthoritativeAdvisorProps> = ({
         <button
           type="button"
           onClick={handleCopyChecklist}
-          className="inline-flex items-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-900 hover:bg-slate-800 text-slate-200 border border-[#1e293b] hover:border-slate-700 transition"
+          className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded text-xs font-mono font-medium bg-[#0c0e15] hover:bg-[#181d2a] text-slate-200 border border-[#212738] hover:border-slate-600 transition"
           title="Copy authoritative incident SOP checklist to clipboard"
         >
           {copied ? (
             <>
               <Check className="w-3.5 h-3.5 text-emerald-400" />
-              <span className="text-emerald-400">Copied SOP!</span>
+              <span className="text-emerald-400 font-mono text-[11px]">Copied SOP</span>
             </>
           ) : (
             <>
-              <Copy className="w-3.5 h-3.5 text-slate-300" />
-              <span>Copy SOP Checklist</span>
+              <Copy className="w-3.5 h-3.5 text-slate-400" />
+              <span className="font-mono text-[11px]">Copy SOP</span>
             </>
           )}
         </button>
@@ -218,10 +218,10 @@ export const AuthoritativeAdvisor: React.FC<AuthoritativeAdvisorProps> = ({
           return (
             <div
               key={rec.id}
-              className={`bg-[#0a0d14] border transition rounded-xl p-4 space-y-3 ${
+              className={`bg-[#0c0e15] border transition rounded p-3 space-y-2.5 ${
                 rec.priority === 'IMMEDIATE_ACTION'
-                  ? 'border-red-900/60 hover:border-red-700/80'
-                  : 'border-[#1e293b] hover:border-slate-700'
+                  ? 'border-rose-900/60 hover:border-rose-700/80'
+                  : 'border-[#212738] hover:border-slate-700'
               }`}
             >
               {/* Card Header */}
@@ -233,18 +233,18 @@ export const AuthoritativeAdvisor: React.FC<AuthoritativeAdvisorProps> = ({
                   <div className="flex flex-wrap items-center gap-2">
                     {getSourceBadge(rec.authoritativeSource)}
                     {getPriorityBadge(rec.priority)}
-                    <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded bg-slate-900 text-slate-400 border border-slate-800">
+                    <span className="text-[10px] font-mono uppercase px-1.5 py-0.5 rounded bg-[#11141d] text-slate-400 border border-[#212738]">
                       {rec.phase.replace(/_/g, ' ')}
                     </span>
                   </div>
 
-                  <h4 className="text-xs font-bold text-slate-100 flex items-center space-x-1.5">
+                  <h4 className="text-xs font-semibold text-slate-100 flex items-center space-x-1.5">
                     <span>{rec.title}</span>
                   </h4>
 
                   <div className="text-[10px] font-mono text-slate-400 flex items-center space-x-1.5">
                     <span className="text-slate-500">Citation:</span>
-                    <span className="text-blue-300 font-semibold">{rec.citation}</span>
+                    <span className="text-sky-300 font-semibold">{rec.citation}</span>
                   </div>
                 </div>
 
@@ -259,9 +259,9 @@ export const AuthoritativeAdvisor: React.FC<AuthoritativeAdvisorProps> = ({
 
               {/* Collapsible Body */}
               {isExpanded && (
-                <div className="pt-2 border-t border-[#1e293b] space-y-3 text-xs">
+                <div className="pt-2 border-t border-[#212738] space-y-3 text-xs">
                   {/* Rationale */}
-                  <div className="bg-[#111726] border border-[#1e293b] p-3 rounded-lg text-slate-300 leading-relaxed text-[11px]">
+                  <div className="bg-[#11141d] border border-[#212738] p-3 rounded text-slate-300 leading-relaxed text-[11px]">
                     <span className="font-semibold text-slate-200 block mb-1">Authoritative Analysis & Rationale:</span>
                     {rec.rationale}
                   </div>
@@ -273,7 +273,7 @@ export const AuthoritativeAdvisor: React.FC<AuthoritativeAdvisorProps> = ({
                       <ul className="space-y-1 text-[11px] text-slate-300">
                         {rec.actionableSteps.map((step, idx) => (
                           <li key={idx} className="flex items-start space-x-2">
-                            <span className="text-blue-400 font-mono font-bold mt-0.5">•</span>
+                            <span className="text-sky-400 font-mono font-bold mt-0.5">•</span>
                             <span>{step}</span>
                           </li>
                         ))}
@@ -283,9 +283,9 @@ export const AuthoritativeAdvisor: React.FC<AuthoritativeAdvisorProps> = ({
 
                   {/* Playbook Quick Launch */}
                   {rec.suggestedPlaybookCode && onLaunchPlaybook && (
-                    <div className="pt-2 flex items-center justify-between bg-purple-950/30 border border-purple-800/40 p-3 rounded-lg">
+                    <div className="pt-2 flex items-center justify-between bg-indigo-950/20 border border-indigo-800/40 p-2.5 rounded">
                       <div className="space-y-0.5">
-                        <span className="text-[10px] font-mono text-purple-300 uppercase font-bold block">
+                        <span className="text-[10px] font-mono text-indigo-300 uppercase font-bold block">
                           Mapped Response Playbook:
                         </span>
                         <span className="text-xs font-semibold text-slate-200">
@@ -293,14 +293,14 @@ export const AuthoritativeAdvisor: React.FC<AuthoritativeAdvisorProps> = ({
                         </span>
                         {rec.suggestedTarget && (
                           <div className="text-[10px] font-mono text-slate-400">
-                            Target: <span className="text-purple-300 font-semibold">{rec.suggestedTarget}</span>
+                            Target: <span className="text-indigo-300 font-semibold">{rec.suggestedTarget}</span>
                           </div>
                         )}
                       </div>
 
                       <button
                         onClick={() => onLaunchPlaybook(rec.suggestedPlaybookCode!, rec.suggestedTarget || '')}
-                        className="bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs px-3 py-1.5 rounded-lg flex items-center space-x-1.5 shadow transition"
+                        className="bg-indigo-600 hover:bg-indigo-500 text-white font-mono font-medium text-xs px-2.5 py-1 rounded flex items-center space-x-1.5 transition"
                       >
                         <Zap className="w-3.5 h-3.5" />
                         <span>Launch Playbook</span>
