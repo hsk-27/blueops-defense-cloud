@@ -324,6 +324,8 @@ node test-lab/adversary-simulation/deceptive_attack_suite.js
 
 ## Documentation Index
 
+- **Manual Testing Runbook:** [`docs/MANUAL_TESTING_GUIDE.md`](docs/MANUAL_TESTING_GUIDE.md)
+- **Verification & Testing Guide:** [`docs/TESTING_GUIDE.md`](docs/TESTING_GUIDE.md)
 - **Authoritative Advisory System Guide:** [`docs/AUTHORITATIVE_ADVISORY_SYSTEM.md`](docs/AUTHORITATIVE_ADVISORY_SYSTEM.md)
 - **Architecture Specification:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - **Technical Design Document:** [`docs/TECHNICAL_DESIGN.md`](docs/TECHNICAL_DESIGN.md)
