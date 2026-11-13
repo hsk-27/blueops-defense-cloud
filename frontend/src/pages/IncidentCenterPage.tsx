@@ -31,7 +31,32 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
   const [newSeverity, setNewSeverity] = useState<IncidentSeverity>('HIGH');
   const [creating, setCreating] = useState(false);
 
-  const fetchIncidents = async () => {
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchIncidents = async () => {
+      try {
+        setLoading(true);
+        const res = await api.getIncidents({
+          severity: selectedSeverity || undefined,
+          status: selectedStatus || undefined,
+          size: 50
+        });
+        if (isMounted) setIncidents(res.content || []);
+      } catch (err) {
+        console.error('Failed to fetch incidents:', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
+    fetchIncidents();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedSeverity, selectedStatus]);
+
+  const handleManualRefresh = async () => {
     try {
       setLoading(true);
       const res = await api.getIncidents({
@@ -46,10 +71,6 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchIncidents();
-  }, [selectedSeverity, selectedStatus]);
 
   const handleCreateIncident = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -128,7 +149,7 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
 
         <div className="flex items-center space-x-3 w-full sm:w-auto justify-end">
           <button
-            onClick={fetchIncidents}
+            onClick={handleManualRefresh}
             title="Refresh"
             className="p-2 bg-[#0c0e15] hover:bg-[#181d2a] border border-[#212738] rounded text-slate-400 hover:text-slate-200 transition"
           >

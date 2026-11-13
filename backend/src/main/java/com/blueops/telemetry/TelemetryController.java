@@ -67,6 +67,12 @@ public class TelemetryController {
         return ResponseEntity.ok(normalizationService.getRecentEvents(limit));
     }
 
+    @GetMapping("/dlq")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST', 'VIEWER')")
+    public ResponseEntity<List<Map<String, Object>>> getDeadLetterQueue(@RequestParam(defaultValue = "50") int limit) {
+        return ResponseEntity.ok(normalizationService.getDeadLetterQueue(limit));
+    }
+
     @GetMapping("/stats")
     @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST', 'VIEWER')")
     public ResponseEntity<Map<String, Object>> getTelemetryStats() {

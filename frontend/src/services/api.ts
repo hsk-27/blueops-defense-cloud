@@ -117,6 +117,7 @@ export const api = {
 
   // Telemetry & Live Stream
   getRecentTelemetry: (limit = 50) => request<any[]>(`/telemetry/events?limit=${limit}`),
+  getDeadLetterQueue: (limit = 50) => request<any[]>(`/telemetry/dlq?limit=${limit}`),
   getTelemetryStats: () => request<any>('/telemetry/stats'),
   ingestTelemetry: (events: any) => request<any>('/telemetry/ingest', { method: 'POST', body: JSON.stringify(events) }),
   simulateAttack: (scenario: string) => request<any>('/telemetry/simulate-attack', { method: 'POST', body: JSON.stringify({ scenario }) }),

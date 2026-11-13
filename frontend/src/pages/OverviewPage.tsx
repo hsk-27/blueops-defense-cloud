@@ -20,22 +20,27 @@ export const OverviewPage: React.FC<{ onNavigateToIncident: (id: number) => void
   const [metrics, setMetrics] = useState<SocOverviewMetrics | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const data = await api.getSocOverview();
-      setMetrics(data);
-    } catch (err) {
-      console.error('Failed to load SOC overview:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 15000);
-    return () => clearInterval(interval);
+    let isMounted = true;
+
+    const loadData = async (isInitial = false) => {
+      try {
+        if (isInitial) setLoading(true);
+        const data = await api.getSocOverview();
+        if (isMounted) setMetrics(data);
+      } catch (err) {
+        console.error('Failed to load SOC overview:', err);
+      } finally {
+        if (isMounted && isInitial) setLoading(false);
+      }
+    };
+
+    loadData(true);
+    const interval = setInterval(() => loadData(false), 15000);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   if (loading && !metrics) {

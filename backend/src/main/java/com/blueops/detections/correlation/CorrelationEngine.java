@@ -30,10 +30,16 @@ public class CorrelationEngine {
 
     public List<CorrelatedScenario> evaluateFindings(List<FindingDto> findings) {
         List<CorrelatedScenario> scenarios = new ArrayList<>();
+        if (findings == null || findings.isEmpty()) return scenarios;
+
+        // Bounded correlation horizon (24 hours) to avoid processing stale findings
+        Instant horizon = Instant.now().minus(Duration.ofHours(24));
+        List<FindingDto> candidateFindings = findings.stream()
+                .filter(f -> f != null && f.getAssetId() != null && (f.getTimestamp() == null || f.getTimestamp().isAfter(horizon)))
+                .toList();
 
         // Group findings by asset
-        Map<String, List<FindingDto>> byAsset = findings.stream()
-                .filter(f -> f.getAssetId() != null)
+        Map<String, List<FindingDto>> byAsset = candidateFindings.stream()
                 .collect(Collectors.groupingBy(FindingDto::getAssetId));
 
         for (Map.Entry<String, List<FindingDto>> entry : byAsset.entrySet()) {

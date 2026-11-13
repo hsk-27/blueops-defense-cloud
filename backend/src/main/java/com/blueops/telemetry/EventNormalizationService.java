@@ -25,6 +25,7 @@ public class EventNormalizationService {
 
     // Bounded in-memory store for recent telemetry events (holds last 1000 events)
     private static final int MAX_BUFFER_SIZE = 1000;
+    private static final int MAX_DLQ_SIZE = 500;
     private final Deque<NormalizedEvent> recentEvents = new ConcurrentLinkedDeque<>();
     private final List<Map<String, Object>> deadLetterQueue = Collections.synchronizedList(new ArrayList<>());
 
@@ -133,19 +134,36 @@ public class EventNormalizationService {
             totalFailedDlq.incrementAndGet();
             log.warn("Telemetry normalization failed. Routing to Dead-Letter Queue (DLQ): {}", ex.getMessage());
             Map<String, Object> dlqEntry = new HashMap<>(raw);
-            dlqEntry.put("dlq_error", ex.getMessage());
+            dlqEntry.put("dlq_error", ex.getMessage() != null ? ex.getMessage() : "Unknown normalization error");
             dlqEntry.put("dlq_timestamp", Instant.now().toString());
-            deadLetterQueue.add(dlqEntry);
+            synchronized (deadLetterQueue) {
+                while (deadLetterQueue.size() >= MAX_DLQ_SIZE) {
+                    deadLetterQueue.remove(0);
+                }
+                deadLetterQueue.add(dlqEntry);
+            }
             return null;
         }
     }
 
     public List<NormalizedEvent> getRecentEvents(int limit) {
-        List<NormalizedEvent> list = new ArrayList<>(recentEvents);
-        if (list.size() > limit) {
-            return list.subList(0, limit);
+        if (limit <= 0) {
+            return Collections.emptyList();
         }
-        return list;
+        List<NormalizedEvent> list = new ArrayList<>(recentEvents);
+        int safeLimit = Math.min(limit, list.size());
+        return list.subList(0, safeLimit);
+    }
+
+    public List<Map<String, Object>> getDeadLetterQueue(int limit) {
+        if (limit <= 0) {
+            return Collections.emptyList();
+        }
+        synchronized (deadLetterQueue) {
+            List<Map<String, Object>> list = new ArrayList<>(deadLetterQueue);
+            int safeLimit = Math.min(limit, list.size());
+            return list.subList(0, safeLimit);
+        }
     }
 
     public Map<String, Object> getTelemetryStats() {

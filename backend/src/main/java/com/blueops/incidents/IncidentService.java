@@ -260,6 +260,7 @@ public class IncidentService {
         );
         incident.getFindings().add(incFinding);
         f.setStatus("LINKED_TO_INCIDENT");
+        findingAdapter.registerFinding(f);
 
         IncidentStatusHistory history = new IncidentStatusHistory(
                 incident, incident.getStatus().name(), incident.getStatus().name(),

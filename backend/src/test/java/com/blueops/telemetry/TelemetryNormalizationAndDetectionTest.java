@@ -360,6 +360,28 @@ class TelemetryNormalizationAndDetectionTest {
         assertEquals(1, savedMatches.size());
     }
 
+    @Test
+    @DisplayName("Normalization: Should clamp limit safely and route unparseable event to DLQ")
+    void shouldClampLimitAndRouteToDlq() {
+        // Safe limit clamping
+        assertTrue(normalizationService.getRecentEvents(0).isEmpty());
+        assertTrue(normalizationService.getRecentEvents(-5).isEmpty());
+        assertTrue(normalizationService.getDeadLetterQueue(0).isEmpty());
+        assertTrue(normalizationService.getDeadLetterQueue(-1).isEmpty());
+
+        // Ingest malformed payload (invalid ID type causing normalization exception)
+        Map<String, Object> malformed = new HashMap<>();
+        malformed.put("id", 99999); // ClassCastException -> routed to DLQ
+
+        NormalizedEvent normalized = normalizationService.normalize(malformed);
+        assertNull(normalized);
+
+        List<Map<String, Object>> dlq = normalizationService.getDeadLetterQueue(10);
+        assertFalse(dlq.isEmpty());
+        assertTrue(dlq.get(0).containsKey("dlq_error"));
+        assertEquals(1L, normalizationService.getTelemetryStats().get("totalFailedDlq"));
+    }
+
     // --- Lightweight Test Double Implementations ---
 
     private static class StubIocIndicatorRepository implements IocIndicatorRepository {

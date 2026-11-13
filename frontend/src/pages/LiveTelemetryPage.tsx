@@ -7,6 +7,8 @@ import { api } from '../services/api';
 
 export const LiveTelemetryPage: React.FC = () => {
   const [events, setEvents] = useState<any[]>([]);
+  const [dlqEvents, setDlqEvents] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'STREAM' | 'DLQ'>('STREAM');
   const [stats, setStats] = useState<any>({ totalReceived: 0, totalNormalized: 0, bufferedCount: 0, dlqCount: 0 });
   const [loading, setLoading] = useState(true);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -18,31 +20,55 @@ export const LiveTelemetryPage: React.FC = () => {
   const [ingestStatus, setIngestStatus] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const fetchTelemetry = async () => {
-    try {
-      const [evts, st] = await Promise.all([
-        api.getRecentTelemetry(50).catch(() => []),
-        api.getTelemetryStats().catch(() => ({ totalReceived: 0, totalNormalized: 0, bufferedCount: 0, dlqCount: 0 }))
-      ]);
-      setEvents(evts || []);
-      setStats(st || {});
-    } catch (err) {
-      console.error('Failed to load telemetry', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    let isMounted = true;
+
+    const fetchTelemetry = async () => {
+      try {
+        const [evts, st, dlqs] = await Promise.all([
+          api.getRecentTelemetry(50).catch(() => []),
+          api.getTelemetryStats().catch(() => ({ totalReceived: 0, totalNormalized: 0, bufferedCount: 0, dlqCount: 0 })),
+          api.getDeadLetterQueue(50).catch(() => [])
+        ]);
+        if (!isMounted) return;
+        setEvents(evts || []);
+        setStats(st || {});
+        setDlqEvents(dlqs || []);
+      } catch (err) {
+        console.error('Failed to load telemetry', err);
+      } finally {
+        if (isMounted) setLoading(false);
+      }
+    };
+
     fetchTelemetry();
     let interval: any = null;
     if (autoRefresh) {
       interval = setInterval(fetchTelemetry, 3000);
     }
     return () => {
+      isMounted = false;
       if (interval) clearInterval(interval);
     };
   }, [autoRefresh]);
+
+  const handleManualRefresh = async () => {
+    setLoading(true);
+    try {
+      const [evts, st, dlqs] = await Promise.all([
+        api.getRecentTelemetry(50).catch(() => []),
+        api.getTelemetryStats().catch(() => ({ totalReceived: 0, totalNormalized: 0, bufferedCount: 0, dlqCount: 0 })),
+        api.getDeadLetterQueue(50).catch(() => [])
+      ]);
+      setEvents(evts || []);
+      setStats(st || {});
+      setDlqEvents(dlqs || []);
+    } catch (err) {
+      console.error('Failed to refresh telemetry', err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleCopyJson = () => {
     if (selectedEvent) {
@@ -109,7 +135,7 @@ export const LiveTelemetryPage: React.FC = () => {
             {autoRefresh ? 'STREAMING ACTIVE' : 'STREAM PAUSED'}
           </button>
           <button
-            onClick={fetchTelemetry}
+            onClick={handleManualRefresh}
             className="p-1.5 bg-[#0c0e15] border border-[#212738] hover:border-slate-600 text-slate-300 rounded"
             title="Refresh now"
           >
@@ -127,8 +153,16 @@ export const LiveTelemetryPage: React.FC = () => {
 
       {/* Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
-          <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Total Received</div>
+        <div 
+          onClick={() => setActiveTab('STREAM')}
+          className={`bg-[#11141d] border rounded-md p-4 cursor-pointer transition ${
+            activeTab === 'STREAM' ? 'border-sky-500/80 bg-sky-950/20' : 'border-[#212738] hover:border-slate-600'
+          }`}
+        >
+          <div className="flex items-center justify-between text-[10px] text-slate-400 uppercase tracking-wider font-mono">
+            <span>Total Received</span>
+            {activeTab === 'STREAM' && <span className="text-sky-400 text-[10px]">Active Stream</span>}
+          </div>
           <div className="text-2xl font-bold text-white mt-1 font-mono">{stats.totalReceived || 0}</div>
           <div className="text-[11px] text-slate-500 mt-0.5 font-mono">Raw events received</div>
         </div>
@@ -142,8 +176,16 @@ export const LiveTelemetryPage: React.FC = () => {
           <div className="text-2xl font-bold text-sky-400 mt-1 font-mono">{stats.bufferedCount || 0}</div>
           <div className="text-[11px] text-slate-500 mt-0.5 font-mono">Capacity 1,000 in memory</div>
         </div>
-        <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
-          <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Dead-Letter Queue</div>
+        <div 
+          onClick={() => setActiveTab(activeTab === 'DLQ' ? 'STREAM' : 'DLQ')}
+          className={`bg-[#11141d] border rounded-md p-4 cursor-pointer transition ${
+            activeTab === 'DLQ' ? 'border-amber-500/80 bg-amber-950/20' : 'border-[#212738] hover:border-slate-600'
+          }`}
+        >
+          <div className="flex items-center justify-between text-[10px] text-slate-400 uppercase tracking-wider font-mono">
+            <span>Dead-Letter Queue</span>
+            {activeTab === 'DLQ' && <span className="text-amber-400 text-[10px]">Active View</span>}
+          </div>
           <div className={`text-2xl font-bold mt-1 font-mono ${(stats.dlqCount || 0) > 0 ? 'text-amber-400' : 'text-slate-400'}`}>
             {stats.dlqCount || 0}
           </div>
@@ -151,113 +193,203 @@ export const LiveTelemetryPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Filters & Search */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#11141d] p-3 rounded-md border border-[#212738]">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <div className="relative flex-1 sm:w-80">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
-            <input
-              type="text"
-              placeholder="Search hostname, process, cmdline, IP, action..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-9 pr-3 py-1.5 bg-[#0c0e15] border border-[#212738] rounded text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500 font-mono"
-            />
-          </div>
-        </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto font-mono">
-          <span className="text-xs text-slate-400">Provider:</span>
-          {['ALL', 'Sysmon', 'Linux-auditd', 'Suricata'].map((p) => (
-            <button
-              key={p}
-              onClick={() => setProviderFilter(p)}
-              className={`px-2.5 py-1 text-xs rounded font-medium border transition-colors ${
-                providerFilter === p
-                  ? 'bg-sky-950/60 border-sky-600 text-sky-400'
-                  : 'bg-[#0c0e15] border-[#212738] text-slate-400 hover:border-slate-600'
-              }`}
-            >
-              {p}
-            </button>
-          ))}
-        </div>
+      {/* View Switcher Tabs */}
+      <div className="flex items-center gap-2 border-b border-[#212738] pb-1 font-mono text-xs">
+        <button
+          onClick={() => setActiveTab('STREAM')}
+          className={`px-3 py-1.5 rounded-t font-semibold transition border-b-2 ${
+            activeTab === 'STREAM'
+              ? 'text-sky-400 border-sky-400 bg-[#171b26]'
+              : 'text-slate-400 border-transparent hover:text-slate-200'
+          }`}
+        >
+          CES Ingest Stream ({filteredEvents.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('DLQ')}
+          className={`px-3 py-1.5 rounded-t font-semibold transition border-b-2 flex items-center gap-1.5 ${
+            activeTab === 'DLQ'
+              ? 'text-amber-400 border-amber-400 bg-[#171b26]'
+              : 'text-slate-400 border-transparent hover:text-slate-200'
+          }`}
+        >
+          Dead-Letter Queue (DLQ)
+          <span className={`px-1.5 py-0.2 rounded text-[10px] ${
+            (stats.dlqCount || 0) > 0 ? 'bg-amber-950/80 text-amber-300 border border-amber-700/50' : 'bg-[#0c0e15] text-slate-500'
+          }`}>
+            {stats.dlqCount || 0}
+          </span>
+        </button>
       </div>
 
-      {/* Events Table */}
-      <div className="bg-[#11141d] border border-[#212738] rounded-md overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left text-xs">
-            <thead className="bg-[#171b26] text-slate-400 font-mono text-[10px] border-b border-[#212738] uppercase tracking-wider">
-              <tr>
-                <th className="py-2.5 px-4">Timestamp</th>
-                <th className="py-2.5 px-4">Provider</th>
-                <th className="py-2.5 px-4">Host / OS</th>
-                <th className="py-2.5 px-4">Category</th>
-                <th className="py-2.5 px-4">User</th>
-                <th className="py-2.5 px-4">Activity Details</th>
-                <th className="py-2.5 px-4 text-right">Action</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-[#212738] text-slate-300">
-              {filteredEvents.length === 0 ? (
-                <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-500 font-mono">
-                    No telemetry events currently in buffer matching filter.
-                  </td>
-                </tr>
-              ) : (
-                filteredEvents.map((ev, idx) => {
-                  const provider = ev.event?.provider || 'Unknown';
-                  const category = (ev.event?.category && ev.event.category[0]) || 'activity';
-                  const host = ev.host?.name || 'LAB-HOST';
-                  const os = ev.host?.osName || 'Unknown';
-                  const user = ev.user?.name || '-';
-                  const cmd = ev.process?.commandLine || ev.process?.name || (ev.destination?.ip ? `Egress -> ${ev.destination.ip}:${ev.destination.port}` : ev.event?.action);
+      {activeTab === 'STREAM' ? (
+        <>
+          {/* Filters & Search */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-[#11141d] p-3 rounded-md border border-[#212738]">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
+              <div className="relative flex-1 sm:w-80">
+                <Search className="w-4 h-4 text-slate-500 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Search hostname, process, cmdline, IP, action..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 bg-[#0c0e15] border border-[#212738] rounded text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500 font-mono"
+                />
+              </div>
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto font-mono">
+              <span className="text-xs text-slate-400">Provider:</span>
+              {['ALL', 'Sysmon', 'Linux-auditd', 'Suricata'].map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setProviderFilter(p)}
+                  className={`px-2.5 py-1 text-xs rounded font-medium border transition-colors ${
+                    providerFilter === p
+                      ? 'bg-sky-950/60 border-sky-600 text-sky-400'
+                      : 'bg-[#0c0e15] border-[#212738] text-slate-400 hover:border-slate-600'
+                  }`}
+                >
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
 
-                  return (
-                    <tr key={ev.id || idx} className="hover:bg-[#181d2a] transition-colors">
+          {/* Events Table */}
+          <div className="bg-[#11141d] border border-[#212738] rounded-md overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#171b26] text-slate-400 font-mono text-[10px] border-b border-[#212738] uppercase tracking-wider">
+                  <tr>
+                    <th className="py-2.5 px-4">Timestamp</th>
+                    <th className="py-2.5 px-4">Provider</th>
+                    <th className="py-2.5 px-4">Host / OS</th>
+                    <th className="py-2.5 px-4">Category</th>
+                    <th className="py-2.5 px-4">User</th>
+                    <th className="py-2.5 px-4">Activity Details</th>
+                    <th className="py-2.5 px-4 text-right">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#212738] text-slate-300">
+                  {filteredEvents.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="py-8 text-center text-slate-500 font-mono">
+                        No telemetry events currently in buffer matching filter.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredEvents.map((ev, idx) => {
+                      const provider = ev.event?.provider || 'Unknown';
+                      const category = (ev.event?.category && ev.event.category[0]) || 'activity';
+                      const host = ev.host?.name || 'LAB-HOST';
+                      const os = ev.host?.osName || 'Unknown';
+                      const user = ev.user?.name || '-';
+                      const cmd = ev.process?.commandLine || ev.process?.name || (ev.destination?.ip ? `Egress -> ${ev.destination.ip}:${ev.destination.port}` : ev.event?.action);
+
+                      return (
+                        <tr key={ev.id || idx} className="hover:bg-[#181d2a] transition-colors">
+                          <td className="py-2.5 px-4 font-mono text-slate-400 whitespace-nowrap">
+                            {new Date(ev.timestamp).toLocaleTimeString()}
+                          </td>
+                          <td className="py-2.5 px-4">
+                            <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase ${
+                              provider === 'Sysmon' ? 'bg-sky-950/60 text-sky-400 border border-sky-800/50' :
+                              provider.includes('auditd') ? 'bg-purple-950/60 text-purple-400 border border-purple-800/50' :
+                              'bg-amber-950/60 text-amber-400 border border-amber-800/50'
+                            }`}>
+                              {provider}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-4 font-mono">
+                            <div className="font-semibold text-white">{host}</div>
+                            <div className="text-[10px] text-slate-500">{os}</div>
+                          </td>
+                          <td className="py-2.5 px-4">
+                            <span className="px-2 py-0.5 bg-[#0c0e15] border border-[#212738] text-slate-300 rounded text-[10px] uppercase font-mono">
+                              {category}
+                            </span>
+                          </td>
+                          <td className="py-2.5 px-4 font-mono text-slate-300">{user}</td>
+                          <td className="py-2.5 px-4 font-mono text-slate-300 max-w-md truncate" title={cmd}>
+                            {cmd}
+                          </td>
+                          <td className="py-2.5 px-4 text-right">
+                            <button
+                              onClick={() => setSelectedEvent(ev)}
+                              className="px-2.5 py-1 bg-[#0c0e15] hover:bg-[#181d2a] border border-[#212738] text-slate-300 rounded text-[11px] font-mono inline-flex items-center gap-1 transition-colors"
+                            >
+                              <Eye className="w-3.5 h-3.5 text-sky-400" />
+                              Inspect
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      ) : (
+        /* DLQ Table */
+        <div className="bg-[#11141d] border border-[#212738] rounded-md overflow-hidden">
+          <div className="p-3 bg-[#171b26] border-b border-[#212738] flex items-center justify-between">
+            <div className="font-mono text-xs text-amber-400 font-semibold uppercase tracking-wider flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-amber-400" />
+              Dead-Letter Queue (DLQ) — Malformed Ingestion Records
+            </div>
+            <span className="text-[11px] font-mono text-slate-400">
+              Retaining {dlqEvents.length} rejected events
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#11141d] text-slate-400 font-mono text-[10px] border-b border-[#212738] uppercase tracking-wider">
+                <tr>
+                  <th className="py-2.5 px-4">Timestamp</th>
+                  <th className="py-2.5 px-4">Error Reason</th>
+                  <th className="py-2.5 px-4">Origin / Keys</th>
+                  <th className="py-2.5 px-4 text-right">Inspect</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#212738] text-slate-300">
+                {dlqEvents.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="py-8 text-center text-slate-500 font-mono">
+                      No malformed events recorded. Ingestion pipeline operating with zero schema rejections.
+                    </td>
+                  </tr>
+                ) : (
+                  dlqEvents.map((item, idx) => (
+                    <tr key={idx} className="hover:bg-[#181d2a] transition-colors">
                       <td className="py-2.5 px-4 font-mono text-slate-400 whitespace-nowrap">
-                        {new Date(ev.timestamp).toLocaleTimeString()}
+                        {item.dlq_timestamp ? new Date(item.dlq_timestamp).toLocaleTimeString() : '-'}
                       </td>
-                      <td className="py-2.5 px-4">
-                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold uppercase ${
-                          provider === 'Sysmon' ? 'bg-sky-950/60 text-sky-400 border border-sky-800/50' :
-                          provider.includes('auditd') ? 'bg-purple-950/60 text-purple-400 border border-purple-800/50' :
-                          'bg-amber-950/60 text-amber-400 border border-amber-800/50'
-                        }`}>
-                          {provider}
-                        </span>
+                      <td className="py-2.5 px-4 font-mono text-amber-400 font-medium">
+                        {item.dlq_error || 'Parser rejection'}
                       </td>
-                      <td className="py-2.5 px-4 font-mono">
-                        <div className="font-semibold text-white">{host}</div>
-                        <div className="text-[10px] text-slate-500">{os}</div>
-                      </td>
-                      <td className="py-2.5 px-4">
-                        <span className="px-2 py-0.5 bg-[#0c0e15] border border-[#212738] text-slate-300 rounded text-[10px] uppercase font-mono">
-                          {category}
-                        </span>
-                      </td>
-                      <td className="py-2.5 px-4 font-mono text-slate-300">{user}</td>
-                      <td className="py-2.5 px-4 font-mono text-slate-300 max-w-md truncate" title={cmd}>
-                        {cmd}
+                      <td className="py-2.5 px-4 font-mono text-slate-400 max-w-md truncate">
+                        Keys: {Object.keys(item).filter(k => !k.startsWith('dlq_')).join(', ') || 'empty'}
                       </td>
                       <td className="py-2.5 px-4 text-right">
                         <button
-                          onClick={() => setSelectedEvent(ev)}
+                          onClick={() => setSelectedEvent(item)}
                           className="px-2.5 py-1 bg-[#0c0e15] hover:bg-[#181d2a] border border-[#212738] text-slate-300 rounded text-[11px] font-mono inline-flex items-center gap-1 transition-colors"
                         >
-                          <Eye className="w-3.5 h-3.5 text-sky-400" />
-                          Inspect
+                          <Eye className="w-3.5 h-3.5 text-amber-400" />
+                          Inspect DLQ
                         </button>
                       </td>
                     </tr>
-                  );
-                })
-              )}
-            </tbody>
-          </table>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* JSON Inspector Drawer Modal */}
       {selectedEvent && (

@@ -102,6 +102,48 @@ class IncidentServiceTest {
         assertTrue(hasNote);
     }
 
+    @Test
+    @DisplayName("Should enforce state machine transitions and allow reopening")
+    void shouldEnforceStateMachineTransitions() {
+        IncidentCreateRequest req = new IncidentCreateRequest();
+        req.setTitle("Multi-stage Intrusion Alert");
+        req.setSeverity(IncidentSeverity.CRITICAL);
+        IncidentDto created = incidentService.createIncident(req, "analyst.alice");
+
+        // Valid transition NEW -> TRIAGED
+        IncidentStatusUpdateRequest triageReq = new IncidentStatusUpdateRequest();
+        triageReq.setStatus(IncidentStatus.TRIAGED);
+        triageReq.setReason("Triaged as genuine security event");
+        IncidentDto triaged = incidentService.updateStatus(created.getId(), triageReq, "analyst.alice");
+        assertEquals("TRIAGED", triaged.getStatus());
+
+        // Invalid direct transition TRIAGED -> CONTAINED (must investigate first)
+        IncidentStatusUpdateRequest invalidReq = new IncidentStatusUpdateRequest();
+        invalidReq.setStatus(IncidentStatus.CONTAINED);
+        assertThrows(InvalidActionException.class, () ->
+                incidentService.updateStatus(created.getId(), invalidReq, "analyst.alice")
+        );
+
+        // Valid transition TRIAGED -> INVESTIGATING -> CONTAINED -> RESOLVED
+        IncidentStatusUpdateRequest invReq = new IncidentStatusUpdateRequest();
+        invReq.setStatus(IncidentStatus.INVESTIGATING);
+        incidentService.updateStatus(created.getId(), invReq, "analyst.alice");
+
+        IncidentStatusUpdateRequest contReq = new IncidentStatusUpdateRequest();
+        contReq.setStatus(IncidentStatus.CONTAINED);
+        incidentService.updateStatus(created.getId(), contReq, "analyst.alice");
+
+        IncidentStatusUpdateRequest resReq = new IncidentStatusUpdateRequest();
+        resReq.setStatus(IncidentStatus.RESOLVED);
+        resReq.setResolutionRationale("Adversary C2 severed, host reimaged, credentials rotated.");
+        IncidentDto resolved = incidentService.updateStatus(created.getId(), resReq, "analyst.alice");
+        assertEquals("RESOLVED", resolved.getStatus());
+
+        // Valid reopening
+        IncidentDto reopened = incidentService.reopenIncident(created.getId(), "Secondary lateral movement identified", "analyst.bob");
+        assertEquals("REOPENED", reopened.getStatus());
+    }
+
     // -------------------------------------------------------------
     // Test Doubles (Avoid Mockito Dynamic Agent Delay on Java 21)
     // -------------------------------------------------------------
