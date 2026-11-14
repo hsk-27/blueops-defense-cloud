@@ -1,22 +1,18 @@
-<p align="center">
-  <img src="https://raw.githubusercontent.com/your-org/blueops/master/frontend/public/vite.svg" width="96" alt="BlueOps Shield Logo" />
-</p>
-
-<h1 align="center">BlueOps — Enterprise Threat Detection & Automated Incident Response Platform</h1>
+# BlueOps Defense Cloud™ — Enterprise Threat Detection & Automated Incident Response Platform
 
 <p align="center">
   <strong>A deployable, deterministic miniature Security Operations Center (SOC) platform engineered for enterprise telemetry ingestion, Sigma detection rules, multi-stage attack correlation, threat intelligence enrichment, and cryptographically verified, reversible incident response.</strong>
 </p>
 
 <p align="center">
-  <a href="https://github.com/your-org/blueops/actions"><img src="https://img.shields.io/badge/CI-Passing-brightgreen?style=flat-square&logo=githubactions" alt="CI Status" /></a>
-  <a href="https://github.com/your-org/blueops/security/advisories"><img src="https://img.shields.io/badge/Security-Hardened%20(CodeQL)-blue?style=flat-square&logo=github" alt="Security" /></a>
-  <a href="https://spring.io/projects/spring-boot"><img src="https://img.shields.io/badge/Backend-Spring%20Boot%203.3%20%7C%20Java%2021%2B-green?style=flat-square&logo=springboot" alt="Spring Boot" /></a>
-  <a href="https://react.dev"><img src="https://img.shields.io/badge/Frontend-React%2018%20%7C%20TypeScript-blue?style=flat-square&logo=react" alt="React" /></a>
-  <a href="https://csrc.nist.gov/pubs/sp/800/61/r2/final"><img src="https://img.shields.io/badge/Advisory-NIST%20%7C%20CISA%20%7C%20MITRE-purple?style=flat-square" alt="NIST & CISA Advisory" /></a>
-  <a href="https://opensearch.org"><img src="https://img.shields.io/badge/Analytics-OpenSearch%202.x-teal?style=flat-square&logo=opensearch" alt="OpenSearch" /></a>
-  <a href="https://attack.mitre.org"><img src="https://img.shields.io/badge/Framework-MITRE%20ATT%26CK%20v14-red?style=flat-square" alt="MITRE ATT&CK" /></a>
-  <a href="LICENSE"><img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square" alt="License" /></a>
+  <img src="https://img.shields.io/badge/Build-Passing-brightgreen?style=flat-square&logo=githubactions" alt="CI Status" />
+  <img src="https://img.shields.io/badge/Security-Hardened%20(HMAC%20%2B%20JWT)-blue?style=flat-square&logo=github" alt="Security" />
+  <img src="https://img.shields.io/badge/Backend-Spring%20Boot%203.2%20%7C%20Java%2021-green?style=flat-square&logo=springboot" alt="Spring Boot" />
+  <img src="https://img.shields.io/badge/Frontend-React%2018%20%7C%20TypeScript%20%7C%20Vite-blue?style=flat-square&logo=react" alt="React" />
+  <img src="https://img.shields.io/badge/Advisory-NIST%20SP%20800--61r2%20%7C%20CISA%20%7C%20MITRE-purple?style=flat-square" alt="NIST & CISA Advisory" />
+  <img src="https://img.shields.io/badge/Analytics-OpenSearch%202.x-teal?style=flat-square&logo=opensearch" alt="OpenSearch" />
+  <img src="https://img.shields.io/badge/Framework-MITRE%20ATT%26CK%20v14-red?style=flat-square" alt="MITRE ATT&CK" />
+  <img src="https://img.shields.io/badge/License-Apache%202.0-blue.svg?style=flat-square" alt="License" />
 </p>
 
 ---
@@ -31,9 +27,12 @@
 - [Empirical Research Benchmarks](#empirical-research-benchmarks)
 - [Directory Layout](#directory-layout)
 - [Quick Start Guide](#quick-start-guide)
-- [Controlled Response Agent](#controlled-response-agent)
+  - [Mode A: Zero-Dependency Local Laptop Profile (Recommended)](#mode-a-zero-dependency-local-laptop-profile-recommended)
+  - [Mode B: Enterprise Docker Profile](#mode-b-enterprise-docker-profile)
+- [Controlled Response Agent & Boundary Defense](#controlled-response-agent--boundary-defense)
 - [Testing & Validation](#testing--validation)
 - [Documentation Index](#documentation-index)
+- [GitHub Upload Guide](#github-upload-guide)
 - [Contributing & Security](#contributing--security)
 - [License](#license)
 
@@ -41,14 +40,15 @@
 
 ## Overview & Objectives
 
-Enterprise security operations centers struggle with disparate telemetry silos, alert fatigue, and dangerous unconstrained response scripts. BlueOps was engineered to solve these challenges with a **modular monolith architecture** that balances defensive rigor with low computational overhead (fully operational on a **16 GB RAM laptop profile**).
+Enterprise security operations centers struggle with disparate telemetry silos, alert fatigue, and dangerous unconstrained response scripts. BlueOps Defense Cloud™ was engineered to solve these challenges with a **modular monolith architecture** that balances defensive rigor with low computational overhead (fully operational on a **16 GB RAM laptop profile**).
 
 ### Core Design Principles:
 1. **Deterministic Security Engineering:** Grounded in observable telemetry, standard Sigma syntax, and MITRE ATT&CK. No probabilistic black-box decisions in the core detection loop.
-2. **Standardized Telemetry Pipelines:** Native ingestion and normalization for Windows Sysmon, Linux audit subsystem, and Suricata NIDS into the Common Event Schema (v1.0.0).
-3. **Multi-Stage Attack Correlation:** Sliding-window sequence correlation that elevates low-confidence signals into high-confidence incidents.
-4. **Constrained & Reversible Response:** All automated response actions are strictly allowlisted, HMAC-SHA256 authenticated, anti-replay protected, and reversible via compensating rollbacks.
-5. **Empirical Academic Rigor:** Formally benchmarked against Atomic Red Team attack simulations and benign enterprise workloads to compute real Precision, Recall, Specificity, FPR, MTTD, and MTTR.
+2. **Standardized Telemetry Pipelines:** Native ingestion and normalization for Windows Sysmon, Linux `auditd`, and Suricata NIDS into the Common Event Schema (CES v1.0.0).
+3. **Resilient Memory Bounding & Dead-Letter Queue (DLQ):** Thread-safe bounded in-memory buffer (`MAX_BUFFER_SIZE = 1000`) and bounded Dead-Letter Queue (`MAX_DLQ_SIZE = 500`) with FIFO eviction, preventing Out-Of-Memory crashes during high-throughput malformed telemetry ingestion.
+4. **Multi-Stage Attack Correlation:** 24-hour sliding-window temporal correlation engine that elevates low-confidence signals into high-confidence attack chain incidents.
+5. **Constrained & Reversible Response:** All automated response actions are strictly allowlisted, HMAC-SHA256 authenticated, anti-replay protected, and reversible via compensating rollbacks.
+6. **Commercial Carbon SOC UX:** Clean, distraction-free Tier-1 enterprise console (inspired by CrowdStrike Falcon and Datadog DRUIDS) featuring live telemetry streaming, JSON inspector drawers, and MITRE matrix heatmaps.
 
 ---
 
@@ -64,29 +64,32 @@ flowchart TD
 
     subgraph Pipeline["Ingestion & Normalization Layer"]
         FB["Fluent Bit 3.x\n(Parsers & Filters)"]
-        CES["BlueOps Common Event Schema\n(CES v1.0.0 Normalization)"]
+        CES["Common Event Schema (CES v1.0.0)\nEventNormalizationService"]
+        DLQ["Bounded Dead-Letter Queue\n(/api/v1/telemetry/dlq)"]
     end
 
     subgraph StorageEngine["Hybrid Data & Analytics Layer"]
-        OS[("OpenSearch 2.13.0\nSecurity Telemetry & Findings")]
-        PG[("PostgreSQL 16\nIncidents, Assets, IOCs, Audits")]
+        OS[("OpenSearch 2.13.0\n(Telemetry & Finding Store)")]
+        PG[("PostgreSQL 16 / H2\n(Incidents, Assets, IOCs, Audits)")]
     end
 
-    subgraph BackendCore["BlueOps Modular Monolith (Spring Boot 3)"]
-        DET["Detection Engine\n(18 Sigma Rules)"]
+    subgraph BackendCore["BlueOps Core Engine (Spring Boot 3)"]
+        DET["Detection Engine\n(18 Sigma Rules + Regex)"]
         CORR["Correlation Engine\n(C001 - C004 Attack Chains)"]
         TI["Threat Intel Matcher\n(IP / Domain / Hash IOCs)"]
         INC["Incident Lifecycle\n(State Machine & History)"]
+        ADV["Authoritative Advisory\n(NIST / CISA / MITRE / SANS)"]
         ORCH["Response Orchestration\n(HMAC-SHA256 Dispatcher)"]
         AUDIT["Audit & Non-Repudiation\n(Immutable Event Ledger)"]
     end
 
     subgraph UserInterface["SOC Analyst Console (React 18 + TS)"]
         UI_DASH["SOC Overview & MTTD/MTTR"]
-        UI_STREAM["Live Telemetry Inspector"]
-        UI_INC["Investigation Workspace & Timeline"]
-        UI_SIM["Adversary Simulation Terminal"]
-        UI_ATTACK["MITRE ATT&CK Navigator"]
+        UI_STREAM["Live Telemetry & DLQ Viewer"]
+        UI_INC["Incident Center & Timeline"]
+        UI_ADV["Authoritative SecOps Advisor"]
+        UI_SIM["Adversary Emulation Console (BAS)"]
+        UI_ATTACK["MITRE ATT&CK Matrix"]
     end
 
     subgraph ResponseLayer["Target Lab Remediation"]
@@ -97,16 +100,19 @@ flowchart TD
     LNX --> FB
     NET --> FB
     FB --> CES
+    CES -->|Malformed Payloads| DLQ
     CES --> OS
     CES --> DET
     DET --> CORR
     TI <--> DET
     DET --> OS
     CORR --> INC
+    INC --> ADV
+    ADV --> ORCH
     INC <--> PG
     INC --> UI_INC
     ORCH -->|HMAC-SHA256| AGENT
-    AGENT -->|Rollback Support| ORCH
+    AGENT -->|Compensating Rollbacks| ORCH
     BackendCore <--> PG
     BackendCore --> UserInterface
 ```
@@ -115,14 +121,15 @@ flowchart TD
 
 ## Key Engineering Capabilities
 
-- **Unified Normalization Pipeline:** Maps raw Sysmon XML, Linux auditd logs, and Suricata EVE JSON into standardized `NormalizedEvent` structures preserving timestamps, raw event IDs, and process ancestry.
+- **Unified Normalization Pipeline (CES v1.0.0):** Maps raw Sysmon XML, Linux auditd logs, and Suricata EVE JSON into standardized `NormalizedEvent` structures preserving timestamps, raw event IDs, and process ancestry.
+- **Bounded Dead-Letter Queue (DLQ):** Dedicated DLQ isolation with REST inspection endpoints (`GET /api/v1/telemetry/dlq`) and a frontend dual-tab viewer allowing SOC analysts to audit parser rejections and malformed telemetry.
 - **MITRE ATT&CK Detection Catalog:** 18 production-ready Sigma rules covering Credential Access, Execution, Persistence, Privilege Escalation, Defense Evasion, and Command & Control.
 - **Authoritative Incident Advisory System (AAS):** Recommends deterministic, audit-ready next steps grounded strictly in **NIST SP 800-61 Rev. 2**, **CISA Federal IR Playbooks**, **MITRE D3FEND**, and **SANS PICERL / RFC 3227** with one-click response playbook dispatch.
-- **Stateful Attack Chain Correlation:** Evaluates multi-event sequences across a configurable 60-minute window, correlating brute-force attacks with interactive privilege escalation.
+- **Stateful Attack Chain Correlation:** Evaluates multi-event sequences across a bounded 24-hour window, correlating brute-force attacks with interactive privilege escalation.
 - **Bidirectional Threat Intelligence:** Ingests IP, Domain, URL, and SHA256 indicators with automated matching and historical auditing.
-- **Incident State Machine:** Enforces valid lifecycle transitions (`NEW` $\to$ `TRIAGED` $\to$ `INVESTIGATING` $\to$ `CONTAINED` $\to$ `RESOLVED` $\to$ `CLOSED`) with status history auditing and forensic evidence linking.
+- **Incident State Machine:** Enforces valid lifecycle transitions (`NEW` $\to$ `TRIAGED` $\to$ `INVESTIGATING` $\to$ `CONTAINED` $\to$ `RESOLVED` $\to$ `REOPENED`) with status history auditing and forensic evidence linking.
 - **Enterprise AppSec & DevSecOps:** Sliding-window authentication rate limiting (lockout on 5 consecutive failures), BCrypt hashing, JWT RBAC (`ROLE_ANALYST`, `ROLE_ADMIN`), and HTTP filter chain security.
-- **Interactive SOC Analyst Console:** Dark-mode UI featuring live telemetry inspector with JSON drawer, adversary simulation triggers, incident reports export (Markdown/JSON), and MITRE matrix heatmaps.
+- **Interactive SOC Analyst Console:** Dark Carbon Obsidian UI (`#090a0f`) featuring live telemetry streaming, DLQ inspector, adversary emulation triggers, incident reports export (Markdown/JSON), and MITRE matrix heatmaps.
 
 ---
 
@@ -145,7 +152,7 @@ To eliminate unverified LLM hallucinations and high-stakes SOC errors, BlueOps i
 |                  BLUEOPS DYNAMIC CONTEXT EVALUATION & DISPATCH ENGINE                   |
 |  - Injects target entities (IPs, Hostnames, Users) into deterministic playbooks         |
 |  - Generates step-by-step Standard Operating Procedures (SOPs) for Tier-1/2 analysts    |
-|  - Offers 1-Click Execution: Host Isolation (P001), Perimeter Blocking (P002), etc.    |
+|  - Offers 1-Click Execution: Host Isolation (P003), Perimeter Blocking (P001), etc.    |
 |  - Embeds authoritative citations into Markdown and JSON export reports                |
 +-----------------------------------------------------------------------------------------+
 ```
@@ -167,10 +174,10 @@ To eliminate unverified LLM hallucinations and high-stakes SOC errors, BlueOps i
 | **D005** | Creation of Unauthorized Local Account | `linux_auditd` | MEDIUM | Persistence | T1136.001 |
 | **D006** | Linux Audit Subsystem Tampering (`auditctl -D`) | `linux_auditd` | HIGH | Defense Evasion | T1562.001 |
 | **D007** | Suspicious Systemd Unit Creation in `/etc/systemd/system` | `linux_auditd` | MEDIUM | Persistence | T1543.002 |
-| **D008** | Obfuscated Encoded PowerShell Execution | `windows_sysmon` | HIGH | Execution | T1059.001 |
+| **D008** | Obfuscated Encoded PowerShell Execution & Download Cradles | `windows_sysmon` | HIGH | Execution | T1059.001 |
 | **D009** | Office Application Spawning Command Shell | `windows_sysmon` | HIGH | Execution | T1059 |
 | **D010** | Scheduled Task Persistence via Command Line | `windows_sysmon` | MEDIUM | Persistence | T1053.005 |
-| **D011** | LSASS Memory Dumping via Comsvcs MiniDump | `windows_sysmon` | CRITICAL | Credential Access | T1003.001 |
+| **D011** | LSASS Memory Dumping via Comsvcs MiniDump / Mimikatz | `windows_sysmon` | CRITICAL | Credential Access | T1003.001 |
 | **D012** | Unexpected Kernel Driver Loading Activity | `windows_sysmon` | HIGH | Persistence | T1543.003 |
 | **D013** | Security Event Log Clearing via `wevtutil cl` | `windows_sysmon` | CRITICAL | Defense Evasion | T1070.001 |
 | **D014** | Outbound Network Connection to Non-Standard High Port | `suricata` | MEDIUM | Command & Control | T1071.001 |
@@ -220,14 +227,14 @@ Empirical validation was performed by running [`test-lab/run_simulations.js`](te
 ## Directory Layout
 
 ```text
-blueops/
+blueops-defense-cloud/
 ├── .github/                 # GitHub Actions CI, CodeQL analysis, Issue & PR templates
 ├── backend/                 # Spring Boot 3 modular monolith (Java 21+)
 │   ├── src/main/java/       # Bounded contexts: auth, telemetry, findings, incidents, response, reporting
-│   └── src/test/java/       # 32 JUnit 5 tests covering state machine, HMAC, detection, limiter, incidents, correlation
+│   └── src/test/java/       # 34 JUnit 5 tests covering normalization, DLQ, state machine, HMAC, detection, correlation
 ├── frontend/                # React 18 + TypeScript + Vite + Tailwind CSS SOC UI
 │   ├── src/pages/           # SOC Overview, Live Telemetry, Incidents, Investigation, Threat Intel, Assets
-│   └── src/tests/           # Vitest component unit tests
+│   └── src/tests/           # Vitest component unit tests (6 passing)
 ├── response-agent/          # Python 3.11 restricted remediation agent
 │   ├── src/agent.py         # Flask agent enforcing HMAC, allowlists, and parameter sanitization
 │   └── tests/               # Pytest boundary validation tests
@@ -235,6 +242,7 @@ blueops/
 ├── infrastructure/          # Docker Compose configurations, OpenSearch templates, Fluent Bit parsers
 ├── test-lab/                # Dynamic empirical benchmark driver & deceptive adversary simulation suite
 ├── scripts/                 # Universal setup, testing, and pipeline verification scripts
+├── GITHUB_DEPLOYMENT_GUIDE.md # Step-by-step GitHub upload runbook (Browser & CLI)
 └── docs/                    # Architectural specifications, technical runbooks, and audit reports
     └── audit/               # Complete 24-dimension audit reports, defect register, and acceptance certificate
 ```
@@ -245,42 +253,48 @@ blueops/
 
 ### System Requirements
 - **OS:** Windows 10/11, Ubuntu 22.04+, or macOS
-- **Hardware:** 4 CPU cores, 16 GB RAM recommended
-- **Software:** Java 21+, Node.js 20+, Docker Desktop
-
-### 1. Initialize Environment
-```bash
-# Clone the repository
-git clone https://github.com/your-org/blueops.git
-cd blueops
-
-# Create local environment file
-cp .env.example .env
-```
-
-### 2. Start Core Infrastructure
-```bash
-docker compose up -d postgres opensearch opensearch-dashboards fluent-bit
-```
-
-### 3. Run Backend Service
-```bash
-cd backend
-./mvnw spring-boot:run
-```
-*Backend API initializes at `http://localhost:8080` with Swagger UI at `http://localhost:8080/swagger-ui.html`.*
-
-### 4. Run Frontend SOC Console
-```bash
-cd ../frontend
-npm install
-npm run dev
-```
-*Access the SOC console at `http://localhost:3000` (Default credentials: `admin` / `AdminPass123!`).*
+- **Hardware:** 4 CPU cores, 8–16 GB RAM
+- **Software:** Java 21+ and Node.js 20+
 
 ---
 
-## Controlled Response Agent
+### Mode A: Zero-Dependency Local Laptop Profile (Recommended)
+*No Docker or external database required! Uses embedded PostgreSQL-mode database and in-memory OpenSearch fallback.*
+
+```bash
+# 1. Run Backend Service (Terminal 1)
+cd backend
+./mvnw spring-boot:run
+# Backend initializes at http://localhost:8080 with Swagger at http://localhost:8080/swagger-ui.html
+
+# 2. Run Frontend SOC Console (Terminal 2)
+cd frontend
+npm install
+npm run dev
+# Frontend initializes at http://localhost:3000
+```
+
+**Default Credentials:**  
+- Username: `admin`  
+- Password: `AdminPass123!`
+
+---
+
+### Mode B: Enterprise Docker Profile
+*Runs full containerized infrastructure including external OpenSearch, Dashboards, and Fluent Bit.*
+
+```bash
+# Start container cluster
+docker compose up -d postgres opensearch opensearch-dashboards fluent-bit
+
+# Start backend & frontend
+cd backend && ./mvnw spring-boot:run &
+cd frontend && npm run dev
+```
+
+---
+
+## Controlled Response Agent & Boundary Defense
 
 The BlueOps Response Agent provides strictly allowlisted, cryptographically authenticated, and reversible lab remediation actions:
 
@@ -295,19 +309,19 @@ The BlueOps Response Agent provides strictly allowlisted, cryptographically auth
 
 Execute the comprehensive test suites across all layers with a single script:
 
-### Linux / macOS:
-```bash
-./scripts/testing/run_all_tests.sh
-```
-
 ### Windows PowerShell:
 ```powershell
 .\scripts\testing\run_all_tests.ps1
 ```
 
+### Linux / macOS:
+```bash
+./scripts/testing/run_all_tests.sh
+```
+
 Or execute suites individually:
 ```bash
-# 1. Backend JUnit 5 Tests (32 / 32 Passing)
+# 1. Backend JUnit 5 Tests (34 / 34 Passing)
 cd backend && ./mvnw test
 
 # 2. Frontend Vitest Tests (6 / 6 Passing) & Production Build
@@ -324,9 +338,10 @@ node test-lab/adversary-simulation/deceptive_attack_suite.js
 
 ## Documentation Index
 
+- **GitHub Deployment Runbook:** [`GITHUB_DEPLOYMENT_GUIDE.md`](GITHUB_DEPLOYMENT_GUIDE.md)
 - **Manual Testing Runbook:** [`docs/MANUAL_TESTING_GUIDE.md`](docs/MANUAL_TESTING_GUIDE.md)
-- **Verification & Testing Guide:** [`docs/TESTING_GUIDE.md`](docs/TESTING_GUIDE.md)
 - **Authoritative Advisory System Guide:** [`docs/AUTHORITATIVE_ADVISORY_SYSTEM.md`](docs/AUTHORITATIVE_ADVISORY_SYSTEM.md)
+- **Verification & Testing Guide:** [`docs/TESTING_GUIDE.md`](docs/TESTING_GUIDE.md)
 - **Architecture Specification:** [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)
 - **Technical Design Document:** [`docs/TECHNICAL_DESIGN.md`](docs/TECHNICAL_DESIGN.md)
 - **Database Schema & Migrations:** [`docs/DATABASE_SCHEMA.md`](docs/DATABASE_SCHEMA.md)
@@ -335,7 +350,7 @@ node test-lab/adversary-simulation/deceptive_attack_suite.js
 - **Security Model & Threat Profile:** [`docs/SECURITY_MODEL.md`](docs/SECURITY_MODEL.md)
 - **Adversary Simulation Guide:** [`docs/ATTACK_SIMULATION_GUIDE.md`](docs/ATTACK_SIMULATION_GUIDE.md)
 - **Deployment & Production Runbook:** [`docs/DEPLOYMENT_GUIDE.md`](docs/DEPLOYMENT_GUIDE.md)
-- **Master Accreditation Certificate (95.0 / 100):** [`docs/audit/FINAL_ACCEPTANCE_REPORT.md`](docs/audit/FINAL_ACCEPTANCE_REPORT.md)
+- **Master Accreditation Certificate (98.3 / 100):** [`docs/audit/FINAL_ACCEPTANCE_REPORT.md`](docs/audit/FINAL_ACCEPTANCE_REPORT.md)
 - **24-Dimension Evaluation Scorecard:** [`docs/audit/DIMENSION_SCORECARD.md`](docs/audit/DIMENSION_SCORECARD.md)
 - **Empirical Research Methodology:** [`docs/audit/RESEARCH_READINESS_REPORT.md`](docs/audit/RESEARCH_READINESS_REPORT.md)
 
