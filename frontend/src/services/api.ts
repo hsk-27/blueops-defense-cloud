@@ -92,6 +92,9 @@ export const api = {
   updateDetectionStatus: (id: number, status: string) =>
     request<DetectionRule>(`/detections/${id}/status?status=${status}`, { method: 'PUT' }),
   getFindings: () => request<Finding[]>('/detections/findings'),
+  reloadSigmaRules: () =>
+    request<{ reloadedCount: number; status: string; message: string }>('/detections/reload', { method: 'POST' }),
+  getSigmaCatalog: () => request<any[]>('/detections/sigma-catalog'),
 
   // Threat Intel
   getIocs: () => request<IocIndicator[]>('/threat-intel/iocs'),

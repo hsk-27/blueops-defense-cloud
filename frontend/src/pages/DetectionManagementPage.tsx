@@ -25,6 +25,7 @@ export const DetectionManagementPage: React.FC = () => {
   const [selectedSource, setSelectedSource] = useState('');
   const [viewMode, setViewMode] = useState<'table' | 'matrix'>('table');
   const [inspectRule, setInspectRule] = useState<DetectionRule | null>(null);
+  const [reloadingSigma, setReloadingSigma] = useState(false);
 
   const loadRules = async () => {
     try {
@@ -53,6 +54,19 @@ export const DetectionManagementPage: React.FC = () => {
       await loadRules();
     } catch (err: any) {
       alert(err.message || 'Failed to update rule status');
+    }
+  };
+
+  const handleReloadSigma = async () => {
+    try {
+      setReloadingSigma(true);
+      const res = await api.reloadSigmaRules();
+      alert(`Dynamic Sigma Engine: Successfully reloaded ${res.reloadedCount} Sigma YAML rules from disk!`);
+      await loadRules();
+    } catch (err: any) {
+      alert(err.message || 'Failed to reload Sigma rules');
+    } finally {
+      setReloadingSigma(false);
     }
   };
 
@@ -114,6 +128,18 @@ export const DetectionManagementPage: React.FC = () => {
               <span>ATT&CK Matrix</span>
             </button>
           </div>
+
+          {isAdmin && (
+            <button
+              onClick={handleReloadSigma}
+              disabled={reloadingSigma}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-sky-950/70 hover:bg-sky-900/90 border border-sky-700/60 text-sky-300 hover:text-sky-100 rounded text-xs font-mono transition"
+              title="Reload all Sigma YAML files from disk dynamically"
+            >
+              <FileCode className={`w-3.5 h-3.5 ${reloadingSigma ? 'animate-spin' : ''}`} />
+              <span>{reloadingSigma ? 'Reloading...' : 'Reload Sigma YAML'}</span>
+            </button>
+          )}
 
           <button
             onClick={loadRules}

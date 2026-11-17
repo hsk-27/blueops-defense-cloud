@@ -1,12 +1,16 @@
 package com.blueops.detections;
 
 import com.blueops.common.dto.ApiResponse;
+import com.blueops.detections.sigma.SigmaRuleDefinition;
+import com.blueops.detections.sigma.SigmaRuleRegistry;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -16,9 +20,16 @@ import java.util.Map;
 public class DetectionRuleController {
 
     private final DetectionRuleService ruleService;
+    private final SigmaRuleRegistry sigmaRegistry;
+
+    @Autowired
+    public DetectionRuleController(DetectionRuleService ruleService, @Autowired(required = false) SigmaRuleRegistry sigmaRegistry) {
+        this.ruleService = ruleService;
+        this.sigmaRegistry = sigmaRegistry;
+    }
 
     public DetectionRuleController(DetectionRuleService ruleService) {
-        this.ruleService = ruleService;
+        this(ruleService, null);
     }
 
     @GetMapping
@@ -44,6 +55,35 @@ public class DetectionRuleController {
     @GetMapping("/summary")
     @Operation(summary = "Get high-level summary of detection coverage and rule states")
     public ResponseEntity<ApiResponse<Map<String, Object>>> getSummary() {
-        return ResponseEntity.ok(ApiResponse.success(ruleService.getDetectionsSummary()));
+        Map<String, Object> summary = new HashMap<>(ruleService.getDetectionsSummary());
+        if (sigmaRegistry != null) {
+            summary.put("dynamicSigmaLoadedCount", sigmaRegistry.getLoadedRuleCount());
+        }
+        return ResponseEntity.ok(ApiResponse.success(summary));
+    }
+
+    @GetMapping("/sigma-catalog")
+    @Operation(summary = "List all dynamically parsed declarative Sigma YAML rules")
+    public ResponseEntity<ApiResponse<List<SigmaRuleDefinition>>> getSigmaCatalog() {
+        if (sigmaRegistry == null) {
+            return ResponseEntity.ok(ApiResponse.success("Sigma registry uninitialized", List.of()));
+        }
+        return ResponseEntity.ok(ApiResponse.success(sigmaRegistry.getAllRules()));
+    }
+
+    @PostMapping("/reload")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Operation(summary = "Reload all Sigma detection rule YAML definitions from disk at runtime")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> reloadSigmaRules() {
+        if (sigmaRegistry == null) {
+            return ResponseEntity.badRequest().body(ApiResponse.error("Sigma registry not available"));
+        }
+        int count = sigmaRegistry.reloadRules();
+        Map<String, Object> result = Map.of(
+                "reloadedCount", count,
+                "status", "SUCCESS",
+                "message", "Successfully reloaded " + count + " Sigma detection rules from YAML storage."
+        );
+        return ResponseEntity.ok(ApiResponse.success(result));
     }
 }

@@ -13,12 +13,19 @@ import json
 import logging
 from flask import Flask, request, jsonify
 
+try:
+    from src.drivers import get_execution_driver
+except ImportError:
+    from drivers import get_execution_driver
+
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("BlueOpsResponseAgent")
 
 app = Flask(__name__)
 
 SECRET_KEY = os.environ.get("RESPONSE_AGENT_SECRET", "b7c938d10b7f43a99e1d8847e923832c3f59194e432c7e436814041b65b16130")
+EXECUTION_MODE = os.environ.get("EXECUTION_MODE", "SIMULATION")
+driver = get_execution_driver(EXECUTION_MODE)
 
 ALLOWLISTED_ACTIONS = {
     "BLOCK_IP",
@@ -63,7 +70,9 @@ def health():
         "status": "HEALTHY",
         "agent": "BlueOps Response Agent v1.0",
         "allowed_actions": sorted(list(ALLOWLISTED_ACTIONS)),
-        "simulation_mode": True
+        "execution_mode": EXECUTION_MODE,
+        "driver": driver.__class__.__name__,
+        "simulation_mode": EXECUTION_MODE.upper() == "SIMULATION"
     }), 200
 
 @app.route("/api/v1/execute", methods=["POST"])
@@ -123,16 +132,19 @@ def execute_action():
     PROCESSED_NONCES.add(action_id)
     logger.info(f"Received validated response action request: Action={resolved_action}, Target={target}, ActionId={action_id}")
 
-    # Map playbook to concrete execution
+    # Delegate execution to modular OS / simulation driver
+    driver_outcome = driver.execute(resolved_action, target)
+
     execution_result = {
         "actionId": action_id,
         "action": resolved_action,
         "playbook": playbook_code,
         "target": target,
-        "status": "SUCCESS",
-        "mode": "LAB_CONTROLLED_EXECUTION",
+        "status": driver_outcome.get("status", "SUCCESS"),
+        "mode": driver_outcome.get("mode", "LAB_CONTROLLED_EXECUTION"),
+        "driver": driver.__class__.__name__,
         "executed_at": time.time(),
-        "remediation": f"Remediation action '{resolved_action}' applied to '{target}' safely in lab environment."
+        "remediation": driver_outcome.get("remediation", f"Action '{resolved_action}' executed successfully.")
     }
 
     return jsonify(execution_result), 200
