@@ -184,4 +184,8 @@ export const api = {
     request<any>(`/response/soar/proposals/${id}/execute`, { method: 'POST' }),
   getProposalVerification: (id: number) =>
     request<any>(`/response/soar/proposals/${id}/verification`),
+
+  // M7 Operational Hardening & Health Telemetry
+  getSystemHealth: () => request<{ status: string; database: string; rulesEngine: string; rulesCount: number; storageFallback: string; timestamp: string }>('/system/health'),
+  getSystemDiagnostics: () => request<any>('/system/diagnostics'),
 };

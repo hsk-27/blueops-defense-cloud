@@ -71,6 +71,11 @@ def evict_expired_nonces_locked(current_time: float) -> None:
         for k in sorted_keys[:max(1, len(sorted_keys) // 5)]:
             del PROCESSED_NONCES[k]
 
+def evict_expired_nonces(current_time: float) -> None:
+    """Thread-safe wrapper to evict expired nonces."""
+    with NONCE_LOCK:
+        evict_expired_nonces_locked(current_time)
+
 def check_and_register_nonce(action_id: str, current_time: float) -> bool:
     """
     Atomically checks if a nonce is fresh and registers it if not present.
@@ -214,3 +219,7 @@ def execute_action():
     }
 
     return jsonify(execution_result), 200
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=5000)
+

@@ -27,7 +27,7 @@ The development of BlueOps is sequenced into ten discrete, verifiable milestones
 | **M4** | **Investigation & Incident Management** | Refine analyst triage workflows, related finding correlation, evidence provenance, and incident lifecycle state machine. | **Complete** |
 | **M5** | **Context & Correlation Engine** | Canonical entity taxonomy, observation provenance, graph relationships, cross-event attack chain correlation, and incident promotion. | **Complete** |
 | **M6** | **Controlled Response Orchestration & SOAR** | Policy-governed response framework, Separation of Duties, bounded simulation adapters, independent outcome verification, and host safety. | **Complete** |
-| **M7** | **Operational Hardening & Reliability** | Harden OpenSearch resilience, eliminate DLQ cyclic replay loops, optimize ring buffers, and add health probes. | **Next Milestone** |
+| **M7** | **Operational Hardening & Reliability** | Harden OpenSearch resilience, eliminate DLQ cyclic replay loops, optimize ring buffers, add health probes, and establish disaster recovery runbooks. | **Complete** |
 | **M8** | **Branch Expansion** | Expand Sigma catalog (Rules 19–50), integrate automated threat feeds, and build threat hunting query translator. | Expansion Gate |
 | **M9** | **Research & Benchmark Defensibility** | Conduct empirical benchmarks, latency profiling under load, and evaluate novel detection hypotheses. | Evaluation Gate |
 
@@ -166,3 +166,29 @@ The development of BlueOps is sequenced into ten discrete, verifiable milestones
 | **DEF-005** | `TelemetryController` / `EventNormalizationService` | **HIGH** | DLQ replay endpoint triggers infinite cyclic loop when re-normalizing unfixable poison-pill payloads. | M2 | **RESOLVED & VERIFIED** |
 | **DEF-006** | `CorrelationEngine` | **MEDIUM** | In-memory finding adapter drops correlation state on JVM restart. | M5 | Backlog |
 | **DEF-007** | `drivers.py` | **LOW** | Host isolation and evidence collection methods are simulation-only stubs in live mode. | M6 | Backlog |
+
+
+---
+
+### Milestone M7: Operational Hardening, Reliability & Deployment Safety (Stabilization)
+
+#### Task ID: BLG-M7-001 (Priority: P0 — Operational Safety)
+- **Title:** Resolution of CI Response Agent Pytest Import & Docker Build Failures
+- **Subsystem:** CI/CD & Testing Pipeline (`ci.yml`, `response-agent/src/agent.py`)
+- **Description:** Expose `evict_expired_nonces` in `src/agent.py` to prevent pytest collection failure on GitHub Actions runners, add entrypoint execution guard, and ensure container image contexts are hardened.
+- **Acceptance Criteria:** CI workflows pass cleanly with 0 import errors; Docker build contexts pass without missing wrapper scripts.
+- **Status:** **RESOLVED & VERIFIED**
+
+#### Task ID: BLG-M7-002 (Priority: P1 — Reliability)
+- **Title:** Implement Spring Boot Actuator Custom Health Indicator & Operational Diagnostics
+- **Subsystem:** Core H: System Diagnostics (`BlueOpsHealthIndicator.java`, `SystemDiagnosticsController.java`)
+- **Description:** Add `/api/v1/system/health` for unauthenticated liveness probes and `/api/v1/system/diagnostics` for authenticated, sanitized operational observability.
+- **Acceptance Criteria:** Health endpoint returns 200 `UP` when DB is healthy; diagnostics provides sanitized JVM memory, buffer, DLQ, and Sigma metrics without leaking secrets.
+- **Status:** **RESOLVED & VERIFIED**
+
+#### Task ID: BLG-M7-003 (Priority: P1 — Disaster Recovery & Operations)
+- **Title:** Author Comprehensive Operations, Deployment, Backup, and Troubleshooting Guides
+- **Subsystem:** Documentation & Operational Readiness
+- **Description:** Create `BLUEOPS_BACKUP_RECOVERY.md`, `BLUEOPS_OPERATIONS_MANUAL.md`, `BLUEOPS_DEPLOYMENT_GUIDE.md`, and `BLUEOPS_TROUBLESHOOTING.md`.
+- **Acceptance Criteria:** Covers RPO (<15m), RTO (<30m), DLQ poison pill handling, zero host mutation invariants, and complete Docker Compose topology.
+- **Status:** **RESOLVED & VERIFIED**

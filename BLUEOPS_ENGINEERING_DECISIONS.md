@@ -199,3 +199,33 @@ Autonomous SOAR remediation poses severe operational risks: accidental host modi
 3. **Separation of Duties (SoD)**: For `HIGH` and `CRITICAL` risk actions, the backend enforces that the proposal creator cannot self-approve their own proposal (`proposer != approver`). Secondary human authorization is mandatory.
 4. **Decoupled Independent Outcome Verification**: `ResponseVerificationEngine` is physically separated from adapter execution. Execution dispatch success does not imply verified remediation; the verification engine performs independent state probing, checks expected vs observed outcomes, and records persistent cryptographic evidence (`ResponseVerificationRecord`).
 5. **Multi-Stage Proposal Lifecycle**: Explicit state machine: `DRAFT` $\rightarrow$ `VALIDATING` $\rightarrow$ `PENDING_APPROVAL` $\rightarrow$ `APPROVED` $\rightarrow$ `READY` $\rightarrow$ `EXECUTING` $\rightarrow$ `EXECUTED` $\rightarrow$ `VERIFIED` (with terminal states `DENIED`, `CANCELLED`, `EXPIRED`, `EXECUTION_FAILED`, `VERIFICATION_FAILED`).
+
+
+---
+
+### ADR-013: Operational Diagnostics, Health Probes & Safe Diagnostic Telemetry (Milestone M7)
+
+#### Context & Problem Statement
+Operational monitoring of modern SOC platforms requires real-time health and performance observability across relational databases, search engines, telemetry buffers, and rule engines. However, exposing administrative endpoints without strict role isolation risks leaking credentials, JWT secrets, or cryptographic HMAC keys.
+
+#### Decision
+1. **Tiered Health & Diagnostic Exposure**:
+   - `/actuator/health` and `/api/v1/system/health`: Unauthenticated, lightweight probes returning coarse health indicators (`UP` / `DEGRADED`) suitable for container orchestrators, load balancers, and monitoring daemons without exposing internal system internals.
+   - `/api/v1/system/diagnostics`: Role-restricted (`ADMIN`, `ANALYST`) endpoint returning comprehensive, sanitized operational telemetry (JVM heap utilization, ring buffer depth, DLQ size, loaded Sigma rule count, SOAR response mode, and storage fallback status).
+2. **Strict Sanitization Invariant**: All diagnostic payloads strictly omit secrets, passwords, database connection strings, JWT signing keys, and HMAC shared keys.
+3. **Resilient OpenSearch Fallback**: If OpenSearch is disconnected, `OpenSearchFindingAdapter` seamlessly serves queries from its thread-safe in-memory cache and PostgreSQL audit store. Platform health degrades gracefully rather than throwing unhandled connection exceptions.
+
+---
+
+### ADR-014: Disaster Recovery Architecture, Database Dump Protocol & Poison-Pill Quarantine (Milestone M7)
+
+#### Context & Problem Statement
+Relational data and detection findings must be recoverable from infrastructure disasters with strict Recovery Point Objectives (RPO < 15 min) and Recovery Time Objectives (RTO < 30 min). Furthermore, in streaming ingestion pipelines, malformed or malicious payloads replayed from Dead-Letter Queues (DLQs) can cause infinite loop failures and CPU exhaustion (poison pills).
+
+#### Decision
+1. **Multi-Tiered Backup & Restore Protocol**:
+   - Tier 1 (PostgreSQL): Automated GPG-encrypted `pg_dump` backups with WAL archiving, retained for 14 daily and 12 monthly rotations.
+   - Tier 2 (Sigma Rules): Versioned Git repository storage providing RPO = 0.
+   - Tier 3 (OpenSearch): Ephemeral search indices rehydratable from Tier 1 relational findings on demand.
+2. **Automated Schema Migration Verification**: Cold restores automatically validate Flyway schema versioning (`V1` through `V4`) on startup, preventing silent schema drift.
+3. **Poison-Pill Trap**: When replaying DLQ entries via `POST /api/v1/telemetry/dlq/replay`, payloads that fail normalization $\ge 3$ consecutive times (`dlq_replay_count >= 3`) are automatically quarantined into a permanent failure repository, preventing cyclic replay loops and platform stalling.
