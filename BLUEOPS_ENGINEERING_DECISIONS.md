@@ -171,3 +171,31 @@ Security operations workflows require analysts to triage detection findings, agg
    - Transition to `RESOLVED` strictly requires a non-blank `resolutionRationale`.
    - Transition to `CLOSED` strictly requires prior `RESOLVED` or `FALSE_POSITIVE` state and records `closedAt`, `closedBy`, and mandatory `closureNotes`.
    - Reopening transitions `RESOLVED` or `CLOSED` to `REOPENED` with mandatory justification.
+
+
+---
+
+### ADR-011: Canonical Entity Taxonomy and Explainable Multi-Stage Correlation Engine (Milestone M5)
+
+#### Context & Problem Statement
+Adversary intrusions manifest across disparate telemetry streams and isolated findings. Analysts need an entity graph that connects identities, hosts, IP addresses, processes, and files without introducing external graph database overhead (such as Neo4j) or unexplainable black-box AI correlations.
+
+#### Decision
+1. **Canonical Entity Taxonomy**: Seven core types (`HOST`, `USER`, `IP_ADDRESS`, `DOMAIN`, `PROCESS`, `FILE`, `HASH`) with deterministic lowercase canonical ID generation (`host:<name>`, `user:<domain\\user>`, `ip:<ip>`, `domain:<fqdn>`, `proc:<host>:<name>:<pid>`, `file:<host>:<path>`, `hash:<sha256>`).
+2. **Deterministic Entity Resolution & Provenance**: `EntityResolutionService` computes dynamic risk scores (capped at 100.0), tracks observations with confidence scores, merges attributes without poisoning, and links bi-directional relationships (`HOST_HAS_PROCESS`, `USER_AUTHENTICATED_TO`, `PROCESS_SPAWNED_PROCESS`).
+3. **Structured Correlation Engine**: Evaluates host-grouped attack chains (`CORR-001` Linux brute-force privilege escalation, `CORR-002` Windows CMD spawning encoded PowerShell, `CORR-003` Threat Intel IOC match, `CORR-004` persistence installation) and hash-grouped lateral movement (`CORR-005` cross-host execution of identical binary).
+4. **Promotion to Incident**: `POST /api/v1/correlations/{id}/promote` converts correlated attack chains into formal high-priority `Incident` entities with pre-linked findings and entity context.
+
+---
+
+### ADR-012: Policy-Governed Response Architecture, Separation of Duties & Independent Outcome Verification (Milestone M6)
+
+#### Context & Problem Statement
+Autonomous SOAR remediation poses severe operational risks: accidental host modification, weaponized command injection, and service disruption. The platform must never turn analytical capabilities into uncontrolled execution on the host machine. Furthermore, conflating action dispatch with remediation verification creates false confidence.
+
+#### Decision
+1. **Non-Negotiable Host Safety Invariant**: All response actions execute in `SIMULATION` mode by default. All execution drivers suppress host mutation commands (`netsh`, `iptables`, `usermod`, `net user`), isolating operations to contained lab sandboxes. The host operating system, network interfaces, DNS, firewall, and developer machine processes remain strictly untouched.
+2. **Centralized Response Policy Engine**: Implements deny-by-default behavior, parameter sanitization (rejecting `-` flag injection, whitespace, and shell metacharacters), blast radius containment (blocking `127.0.0.1`, `localhost`, default gateways, and registered protected infrastructure), and risk classification (`LOW`, `MODERATE`, `HIGH`, `CRITICAL`).
+3. **Separation of Duties (SoD)**: For `HIGH` and `CRITICAL` risk actions, the backend enforces that the proposal creator cannot self-approve their own proposal (`proposer != approver`). Secondary human authorization is mandatory.
+4. **Decoupled Independent Outcome Verification**: `ResponseVerificationEngine` is physically separated from adapter execution. Execution dispatch success does not imply verified remediation; the verification engine performs independent state probing, checks expected vs observed outcomes, and records persistent cryptographic evidence (`ResponseVerificationRecord`).
+5. **Multi-Stage Proposal Lifecycle**: Explicit state machine: `DRAFT` $\rightarrow$ `VALIDATING` $\rightarrow$ `PENDING_APPROVAL` $\rightarrow$ `APPROVED` $\rightarrow$ `READY` $\rightarrow$ `EXECUTING` $\rightarrow$ `EXECUTED` $\rightarrow$ `VERIFIED` (with terminal states `DENIED`, `CANCELLED`, `EXPIRED`, `EXECUTION_FAILED`, `VERIFICATION_FAILED`).

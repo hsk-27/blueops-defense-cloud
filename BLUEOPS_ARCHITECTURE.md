@@ -250,61 +250,66 @@ BlueOps employs an explicit dual-store architecture with clearly delineated data
 
 ---
 
-## 6. CONTROLLED RESPONSE & SECURITY BOUNDARIES
+## 6. CONTROLLED RESPONSE ORCHESTRATION & SOAR (MILESTONE 6)
 
-The response subsystem represents the highest operational risk in BlueOps. To guarantee safety and prevent accidental service disruption or weaponization, execution is strictly compartmentalized:
+The response subsystem represents the highest operational risk in BlueOps. To guarantee host safety, prevent service disruption, and preclude uncontrolled execution, BlueOps enforces a strictly policy-governed SOAR architecture with complete decoupling between response proposals, policy evaluation, execution dispatch, and independent outcome verification:
 
 ```mermaid
 sequenceDiagram
     autonumber
     actor Analyst as SOC Analyst / Rule
-    participant ROS as ResponseOrchestrationService
-    participant RPV as ResponsePolicyValidator
-    participant DB as PostgreSQL (Audit/State)
-    participant HMAC as HmacSignatureService
-    participant Agent as Host Response Daemon (Python)
-    participant OS as Host OS (iptables/netsh/user)
+    participant RSO as ResponseSoarOrchestrator
+    participant RPE as ResponsePolicyEngine
+    participant DB as PostgreSQL (Proposals/Catalog/Targets)
+    participant SRA as SimulationResponseAdapter
+    participant RVE as ResponseVerificationEngine
+    participant AS as AuditService
 
-    Analyst->>ROS: requestAction(playbookCode, target, isSimulation)
-    ROS->>RPV: validateRequest(playbook, targetIdentifier, targetAsset)
-    alt Target in Protected Subnet / Loopback / Malformed
-        RPV-->>ROS: Throw InvalidActionException (Policy Violation)
-        ROS-->>Analyst: HTTP 400 Rejected by Policy
-    else Valid Target
-        RPV-->>ROS: Policy Check Passed
-        ROS->>DB: Save Action (PENDING or AUTO_APPROVED)
-        alt Action Requires Manual Approval & Not Approved
-            ROS-->>Analyst: Action Queued for Approval
-        else Approved / Auto-Approved
-            ROS->>HMAC: generateHeaders(payloadJson)
-            HMAC-->>ROS: X-Signature, X-Timestamp, X-Nonce
-            ROS->>Agent: POST /api/v1/action (Signed Payload)
-            Agent->>Agent: Verify Timestamp (<= 60s) & Nonce (Sliding Window)
-            Agent->>Agent: Verify HMAC-SHA256 Signature
-            alt Signature Mismatch or Nonce Replayed
-                Agent-->>ROS: HTTP 401 / 409 Rejected
-            else Verification Passed
-                alt Simulation Mode == True
-                    Agent->>Agent: Driver logs simulated execution
-                    Agent-->>ROS: HTTP 200 {status: "SIMULATED", message: "..."}
-                else Live Execution Mode
-                    Agent->>OS: Execute constrained OS command
-                    OS-->>Agent: Subprocess exit code 0
-                    Agent-->>ROS: HTTP 200 {status: "EXECUTED", message: "..."}
-                end
-            end
-            ROS->>DB: Save ResponseExecution Record & AuditLog
-            ROS-->>Analyst: Action Complete (SIMULATED / EXECUTED)
+    Analyst->>RSO: createProposal(actionCode, targetIdentifier, parameters)
+    RSO->>RPE: evaluate(actionDef, targetIdentifier, mode, proposedBy)
+    alt Malformed Target / Protected Infrastructure / Blast Radius Violation
+        RPE-->>RSO: PolicyOutcome: DENY / BLOCKED
+        RSO-->>Analyst: HTTP 400 Rejected by Policy
+    else Policy Cleared (Requires Approval)
+        RPE-->>RSO: PolicyOutcome: REQUIRE_APPROVAL (Risk: HIGH/CRITICAL)
+        RSO->>DB: Save Proposal (Status: PENDING_APPROVAL)
+        RSO->>AS: Record RESPONSE_PROPOSAL_CREATED
+        RSO-->>Analyst: Proposal Registered (Awaiting Secondary Approval)
+        
+        actor Lead as Lead Analyst (Separation of Duties)
+        Lead->>RSO: approveProposal(proposalId, reason)
+        RSO->>RPE: canApprove(proposal, leadAnalyst)
+        alt Proposer Attempts Self-Approval (SoD Violation)
+            RPE-->>RSO: Separation of Duties Violation
+            RSO-->>Lead: HTTP 400 Proposer cannot self-approve high-risk actions
+        else Authorized Secondary Approver
+            RSO->>DB: Set Status = APPROVED -> READY
+            RSO->>AS: Record RESPONSE_PROPOSAL_APPROVED
+            
+            Lead->>RSO: executeProposal(proposalId)
+            RSO->>RSO: Acquire Concurrency / Idempotency Lock
+            RSO->>SRA: dispatch(proposal) [Simulation Default]
+            SRA-->>RSO: ResponseExecutionResult (Success: true, Mode: SIMULATION)
+            RSO->>DB: Update Status = EXECUTED
+            RSO->>AS: Record RESPONSE_ACTION_EXECUTED
+            
+            RSO->>RVE: verifyOutcome(proposal, executionResult)
+            RVE->>RVE: Independent State Probe & Cryptographic Checksum
+            RVE->>DB: Save ResponseVerificationRecord (Status: VERIFIED)
+            RSO->>DB: Update Status = VERIFIED
+            RSO-->>Lead: Proposal Executed & Independently Verified
         end
     end
 ```
 
 ### Safety Controls Enforced at Every Execution:
-1. **Simulation Default:** The system default is `simulation-mode: true`. Live execution requires explicit configuration and administrator privilege.
-2. **Pre-Execution Policy Validation:** `ResponsePolicyValidator` blocks any action attempting to isolate `127.0.0.1`, `localhost`, default gateways, or active BlueOps controller nodes.
-3. **Mandatory Approval for Critical Assets:** Any action targeting an asset flagged with `criticality: CRITICAL` is forced into `PENDING` state, requiring secondary human authorization.
-4. **Anti-Replay & Integrity:** All agent communications are signed with HMAC-SHA256. Nonces are cached in a sliding time window (60 seconds) to prevent replay attacks.
-5. **Reversibility Guarantee:** Every playbook in `ResponsePlaybook` must declare a corresponding rollback action (`block_ip` $\rightarrow$ `restore_ip`; `disable_user` $\rightarrow$ `enable_user`).
+1. **Simulation Default & Host Safety Invariant:** System default is `SIMULATION` mode. All drivers and adapters default to contained simulation sandbox, guaranteeing zero modification to the host machine's firewall, network routing, user accounts, services, or registry.
+2. **Pre-Execution Central Policy Engine:** `ResponsePolicyEngine` blocks any action attempting to disrupt `127.0.0.1`, `localhost`, default gateways (`10.0.0.1`), DNS servers, or registered protected infrastructure (`is_protected = true`).
+3. **Strict Parameter Sanitization:** Target identifiers undergo regex sanitization rejecting CLI option injection (`-` flags), whitespace (multiple argument injection), and shell metacharacters (`;`, `&`, `|`, `` ` ``, `$`).
+4. **Separation of Duties (SoD):** For `HIGH` and `CRITICAL` risk actions, the backend forbids the proposal creator from self-approving their own proposal. Secondary human authorization is strictly required.
+5. **Decoupled Independent Verification:** Response execution and response verification are handled by distinct subsystems (`ResponseVerificationEngine`). Dispatch success is never conflated with outcome verification; verification produces an independent evidence record (`ResponseVerificationRecord`).
+6. **Anti-Replay & Integrity:** Live agent communications require HMAC-SHA256 signatures with 60-second validity windows and persistent nonces to defeat replay attacks.
+7. **Reversibility Guarantee:** Action definitions declare reversal counterparts (`ACT-001` block $\rightarrow$ `ACT-004` restore; `ACT-002` disable $\rightarrow$ `ACT-005` enable; `ACT-003` isolate $\rightarrow$ `ACT-006` reconnect).
 
 ---
 

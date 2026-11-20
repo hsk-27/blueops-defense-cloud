@@ -141,5 +141,47 @@ export const api = {
   getIncidentRecommendations: (incidentId: number) =>
     request<IncidentRecommendation[]>(`/advisory/incidents/${incidentId}/recommendations`),
   analyzeAdvisory: (payload: any) =>
-    request<IncidentRecommendation[]>('/advisory/analyze', { method: 'POST', body: JSON.stringify(payload) })
+    request<IncidentRecommendation[]>('/advisory/analyze', { method: 'POST', body: JSON.stringify(payload) }),
+
+  // M5 Context, Entity & Correlation
+  getEntities: (type?: string, search?: string) => {
+    const params = new URLSearchParams();
+    if (type) params.append('type', type);
+    if (search) params.append('search', search);
+    const qs = params.toString();
+    return request<any>(`/entities${qs ? `?${qs}` : ''}`);
+  },
+  getEntityById: (id: number) => request<any>(`/entities/${id}`),
+  getEntityObservations: (id: number) => request<any[]>(`/entities/${id}/observations`),
+  getEntityRelationships: (id: number) => request<any[]>(`/entities/${id}/relationships`),
+  getEntityContext: (id: number) => request<any>(`/entities/${id}/context`),
+  getCorrelations: () => request<any[]>('/correlations'),
+  getCorrelationRules: () => request<any[]>('/correlations/rules'),
+  promoteCorrelation: (id: number) => request<any>(`/correlations/${id}/promote`, { method: 'POST' }),
+
+  // M6 Controlled SOAR & Policy Governance
+  getResponseCatalog: () => request<any[]>('/response/soar/catalog'),
+  getResponseTargets: () => request<any[]>('/response/soar/targets'),
+  previewResponsePolicy: (payload: any) =>
+    request<any>('/response/soar/policy-preview', { method: 'POST', body: JSON.stringify(payload) }),
+  createResponseProposal: (payload: any) =>
+    request<any>('/response/soar/proposals', { method: 'POST', body: JSON.stringify(payload) }),
+  getResponseProposals: (status?: string, page = 0, size = 20) => {
+    const params = new URLSearchParams({ page: String(page), size: String(size) });
+    if (status) params.append('status', status);
+    return request<any>(`/response/soar/proposals?${params.toString()}`);
+  },
+  getResponseProposalById: (id: number) => request<any>(`/response/soar/proposals/${id}`),
+  getIncidentResponseProposals: (incidentId: number) =>
+    request<any[]>(`/response/soar/incidents/${incidentId}/proposals`),
+  approveResponseProposal: (id: number, payload?: any) =>
+    request<any>(`/response/soar/proposals/${id}/approve`, { method: 'POST', body: JSON.stringify(payload || {}) }),
+  denyResponseProposal: (id: number, reason: string) =>
+    request<any>(`/response/soar/proposals/${id}/deny`, { method: 'POST', body: JSON.stringify({ reason }) }),
+  cancelResponseProposal: (id: number, reason: string) =>
+    request<any>(`/response/soar/proposals/${id}/cancel`, { method: 'POST', body: JSON.stringify({ reason }) }),
+  executeResponseProposal: (id: number) =>
+    request<any>(`/response/soar/proposals/${id}/execute`, { method: 'POST' }),
+  getProposalVerification: (id: number) =>
+    request<any>(`/response/soar/proposals/${id}/verification`),
 };

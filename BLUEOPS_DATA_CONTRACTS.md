@@ -401,3 +401,126 @@ Enforces strict lifecycle state transitions, distinct priority levels, and closu
   "noteCount": 3
 }
 ```
+
+
+---
+
+## 12. CONTRACT 11: CANONICAL ENTITY & CORRELATION GRAPH (Milestone M5)
+
+Canonical Entity Schema:
+```json
+{
+  "id": 1,
+  "canonicalId": "host:win-prod-01",
+  "type": "HOST",
+  "displayName": "WIN-PROD-01",
+  "status": "ACTIVE",
+  "riskScore": 75.0,
+  "firstSeen": "2026-11-20T10:00:00Z",
+  "lastSeen": "2026-11-20T14:30:00Z",
+  "attributes": {
+    "ip": "192.168.1.50",
+    "os_name": "Windows",
+    "os_version": "11"
+  }
+}
+```
+
+Cross-Event Correlation Schema:
+```json
+{
+  "id": 1,
+  "correlationKey": "corr:CORR-002:host:win-prod-01:1795110000",
+  "ruleId": "CORR-002",
+  "title": "Windows Execution Chain (CMD spawning Encoded PowerShell)",
+  "severity": "HIGH",
+  "status": "ACTIVE",
+  "primaryEntityCanonicalId": "host:win-prod-01",
+  "findingCount": 2,
+  "entityCount": 3,
+  "correlationWindowSeconds": 900,
+  "windowStart": "2026-11-20T14:15:00Z",
+  "windowEnd": "2026-11-20T14:30:00Z",
+  "explanation": "Execution chain satisfied on WIN-PROD-01: Parent Process Spawned Cmd followed by Encoded PowerShell within 15 minutes."
+}
+```
+
+---
+
+## 13. CONTRACT 12: CONTROLLED SOAR RESPONSE & POLICY GOVERNANCE (Milestone M6)
+
+Action Catalog Definition Schema (`response_action_catalog`):
+```json
+{
+  "id": 1,
+  "actionCode": "ACT-001",
+  "name": "Block Lab Network Source IP",
+  "description": "Applies dynamic perimeter drop rules against confirmed malicious network traffic.",
+  "category": "DEFENSIVE_CONTAINMENT",
+  "targetType": "IP",
+  "riskLevel": "MODERATE",
+  "requiresApproval": true,
+  "simulationSupported": true,
+  "rollbackSupported": true,
+  "reversalActionCode": "ACT-004",
+  "timeoutSeconds": 15,
+  "verificationMethod": "FIREWALL_DROP_QUERY",
+  "parameterSchema": "{\"targetIp\":\"string\"}",
+  "isEnabled": true
+}
+```
+
+Response Proposal Schema (`response_proposals`):
+```json
+{
+  "id": 1,
+  "proposalUuid": "PROP-A986A2B7-B",
+  "incidentId": 42,
+  "findingId": "FND-C2-01",
+  "correlationId": 1,
+  "actionCode": "ACT-001",
+  "actionName": "Block Lab Network Source IP",
+  "actionType": "DEFENSIVE_CONTAINMENT",
+  "targetCanonicalId": "ip:198.51.100.24",
+  "targetIdentifier": "198.51.100.24",
+  "targetType": "IP",
+  "parametersJson": "{\"firewallZone\":\"PERIMETER_DROP\"}",
+  "proposedBy": "analyst-alice",
+  "proposedAt": "2026-11-20T14:30:00Z",
+  "riskLevel": "MODERATE",
+  "executionMode": "SIMULATION",
+  "policyOutcome": "REQUIRE_APPROVAL",
+  "policyReason": "Policy evaluation passed. Approval required prior to dispatch.",
+  "status": "VERIFIED",
+  "requiresApproval": true,
+  "approver": "lead-bob",
+  "approvedAt": "2026-11-20T14:32:00Z",
+  "expiresAt": "2026-11-21T14:30:00Z",
+  "executionId": 105,
+  "verification": {
+    "id": 1,
+    "verificationUuid": "VER-7FA3E91B",
+    "proposalId": 1,
+    "status": "VERIFIED",
+    "verificationMethod": "INDEPENDENT_STATE_PROBE",
+    "expectedOutcome": "Dynamic perimeter firewall DROP rule active for IP: 198.51.100.24",
+    "observedOutcome": "Simulated lab firewall table query confirmed drop rule active for 198.51.100.24",
+    "evidencePayload": "{\"target\":\"198.51.100.24\",\"firewallRule\":\"DROP\",\"matchedFilter\":true}",
+    "verifiedAt": "2026-11-20T14:32:05Z",
+    "isSimulation": true
+  }
+}
+```
+
+Policy Evaluation Result Schema (`PolicyEvaluationResultDto`):
+```json
+{
+  "outcome": "REQUIRE_APPROVAL",
+  "riskLevel": "HIGH",
+  "requiresApproval": true,
+  "isSeparationOfDutiesRequired": true,
+  "reason": "Policy evaluation passed. Secondary authorization required prior to execution.",
+  "policyViolations": [],
+  "blastRadiusAssessment": "Risk: HIGH, Mode: SIMULATION, Reversible: YES"
+}
+```

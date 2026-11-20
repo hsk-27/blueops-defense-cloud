@@ -286,3 +286,209 @@ export interface IncidentRecommendation {
   suggestedTarget?: string;
   applicableTechniques: string[];
 }
+
+
+// --- M5 Context, Entity & Correlation Types ---
+
+export type EntityType = 'HOST' | 'USER' | 'IP_ADDRESS' | 'DOMAIN' | 'PROCESS' | 'FILE' | 'HASH';
+export type EntityStatus = 'ACTIVE' | 'INACTIVE' | 'SUSPICIOUS' | 'COMPROMISED' | 'BENIGN';
+export type EntityRelationType =
+  | 'HOST_HAS_USER'
+  | 'HOST_HAS_PROCESS'
+  | 'PROCESS_CONNECTED_TO'
+  | 'USER_AUTHENTICATED_TO'
+  | 'FILE_OBSERVED_ON'
+  | 'ENTITY_RESOLVED_TO_IP'
+  | 'PROCESS_SPAWNED_PROCESS'
+  | 'ENTITY_ASSOCIATED_WITH_FINDING';
+
+export interface EntityRecord {
+  id: number;
+  canonicalId: string;
+  type: EntityType;
+  displayName: string;
+  status: EntityStatus;
+  riskScore: number;
+  firstSeen: string;
+  lastSeen: string;
+  attributes?: Record<string, any>;
+}
+
+export interface EntityObservation {
+  id: number;
+  entityId: number;
+  observationType: string;
+  referenceId: string;
+  observedHostname?: string;
+  rawReference?: string;
+  confidence: number;
+  observedAt: string;
+}
+
+export interface EntityRelationship {
+  id: number;
+  sourceCanonicalId: string;
+  targetCanonicalId: string;
+  relationType: EntityRelationType;
+  confidence: number;
+  contextReason?: string;
+  firstObservedAt: string;
+  lastObservedAt: string;
+}
+
+export interface CorrelationRecord {
+  id: number;
+  correlationKey: string;
+  ruleId: string;
+  title: string;
+  description: string;
+  severity: string;
+  status: string;
+  primaryEntityCanonicalId: string;
+  findingCount: number;
+  entityCount: number;
+  correlationWindowSeconds: number;
+  windowStart: string;
+  windowEnd: string;
+  explanation: string;
+  incidentId?: number;
+  createdAt: string;
+}
+
+export interface CorrelationRule {
+  ruleId: string;
+  name: string;
+  description: string;
+  scenarioType: string;
+  severity: string;
+  windowSeconds: number;
+  requiredFindingCount: number;
+  requiredDetectionIds: string[];
+  targetEntityType: string;
+  enabled: boolean;
+}
+
+// --- M6 Controlled SOAR & Response Governance Types ---
+
+export type ResponseRiskLevel = 'LOW' | 'MODERATE' | 'HIGH' | 'CRITICAL';
+export type ResponseExecutionMode = 'SIMULATION' | 'LIVE';
+export type ResponsePolicyOutcome = 'ALLOW' | 'DENY' | 'REQUIRE_APPROVAL' | 'SIMULATION_ONLY' | 'BLOCKED' | 'INVALID';
+export type ProposalStatus =
+  | 'DRAFT'
+  | 'VALIDATING'
+  | 'REJECTED'
+  | 'PENDING_APPROVAL'
+  | 'APPROVED'
+  | 'DENIED'
+  | 'READY'
+  | 'EXECUTING'
+  | 'EXECUTION_FAILED'
+  | 'EXECUTED'
+  | 'VERIFICATION_PENDING'
+  | 'VERIFIED'
+  | 'VERIFICATION_FAILED'
+  | 'CANCELLED'
+  | 'EXPIRED';
+
+export type VerificationStatus = 'NOT_STARTED' | 'PENDING' | 'VERIFIED' | 'FAILED' | 'INCONCLUSIVE';
+
+export interface ResponseActionCatalogItem {
+  id: number;
+  actionCode: string;
+  name: string;
+  description: string;
+  category: string;
+  targetType: string;
+  riskLevel: ResponseRiskLevel;
+  requiresApproval: boolean;
+  simulationSupported: boolean;
+  rollbackSupported: boolean;
+  reversalActionCode?: string;
+  timeoutSeconds: number;
+  verificationMethod: string;
+  parameterSchema?: string;
+  isEnabled: boolean;
+}
+
+export interface ResponseTargetItem {
+  id: number;
+  targetId: string;
+  targetType: string;
+  identifier: string;
+  displayName?: string;
+  criticality: string;
+  environment: string;
+  trustStatus: string;
+  isProtected: boolean;
+}
+
+export interface ResponseVerification {
+  id: number;
+  verificationUuid: string;
+  proposalId: number;
+  executionId?: number;
+  status: VerificationStatus;
+  verificationMethod: string;
+  expectedOutcome: string;
+  observedOutcome: string;
+  evidencePayload?: string;
+  verifiedAt: string;
+  isSimulation: boolean;
+}
+
+export interface ResponseProposal {
+  id: number;
+  proposalUuid: string;
+  incidentId?: number;
+  findingId?: string;
+  correlationId?: number;
+  actionCode: string;
+  actionName: string;
+  actionType: string;
+  targetCanonicalId?: string;
+  targetIdentifier: string;
+  targetType: string;
+  parametersJson?: string;
+  proposedBy: string;
+  proposedAt: string;
+  riskLevel: ResponseRiskLevel;
+  executionMode: ResponseExecutionMode;
+  policyOutcome: ResponsePolicyOutcome;
+  policyReason?: string;
+  status: ProposalStatus;
+  requiresApproval: boolean;
+  approver?: string;
+  approvedAt?: string;
+  denialReason?: string;
+  expiresAt?: string;
+  executionId?: number;
+  createdAt: string;
+  updatedAt: string;
+  verification?: ResponseVerification;
+}
+
+export interface PolicyEvaluationResult {
+  outcome: ResponsePolicyOutcome;
+  riskLevel: ResponseRiskLevel;
+  requiresApproval: boolean;
+  isSeparationOfDutiesRequired: boolean;
+  reason: string;
+  policyViolations: string[];
+  blastRadiusAssessment: string;
+}
+
+export interface CreateProposalRequest {
+  incidentId?: number;
+  findingId?: string;
+  correlationId?: number;
+  actionCode: string;
+  targetIdentifier: string;
+  targetCanonicalId?: string;
+  executionMode?: ResponseExecutionMode;
+  parameters?: Record<string, any>;
+}
+
+export interface ApproveProposalRequest {
+  reason?: string;
+  executeImmediately?: boolean;
+}

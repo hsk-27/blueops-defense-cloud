@@ -25,9 +25,9 @@ The development of BlueOps is sequenced into ten discrete, verifiable milestones
 | **M2** | **Core Integrity & Security Hardening (P0)**| Resolve all critical security vulnerabilities, entropy check errors, aggregation semantic corruptions, and replay hazards. | **Complete** |
 | **M3** | **Functional Detection Spine (P1)** | Execute and verify the complete functional detection spine from ingestion through finding and evidence retrieval. | **Complete** |
 | **M4** | **Investigation & Incident Management** | Refine analyst triage workflows, related finding correlation, evidence provenance, and incident lifecycle state machine. | **Complete** |
-| **M5** | **Response Orchestration & Safe Mitigation** | Controlled response execution, dual-approval workflows, reversible playbooks, and containment verification. | Next Milestone |
-| **M6** | **Context & Correlation Engine** | Implement sliding-window state store, multi-stage kill-chain correlation, and asset criticality enrichment. | Correlation Gate |
-| **M7** | **Reliability & Integration Refinement** | Harden OpenSearch resilience, eliminate DLQ cyclic replay loops, optimize ring buffers, and add health probes. | Reliability Gate |
+| **M5** | **Context & Correlation Engine** | Canonical entity taxonomy, observation provenance, graph relationships, cross-event attack chain correlation, and incident promotion. | **Complete** |
+| **M6** | **Controlled Response Orchestration & SOAR** | Policy-governed response framework, Separation of Duties, bounded simulation adapters, independent outcome verification, and host safety. | **Complete** |
+| **M7** | **Operational Hardening & Reliability** | Harden OpenSearch resilience, eliminate DLQ cyclic replay loops, optimize ring buffers, and add health probes. | **Next Milestone** |
 | **M8** | **Branch Expansion** | Expand Sigma catalog (Rules 19–50), integrate automated threat feeds, and build threat hunting query translator. | Expansion Gate |
 | **M9** | **Research & Benchmark Defensibility** | Conduct empirical benchmarks, latency profiling under load, and evaluate novel detection hypotheses. | Evaluation Gate |
 
