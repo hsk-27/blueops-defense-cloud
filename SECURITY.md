@@ -1,47 +1,78 @@
-# Security Policy
+# BlueOps Security Policy & Architecture Security Controls
+
+**Document ID:** BLUEOPS-SEC-001  
+**Classification:** Operational Security Policy & Defensive Architecture Standards  
+**Version:** 1.2.0  
+**Status:** Mandatory Engineering Standard  
+
+---
 
 ## 1. Supported Versions
 
 We provide security updates and patches for the following versions of BlueOps:
 
 | Version | Supported          |
-| ------- | ------------------ |
+| :---    | :---               |
 | 1.2.x   | :white_check_mark: |
 | 1.1.x   | :white_check_mark: |
 | < 1.1.0 | :x:                |
 
 ---
 
-## 2. Reporting a Vulnerability
+## 2. Responsible Vulnerability Disclosure
 
-The BlueOps team takes security vulnerabilities seriously. We appreciate your efforts to responsibly disclose findings.
+The BlueOps team takes security vulnerabilities seriously. We appreciate efforts to responsibly disclose findings.
 
-### Where to Report
-**Please DO NOT report security vulnerabilities through public GitHub issues.**
+### Reporting Channels
+**DO NOT report security vulnerabilities through public GitHub issues.**
 
-Instead, please report security vulnerabilities via:
-- **Private Vulnerability Reporting:** Use GitHub's [Security Advisories](https://github.com/your-org/blueops/security/advisories/new) feature on this repository.
-- **Email:** Send details to `security@blueops.lab` (or maintainers).
+Please report security vulnerabilities via:
+- **Private Vulnerability Reporting:** GitHub [Security Advisories](https://github.com/hsk-27/blueops-defense-cloud/security/advisories/new).
+- **Security Operations Email:** `security@blueops.lab`
 
-### What to Include
-To help us triage and investigate the issue quickly, please include:
-1. **Description:** Clear description of the vulnerability, including attack vector and potential impact.
-2. **Component:** Affected service (Backend, Frontend, Response Agent, OpenSearch/Fluent Bit, Detection Rules).
-3. **Reproduction Steps:** Step-by-step instructions or proof-of-concept (PoC) payload.
-4. **Environment:** Operating system, Java/Node versions, and environment configurations.
-5. **Mitigation:** Any proposed fix or remediation, if identified.
-
-### Response Timeline
-- **Initial Response:** Within 48 hours of report submission.
-- **Triage & Assessment:** Within 5 business days.
-- **Remediation & Advisory:** Coordinated release and CVE disclosure timeline agreed upon with the reporter.
+### Report Requirements
+1. **Description:** Attack vector, reproduction payload, and affected component.
+2. **Component Affected:** Backend, Frontend, Response Agent, Telemetry Ingestion, or Detection Rules.
+3. **Reproduction Proof-of-Concept:** Non-destructive PoC demonstrating the flaw.
+4. **Environment:** OS, Java, Node, Python versions.
 
 ---
 
-## 3. Security Design Principles
+## 3. Core Security Principles & Architectural Controls
 
-BlueOps enforces strict architectural controls:
-- **Role-Based Access Control:** Defense-in-depth via Spring Security HTTP filter chain rules and `@PreAuthorize` method annotations.
-- **HMAC-SHA256 Response Authenticity:** Cryptographically signed response action payloads with 60-second anti-replay windows and nonce tracking.
-- **Input Sanitization:** Response agent parameter validation preventing shell injection.
-- **Audit Trails:** Immutable database logging of all administrative and operational state modifications.
+### 3.1. Cryptographic Key Management & Entropy Standards
+- **Token Signing:** All JWT access and refresh tokens must be signed using HMAC-SHA256 with keys containing **minimum 256 bits (32 bytes)** of genuine cryptographic entropy.
+- **Entropy Calculation:** Secret evaluation must measure **Shannon Information Entropy** ($H(X) = -\sum P(x_i) \log_2 P(x_i)$) across the key space:
+  - Minimum acceptable Shannon entropy is **3.8 bits per character/byte**.
+  - Repetitive strings (e.g., `aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa`), simple sequences (`12345678901234567890...`), or repeated words are rejected unconditionally.
+- **Startup Validation:** In all production-tier profiles (`prod`, `production`, `prd`, `live`), the backend executes `SecurityStartupValidator` at startup. If an insecure, default, blacklisted, or low-entropy key is detected, the application **immediately terminates** boot with a `SecurityException`.
+
+### 3.2. Response Agent Security Boundary
+The host-level response agent operates under strict boundary defenses:
+1. **Cryptographic Authenticity:** Every incoming request must provide an `X-BlueOps-Signature` computed as `HMAC-SHA256(SECRET_KEY, f"{timestamp}:{raw_payload}")`. Signatures are evaluated using constant-time equality comparisons (`hmac.compare_digest`) to prevent timing side-channel attacks.
+2. **Sliding-Window Anti-Replay:**
+   - The payload timestamp must be within a **60-second sliding window** (`|current_time - timestamp| <= 60`).
+   - Every request requires a unique `action_id` (UUIDv4 nonce).
+   - Nonces are tracked with a sliding Time-To-Live (TTL) cache. Entries expire only when their corresponding 60-second validity window has lapsed, preventing replay attacks across cache cleanups.
+3. **Command & Argument Injection Defense:**
+   - Commands are executed via direct `execve` list invocations (`subprocess.run(shell=False)`). Shell metacharacters (`;&|$\`><\r\n`) are completely disallowed.
+   - **CLI Option Injection Defense:** Target arguments are strictly validated against allowlist formats:
+     - IP Addresses: Strict IPv4/IPv6 CIDR syntax (`^[0-9a-fA-F.:/]+$`). Leading hyphens (`-`) or whitespace are strictly prohibited.
+     - Usernames: Strict POSIX username syntax (`^[a-zA-Z0-9._][a-zA-Z0-9._-]*$`), forbidding leading hyphens (`-`) or flags.
+4. **Action Allowlisting:** The agent accepts only explicitly allowlisted actions:
+   - `block_ip`
+   - `isolate_host`
+   - `terminate_process`
+   - `disable_user`
+   Arbitrary shell execution or ad-hoc system administration commands are rejected.
+
+### 3.3. Response Execution Safety: Simulation by Default
+- **Safe Testing Guarantee:** The default execution mode across all environments is `SIMULATION`.
+- **Zero Host Destruction:** In `SIMULATION` mode, actions are verified, audited, and logged to `simulation_audit.log` without modifying iptables, Windows Firewall, user accounts, or active processes.
+- **Live Mode Restrictions:** Live execution drivers (`LinuxDriver`, `WindowsDriver`) may only be enabled in dedicated, isolated laboratory virtual machines with explicit administrative configuration (`EXECUTION_MODE=LIVE`).
+
+### 3.4. Role-Based Access Control (RBAC)
+- All endpoints enforce strict Spring Security filter chains and `@PreAuthorize` method annotations:
+  - `ROLE_SOC_ANALYST`: Read-only access to telemetry, detection findings, incident queues, and timeline investigations.
+  - `ROLE_INCIDENT_RESPONDER`: Ability to update incident status, attach evidence, and request response actions.
+  - `ROLE_ADMIN`: Ability to reload detection rules, manage users, modify security configuration, and approve high-impact containment actions.

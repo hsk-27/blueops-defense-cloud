@@ -1,6 +1,6 @@
 {
   "benchmarkMetadata": {
-    "generatedAt": "2026-11-08T07:08:24.260Z",
+    "generatedAt": "2026-11-20T08:06:14.577Z",
     "platform": "BlueOps Enterprise Threat Detection & Response Platform",
     "version": "1.0.0-PROD",
     "evaluationEngine": "Dynamic Sigma + Threat Intel + Common Schema Evaluator"
@@ -21,7 +21,7 @@
     "falsePositiveRate": 0,
     "f1Score": 1,
     "accuracy": 1,
-    "meanTimeToDetectSeconds": 3.08,
+    "meanTimeToDetectSeconds": 4.03,
     "meanTimeToRespondSeconds": 42.5
   },
   "adversaryDetails": [
@@ -37,7 +37,7 @@
         "D017"
       ],
       "detected": true,
-      "detectionLatencySec": 3.57
+      "detectionLatencySec": 4.91
     },
     {
       "scenarioCode": "T002",
@@ -50,7 +50,7 @@
         "D002"
       ],
       "detected": true,
-      "detectionLatencySec": 4.84
+      "detectionLatencySec": 4.8
     },
     {
       "scenarioCode": "T003",
@@ -63,7 +63,7 @@
         "D004"
       ],
       "detected": true,
-      "detectionLatencySec": 1.81
+      "detectionLatencySec": 2.28
     },
     {
       "scenarioCode": "T004",
@@ -76,7 +76,7 @@
         "D007"
       ],
       "detected": true,
-      "detectionLatencySec": 1.83
+      "detectionLatencySec": 3.98
     },
     {
       "scenarioCode": "T005",
@@ -89,7 +89,7 @@
         "D008"
       ],
       "detected": true,
-      "detectionLatencySec": 3.15
+      "detectionLatencySec": 3.13
     },
     {
       "scenarioCode": "T006",
@@ -102,7 +102,7 @@
         "D009"
       ],
       "detected": true,
-      "detectionLatencySec": 4.41
+      "detectionLatencySec": 4.33
     },
     {
       "scenarioCode": "T007",
@@ -116,7 +116,7 @@
         "D010"
       ],
       "detected": true,
-      "detectionLatencySec": 3.95
+      "detectionLatencySec": 4.88
     },
     {
       "scenarioCode": "T008",
@@ -129,7 +129,7 @@
         "D011"
       ],
       "detected": true,
-      "detectionLatencySec": 3.4
+      "detectionLatencySec": 2.52
     },
     {
       "scenarioCode": "T009",
@@ -142,7 +142,7 @@
         "D013"
       ],
       "detected": true,
-      "detectionLatencySec": 1.57
+      "detectionLatencySec": 4.91
     },
     {
       "scenarioCode": "T010",
@@ -156,7 +156,7 @@
         "D014"
       ],
       "detected": true,
-      "detectionLatencySec": 2.27
+      "detectionLatencySec": 4.59
     }
   ],
   "falsePositiveDetails": []

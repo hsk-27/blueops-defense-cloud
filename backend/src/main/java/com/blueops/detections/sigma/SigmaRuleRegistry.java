@@ -6,7 +6,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Files;
@@ -14,12 +13,13 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 /**
- * Registry and dynamic loader for Sigma detection rules.
+ * Registry and dynamic loader for Sigma detection rules (SEC-003).
  * Automatically scans rule directories, indexes rules by code and technique,
- * and enables runtime rule reloads without backend restarts.
+ * and enables lock-free, zero-downtime runtime rule reloads without race windows.
  */
 @Component
 public class SigmaRuleRegistry {
@@ -28,8 +28,10 @@ public class SigmaRuleRegistry {
 
     private final SigmaRuleParser parser;
     private final String customSigmaPath;
-    private final Map<String, SigmaRuleDefinition> rulesByCode = new ConcurrentHashMap<>();
-    private final Map<String, SigmaRuleDefinition> rulesById = new ConcurrentHashMap<>();
+
+    // Atomic references holding immutable snapshots of active rules
+    private final AtomicReference<Map<String, SigmaRuleDefinition>> rulesByCodeRef = new AtomicReference<>(Collections.emptyMap());
+    private final AtomicReference<Map<String, SigmaRuleDefinition>> rulesByIdRef = new AtomicReference<>(Collections.emptyMap());
 
     public SigmaRuleRegistry(
             SigmaRuleParser parser,
@@ -43,10 +45,12 @@ public class SigmaRuleRegistry {
         reloadRules();
     }
 
+    /**
+     * Atomically reloads Sigma rules from disk.
+     * Rules are parsed into temporary staging structures; existing active rules remain fully
+     * available to concurrent queries until atomic reference swap at completion.
+     */
     public synchronized int reloadRules() {
-        rulesByCode.clear();
-        rulesById.clear();
-
         List<Path> candidateRoots = getCandidateSigmaRoots();
         Path activeRoot = null;
 
@@ -64,28 +68,45 @@ public class SigmaRuleRegistry {
 
         log.info("Loading dynamic Sigma detection rules from directory: {}", activeRoot.toAbsolutePath());
 
+        // Staging maps for atomic swap
+        Map<String, SigmaRuleDefinition> stagingByCode = new ConcurrentHashMap<>();
+        Map<String, SigmaRuleDefinition> stagingById = new ConcurrentHashMap<>();
+
         try (Stream<Path> paths = Files.walk(activeRoot)) {
             paths.filter(Files::isRegularFile)
                  .filter(p -> p.toString().endsWith(".yml") || p.toString().endsWith(".yaml"))
-                 .forEach(this::loadRuleFile);
+                 .forEach(p -> loadRuleFile(p, stagingByCode, stagingById));
         } catch (IOException e) {
             log.error("Failed to traverse Sigma rule directory: {}", e.getMessage(), e);
         }
 
-        log.info("Successfully loaded and registered {} Sigma detection rules dynamically.", rulesByCode.size());
-        return rulesByCode.size();
+        // Lock-free atomic reference swap: readers never observe an empty or half-loaded map
+        rulesByCodeRef.set(Collections.unmodifiableMap(stagingByCode));
+        rulesByIdRef.set(Collections.unmodifiableMap(stagingById));
+
+        log.info("Successfully loaded and registered {} Sigma detection rules dynamically (atomic swap complete).", stagingByCode.size());
+        return stagingByCode.size();
     }
 
-    private void loadRuleFile(Path file) {
+    private void loadRuleFile(Path file, Map<String, SigmaRuleDefinition> stagingByCode, Map<String, SigmaRuleDefinition> stagingById) {
         try (FileInputStream fis = new FileInputStream(file.toFile())) {
             String filename = file.getFileName().toString();
             SigmaRuleDefinition rule = parser.parse(fis, filename);
             if (rule != null) {
                 if (rule.getRuleCode() != null) {
-                    rulesByCode.put(rule.getRuleCode().toUpperCase(), rule);
+                    String codeKey = rule.getRuleCode().toUpperCase(Locale.ROOT);
+                    SigmaRuleDefinition existing = stagingByCode.putIfAbsent(codeKey, rule);
+                    if (existing != null) {
+                        log.warn("Duplicate Sigma ruleCode detected during reload: [{}] in file '{}'. Retaining initial definition '{}'.",
+                                codeKey, filename, existing.getTitle());
+                    }
                 }
                 if (rule.getId() != null) {
-                    rulesById.put(rule.getId(), rule);
+                    SigmaRuleDefinition existingId = stagingById.putIfAbsent(rule.getId(), rule);
+                    if (existingId != null) {
+                        log.warn("Duplicate Sigma rule ID detected during reload: [{}] in file '{}'.",
+                                rule.getId(), filename);
+                    }
                 }
                 log.debug("Loaded Sigma rule: [{}] {} (Severity: {})", rule.getRuleCode(), rule.getTitle(), rule.getLevel());
             }
@@ -96,25 +117,25 @@ public class SigmaRuleRegistry {
 
     public Optional<SigmaRuleDefinition> getRuleByCode(String code) {
         if (code == null) return Optional.empty();
-        return Optional.ofNullable(rulesByCode.get(code.toUpperCase()));
+        return Optional.ofNullable(rulesByCodeRef.get().get(code.toUpperCase(Locale.ROOT)));
     }
 
     public Optional<SigmaRuleDefinition> getRuleById(String id) {
         if (id == null) return Optional.empty();
-        return Optional.ofNullable(rulesById.get(id));
+        return Optional.ofNullable(rulesByIdRef.get().get(id));
     }
 
     public List<SigmaRuleDefinition> getAllRules() {
-        return new ArrayList<>(rulesByCode.values());
+        return new ArrayList<>(rulesByCodeRef.get().values());
     }
 
     public int getLoadedRuleCount() {
-        return rulesByCode.size();
+        return rulesByCodeRef.get().size();
     }
 
     public List<SigmaRuleDefinition> getRulesByLogSourceProduct(String product) {
         if (product == null) return Collections.emptyList();
-        return rulesByCode.values().stream()
+        return rulesByCodeRef.get().values().stream()
                 .filter(r -> r.getLogsource() != null && product.equalsIgnoreCase(String.valueOf(r.getLogsource().get("product"))))
                 .toList();
     }

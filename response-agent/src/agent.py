@@ -1,7 +1,7 @@
 """
-BlueOps Restricted Incident Response Agent
+BlueOps Restricted Incident Response Agent (SEC-002)
 Provides strictly allowlisted, HMAC-SHA256 authenticated, auditable, and reversible lab remediation actions.
-NO arbitrary shell execution permitted.
+NO arbitrary shell execution or CLI argument injection permitted.
 """
 
 import os
@@ -48,9 +48,20 @@ PLAYBOOK_TO_ACTION = {
 }
 
 FORBIDDEN_TARGET_PATTERN = re.compile(r"[;&|`$><\r\n]")
+IP_CIDR_PATTERN = re.compile(r"^[0-9a-fA-F.:/]+$")
+POSIX_USER_PATTERN = re.compile(r"^[a-zA-Z0-9._][a-zA-Z0-9._-]*$")
+HOSTNAME_PATTERN = re.compile(r"^[a-zA-Z0-9._-]+$")
 
-PROCESSED_NONCES = set()
-MAX_NONCES = 10000
+# Sliding-window nonce cache mapping: action_id -> received_timestamp
+PROCESSED_NONCES: dict[str, float] = {}
+NONCE_VALIDITY_WINDOW_SECONDS = 65.0  # 60s request window + 5s clock skew grace
+
+def evict_expired_nonces(current_time: float) -> None:
+    """Purges nonces older than the sliding validity window."""
+    cutoff = current_time - NONCE_VALIDITY_WINDOW_SECONDS
+    expired_keys = [k for k, ts in PROCESSED_NONCES.items() if ts < cutoff]
+    for k in expired_keys:
+        del PROCESSED_NONCES[k]
 
 def verify_hmac(payload: str, timestamp: int, signature: str) -> bool:
     # 1. Anti-replay expiration window: 60 seconds
@@ -64,19 +75,60 @@ def verify_hmac(payload: str, timestamp: int, signature: str) -> bool:
     expected_sig = hmac.new(SECRET_KEY.encode("utf-8"), message, hashlib.sha256).hexdigest()
     return hmac.compare_digest(expected_sig, signature)
 
+def validate_target_parameter(action: str, target: str) -> tuple[bool, str]:
+    """
+    Strict validation of the target parameter.
+    Blocks shell injection, argument/option injection (leading '-'), whitespace,
+    and format violations per action category.
+    """
+    if not target:
+        return False, "Target parameter is required and cannot be empty"
+
+    if len(target) > 256:
+        return False, "Target parameter exceeds maximum permitted length (256 bytes)"
+
+    # Defense against CLI option/flag injection: target must not start with '-'
+    if target.startswith("-"):
+        return False, "Target parameter cannot begin with hyphen (CLI option injection rejected)"
+
+    # Defense against multiple arguments: target must not contain whitespace
+    if re.search(r"\s", target):
+        return False, "Target parameter cannot contain whitespace (argument injection rejected)"
+
+    # Defense against shell metacharacters
+    if FORBIDDEN_TARGET_PATTERN.search(target):
+        return False, "Target parameter contains forbidden shell metacharacters"
+
+    # Action-specific semantic format verification
+    if action in {"BLOCK_IP", "RESTORE_IP"}:
+        if len(target) > 45 or not IP_CIDR_PATTERN.match(target):
+            return False, f"Target '{target}' is not a valid IPv4/IPv6 address or CIDR range"
+    elif action in {"DISABLE_USER", "ENABLE_USER"}:
+        if len(target) > 64 or not POSIX_USER_PATTERN.match(target):
+            return False, f"Target '{target}' is not a valid user account identifier"
+    elif action in {"ISOLATE_HOST", "RECONNECT_HOST", "COLLECT_EVIDENCE"}:
+        if not HOSTNAME_PATTERN.match(target):
+            return False, f"Target '{target}' is not a valid host identifier or asset code"
+
+    return True, ""
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({
         "status": "HEALTHY",
-        "agent": "BlueOps Response Agent v1.0",
+        "agent": "BlueOps Response Agent v1.2",
         "allowed_actions": sorted(list(ALLOWLISTED_ACTIONS)),
         "execution_mode": EXECUTION_MODE,
         "driver": driver.__class__.__name__,
-        "simulation_mode": EXECUTION_MODE.upper() == "SIMULATION"
+        "simulation_mode": EXECUTION_MODE.upper() == "SIMULATION",
+        "tracked_nonces": len(PROCESSED_NONCES)
     }), 200
 
 @app.route("/api/v1/execute", methods=["POST"])
 def execute_action():
+    now = time.time()
+    evict_expired_nonces(now)
+
     signature = request.headers.get("X-BlueOps-Signature")
     timestamp_header = request.headers.get("X-BlueOps-Timestamp")
     action_id = request.headers.get("X-BlueOps-ActionId")
@@ -113,23 +165,17 @@ def execute_action():
             "message": f"Action or playbook '{action or playbook_code}' is not permitted by agent security policy"
         }), 400
 
-    # Boundary check: target sanitization
-    if not target:
+    # Boundary check: strict target validation
+    is_valid, validation_error = validate_target_parameter(resolved_action, target)
+    if not is_valid:
+        logger.warning(f"Target validation rejected for {resolved_action}: {validation_error} (target='{target}')")
         return jsonify({
             "error": "REJECTED_INVALID_PARAMETER",
-            "message": "Target parameter is required and cannot be empty"
+            "message": validation_error
         }), 400
 
-    if len(target) > 256 or FORBIDDEN_TARGET_PATTERN.search(target):
-        logger.warning(f"Command injection attempt or illegal characters detected in target: {target}")
-        return jsonify({
-            "error": "REJECTED_INVALID_PARAMETER",
-            "message": "Target parameter contains forbidden characters or exceeds maximum length"
-        }), 400
-
-    if len(PROCESSED_NONCES) >= MAX_NONCES:
-        PROCESSED_NONCES.clear()
-    PROCESSED_NONCES.add(action_id)
+    # Register nonce with arrival timestamp
+    PROCESSED_NONCES[action_id] = now
     logger.info(f"Received validated response action request: Action={resolved_action}, Target={target}, ActionId={action_id}")
 
     # Delegate execution to modular OS / simulation driver
@@ -148,6 +194,3 @@ def execute_action():
     }
 
     return jsonify(execution_result), 200
-
-if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000)

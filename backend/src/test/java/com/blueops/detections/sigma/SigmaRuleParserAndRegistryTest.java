@@ -3,8 +3,11 @@ package com.blueops.detections.sigma;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -87,5 +90,53 @@ class SigmaRuleParserAndRegistryTest {
         List<SigmaRuleDefinition> linuxRules = registry.getRulesByLogSourceProduct("linux");
         assertFalse(linuxRules.isEmpty());
         assertTrue(linuxRules.stream().anyMatch(r -> "D001".equals(r.getRuleCode())));
+    }
+
+    @Test
+    @DisplayName("Should support concurrent lock-free queries during rule reload without race window (SEC-003)")
+    void testConcurrentQueriesDuringReload() throws Exception {
+        SigmaRuleRegistry registry = new SigmaRuleRegistry(parser, "");
+        int initialLoaded = registry.reloadRules();
+        assertTrue(initialLoaded >= 18);
+
+        int readerThreads = 8;
+        ExecutorService executor = Executors.newFixedThreadPool(readerThreads + 1);
+        AtomicInteger successfulReads = new AtomicInteger(0);
+        AtomicInteger emptyReads = new AtomicInteger(0);
+        CountDownLatch startLatch = new CountDownLatch(1);
+        CountDownLatch finishLatch = new CountDownLatch(readerThreads);
+
+        // Reader tasks continuously querying rules
+        for (int i = 0; i < readerThreads; i++) {
+            executor.submit(() -> {
+                try {
+                    startLatch.await();
+                    for (int j = 0; j < 500; j++) {
+                        Optional<SigmaRuleDefinition> rule = registry.getRuleByCode("D008");
+                        if (rule.isPresent() && "D008".equals(rule.get().getRuleCode())) {
+                            successfulReads.incrementAndGet();
+                        } else {
+                            emptyReads.incrementAndGet();
+                        }
+                    }
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                } finally {
+                    finishLatch.countDown();
+                }
+            });
+        }
+
+        // Trigger start and immediately reload rules concurrently
+        startLatch.countDown();
+        Future<Integer> reloadFuture = executor.submit(registry::reloadRules);
+
+        assertTrue(finishLatch.await(5, TimeUnit.SECONDS), "Reader threads should finish within 5s");
+        int reloadedCount = reloadFuture.get(5, TimeUnit.SECONDS);
+
+        executor.shutdown();
+        assertTrue(reloadedCount >= 18);
+        assertTrue(successfulReads.get() > 0, "Readers should have executed successfully");
+        assertEquals(0, emptyReads.get(), "Zero empty reads should occur during concurrent reload (atomic reference swap)");
     }
 }

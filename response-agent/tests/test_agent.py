@@ -5,13 +5,14 @@ import json
 import pytest
 
 try:
-    from src.agent import app, SECRET_KEY
+    from src.agent import app, SECRET_KEY, PROCESSED_NONCES, evict_expired_nonces
 except ImportError:
-    from agent import app, SECRET_KEY
+    from agent import app, SECRET_KEY, PROCESSED_NONCES, evict_expired_nonces
 
 @pytest.fixture
 def client():
     app.config["TESTING"] = True
+    PROCESSED_NONCES.clear()
     with app.test_client() as client:
         yield client
 
@@ -102,3 +103,62 @@ def test_command_injection_target_rejected(client):
     res = client.post("/api/v1/execute", data=payload, headers=headers)
     assert res.status_code == 400
     assert "REJECTED_INVALID_PARAMETER" in res.get_json()["error"]
+
+def test_cli_option_injection_target_rejected(client):
+    # Tests that leading hyphens (CLI flags like --help, -o) are rejected
+    payload = json.dumps({"actionUuid": "act-106", "playbookCode": "P002", "target": "--help"})
+    timestamp = int(time.time())
+    message = f"{timestamp}:{payload}".encode("utf-8")
+    sig = hmac.new(SECRET_KEY.encode("utf-8"), message, hashlib.sha256).hexdigest()
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-BlueOps-Signature": sig,
+        "X-BlueOps-Timestamp": str(timestamp),
+        "X-BlueOps-ActionId": "act-106"
+    }
+
+    res = client.post("/api/v1/execute", data=payload, headers=headers)
+    assert res.status_code == 400
+    assert "REJECTED_INVALID_PARAMETER" in res.get_json()["error"]
+    assert "hyphen" in res.get_json()["message"].lower()
+
+def test_whitespace_argument_injection_rejected(client):
+    payload = json.dumps({"actionUuid": "act-107", "playbookCode": "P001", "target": "198.51.100.24 10.0.0.1"})
+    timestamp = int(time.time())
+    message = f"{timestamp}:{payload}".encode("utf-8")
+    sig = hmac.new(SECRET_KEY.encode("utf-8"), message, hashlib.sha256).hexdigest()
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-BlueOps-Signature": sig,
+        "X-BlueOps-Timestamp": str(timestamp),
+        "X-BlueOps-ActionId": "act-107"
+    }
+
+    res = client.post("/api/v1/execute", data=payload, headers=headers)
+    assert res.status_code == 400
+    assert "REJECTED_INVALID_PARAMETER" in res.get_json()["error"]
+    assert "whitespace" in res.get_json()["message"].lower()
+
+def test_replay_attack_rejected(client):
+    payload = json.dumps({"actionUuid": "act-108", "playbookCode": "P001", "target": "198.51.100.24"})
+    timestamp = int(time.time())
+    message = f"{timestamp}:{payload}".encode("utf-8")
+    sig = hmac.new(SECRET_KEY.encode("utf-8"), message, hashlib.sha256).hexdigest()
+
+    headers = {
+        "Content-Type": "application/json",
+        "X-BlueOps-Signature": sig,
+        "X-BlueOps-Timestamp": str(timestamp),
+        "X-BlueOps-ActionId": "act-108"
+    }
+
+    # First attempt: succeeds
+    res1 = client.post("/api/v1/execute", data=payload, headers=headers)
+    assert res1.status_code == 200
+
+    # Second attempt with same ActionId: rejected as replay
+    res2 = client.post("/api/v1/execute", data=payload, headers=headers)
+    assert res2.status_code == 409
+    assert "Replay detected" in res2.get_json()["error"]
