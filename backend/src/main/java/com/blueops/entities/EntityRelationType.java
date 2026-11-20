@@ -1,0 +1,12 @@
+package com.blueops.entities;
+
+public enum EntityRelationType {
+    HOST_HAS_USER,
+    HOST_HAS_PROCESS,
+    PROCESS_CONNECTED_TO,
+    USER_AUTHENTICATED_TO,
+    FILE_OBSERVED_ON,
+    ENTITY_RESOLVED_TO_IP,
+    PROCESS_SPAWNED_PROCESS,
+    ENTITY_ASSOCIATED_WITH_FINDING
+}

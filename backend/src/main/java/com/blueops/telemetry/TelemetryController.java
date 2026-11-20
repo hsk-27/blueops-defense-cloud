@@ -1,5 +1,7 @@
 package com.blueops.telemetry;
 
+import com.blueops.correlation.CorrelationService;
+import com.blueops.entities.EntityExtractionService;
 import com.blueops.findings.FindingDto;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -13,10 +15,21 @@ public class TelemetryController {
 
     private final EventNormalizationService normalizationService;
     private final DetectionEvaluationService evaluationService;
+    private final EntityExtractionService entityExtractionService;
+    private final CorrelationService correlationService;
 
-    public TelemetryController(EventNormalizationService normalizationService, DetectionEvaluationService evaluationService) {
+    public TelemetryController(EventNormalizationService normalizationService,
+                               DetectionEvaluationService evaluationService,
+                               EntityExtractionService entityExtractionService,
+                               CorrelationService correlationService) {
         this.normalizationService = normalizationService;
         this.evaluationService = evaluationService;
+        this.entityExtractionService = entityExtractionService;
+        this.correlationService = correlationService;
+    }
+
+    public TelemetryController(EventNormalizationService normalizationService, DetectionEvaluationService evaluationService) {
+        this(normalizationService, evaluationService, null, null);
     }
 
     @PostMapping("/ingest")
@@ -45,10 +58,22 @@ public class TelemetryController {
             NormalizedEvent event = normalizationService.normalize(raw);
             if (event != null) {
                 normalizedCount++;
+                if (entityExtractionService != null) {
+                    entityExtractionService.extractFromEvent(event);
+                }
                 List<FindingDto> findings = evaluationService.evaluate(event);
                 findingsCount += findings.size();
                 newFindings.addAll(findings);
+                if (entityExtractionService != null) {
+                    for (FindingDto f : findings) {
+                        entityExtractionService.extractFromFinding(f);
+                    }
+                }
             }
+        }
+
+        if (correlationService != null && !newFindings.isEmpty()) {
+            correlationService.evaluateAndPersist(newFindings);
         }
 
         Map<String, Object> response = new HashMap<>();
