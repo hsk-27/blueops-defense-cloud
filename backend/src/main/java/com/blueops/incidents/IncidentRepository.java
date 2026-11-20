@@ -21,6 +21,31 @@ public interface IncidentRepository extends JpaRepository<Incident, Long> {
     @Query("SELECT i FROM Incident i LEFT JOIN FETCH i.primaryAsset WHERE (:status IS NULL OR i.status = :status) AND (:severity IS NULL OR i.severity = :severity)")
     Page<Incident> findFiltered(@Param("status") IncidentStatus status, @Param("severity") IncidentSeverity severity, Pageable pageable);
 
+    @Query(value = "SELECT i FROM Incident i LEFT JOIN FETCH i.primaryAsset WHERE " +
+           "(:status IS NULL OR i.status = :status) AND " +
+           "(:severity IS NULL OR i.severity = :severity) AND " +
+           "(:priority IS NULL OR i.priority = :priority) AND " +
+           "(:assignedTo IS NULL OR LOWER(i.assignedTo) = LOWER(:assignedTo)) AND " +
+           "(:query IS NULL OR LOWER(i.title) LIKE LOWER(CONCAT('%', :query, '%')) " +
+           " OR LOWER(i.incidentNumber) LIKE LOWER(CONCAT('%', :query, '%')) " +
+           " OR LOWER(i.description) LIKE LOWER(CONCAT('%', :query, '%')) " +
+           " OR (i.primaryAsset IS NOT NULL AND LOWER(i.primaryAsset.hostname) LIKE LOWER(CONCAT('%', :query, '%'))))",
+           countQuery = "SELECT COUNT(i) FROM Incident i WHERE " +
+           "(:status IS NULL OR i.status = :status) AND " +
+           "(:severity IS NULL OR i.severity = :severity) AND " +
+           "(:priority IS NULL OR i.priority = :priority) AND " +
+           "(:assignedTo IS NULL OR LOWER(i.assignedTo) = LOWER(:assignedTo)) AND " +
+           "(:query IS NULL OR LOWER(i.title) LIKE LOWER(CONCAT('%', :query, '%')) " +
+           " OR LOWER(i.incidentNumber) LIKE LOWER(CONCAT('%', :query, '%')) " +
+           " OR LOWER(i.description) LIKE LOWER(CONCAT('%', :query, '%')) " +
+           " OR (i.primaryAsset IS NOT NULL AND LOWER(i.primaryAsset.hostname) LIKE LOWER(CONCAT('%', :query, '%'))))")
+    Page<Incident> findFilteredAdvanced(@Param("status") IncidentStatus status,
+                                        @Param("severity") IncidentSeverity severity,
+                                        @Param("priority") IncidentPriority priority,
+                                        @Param("assignedTo") String assignedTo,
+                                        @Param("query") String query,
+                                        Pageable pageable);
+
     @Query("SELECT COUNT(i) FROM Incident i WHERE i.status NOT IN ('RESOLVED', 'FALSE_POSITIVE')")
     long countActiveIncidents();
 

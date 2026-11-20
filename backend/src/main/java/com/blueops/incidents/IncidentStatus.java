@@ -9,6 +9,7 @@ public enum IncidentStatus {
     CONTAINMENT_PENDING,
     CONTAINED,
     RESOLVED,
+    CLOSED,
     FALSE_POSITIVE,
     REOPENED;
 
@@ -27,7 +28,10 @@ public enum IncidentStatus {
             case CONTAINED:
                 return Set.of(RESOLVED, INVESTIGATING).contains(next);
             case RESOLVED:
+                return Set.of(CLOSED, REOPENED).contains(next);
             case FALSE_POSITIVE:
+                return Set.of(CLOSED, REOPENED).contains(next);
+            case CLOSED:
                 return next == REOPENED;
             case REOPENED:
                 return Set.of(TRIAGED, INVESTIGATING).contains(next);

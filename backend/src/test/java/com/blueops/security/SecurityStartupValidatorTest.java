@@ -100,7 +100,38 @@ class SecurityStartupValidatorTest {
     }
 
     @Test
-    @DisplayName("Should pass startup validation in production if high-entropy secrets are injected")
+    @DisplayName("Should fail startup validation for predictable sequential character sequence (e.g. alphabet sequence)")
+    void testSequentialAlphabetSequenceFailsInProd() {
+        MockEnvironment env = new MockEnvironment();
+        env.setActiveProfiles("production");
+
+        String sequentialSecret = "abcdefghijklmnopqrstuvwxyz012345";
+        assertTrue(SecurityStartupValidator.isPredictablePattern(sequentialSecret));
+
+        SecurityStartupValidator validator = new SecurityStartupValidator(
+                sequentialSecret,
+                STRONG_PROD_HMAC,
+                env
+        );
+
+        assertThrows(IllegalStateException.class, validator::validateSecurityPostures);
+    }
+
+    @Test
+    @DisplayName("Should fail startup validation if default 404E6352... JWT key is used in production")
+    void testDefaultYamlSecretFailsInProd() {
+        MockEnvironment env = new MockEnvironment();
+        env.setActiveProfiles("production");
+
+        String defaultYamlSecret = "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970";
+        SecurityStartupValidator validator = new SecurityStartupValidator(
+                defaultYamlSecret,
+                STRONG_PROD_HMAC,
+                env
+        );
+
+        assertThrows(IllegalStateException.class, validator::validateSecurityPostures);
+    }
     void testStrongCustomSecretsPassInProd() {
         MockEnvironment env = new MockEnvironment();
         env.setActiveProfiles("production");

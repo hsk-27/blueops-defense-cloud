@@ -171,6 +171,7 @@ class IncidentServiceTest {
         @Override public List<Incident> findByStatus(IncidentStatus status) { return store.values().stream().filter(i -> i.getStatus() == status).toList(); }
         @Override public org.springframework.data.domain.Page<Incident> findByStatus(IncidentStatus status, org.springframework.data.domain.Pageable pageable) { return org.springframework.data.domain.Page.empty(); }
         @Override public org.springframework.data.domain.Page<Incident> findFiltered(IncidentStatus status, IncidentSeverity severity, org.springframework.data.domain.Pageable pageable) { return org.springframework.data.domain.Page.empty(); }
+        @Override public org.springframework.data.domain.Page<Incident> findFilteredAdvanced(IncidentStatus status, IncidentSeverity severity, IncidentPriority priority, String assignedTo, String query, org.springframework.data.domain.Pageable pageable) { return org.springframework.data.domain.Page.empty(); }
         @Override public long countActiveIncidents() { return 0; }
         @Override public long countBySeverity(IncidentSeverity severity) { return 0; }
         @Override public long countAssetsWithActiveIncidents() { return 0; }

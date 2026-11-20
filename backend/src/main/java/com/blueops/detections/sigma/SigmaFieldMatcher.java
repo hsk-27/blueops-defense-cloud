@@ -164,10 +164,23 @@ public class SigmaFieldMatcher {
             if (event.getProcess() != null && event.getProcess().getCommandLine() != null) {
                 values.add(event.getProcess().getCommandLine());
             }
-        } else if (key.equals("eventaction") || key.equals("eventoutcome") || key.equals("action")) {
+        } else if (key.equals("eventaction") || key.equals("action")) {
             if (event.getEvent() != null) {
                 if (event.getEvent().getAction() != null) values.add(event.getEvent().getAction());
                 if (event.getEvent().getCategory() != null) values.addAll(event.getEvent().getCategory());
+            }
+        } else if (key.equals("eventoutcome") || key.equals("outcome")) {
+            if (event.getEvent() != null) {
+                if (event.getEvent().getType() != null) values.addAll(event.getEvent().getType());
+                if (event.getEvent().getAction() != null) {
+                    values.add(event.getEvent().getAction());
+                    if (event.getEvent().getAction().toLowerCase(Locale.ROOT).contains("fail")) values.add("failure");
+                    if (event.getEvent().getAction().toLowerCase(Locale.ROOT).contains("succ")) values.add("success");
+                }
+                if (event.getEvent().getOriginal() != null) {
+                    if (event.getEvent().getOriginal().toLowerCase(Locale.ROOT).contains("fail")) values.add("failure");
+                    if (event.getEvent().getOriginal().toLowerCase(Locale.ROOT).contains("succ")) values.add("success");
+                }
             }
         } else if (key.equals("sourceip") || key.equals("srcip")) {
             if (event.getSource() != null && event.getSource().getIp() != null) {

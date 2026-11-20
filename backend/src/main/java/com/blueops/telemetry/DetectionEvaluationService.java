@@ -109,21 +109,17 @@ public class DetectionEvaluationService {
         // 1. Threat Intelligence IOC Matching
         evaluateThreatIntel(event, asset, triggeredFindings);
 
-        // 2. Built-in Sigma Detection Rules Evaluation
-        evaluateSigmaRules(event, assetId, assetName, triggeredFindings);
-
-        // 3. Dynamic Sigma Rule Engine Evaluation (DET-001)
+        // 2. Dynamic Sigma Rule Engine Evaluation (DET-001 / DET-003)
         if (sigmaDetectionEvaluator != null) {
             List<FindingDto> dynamicFindings = sigmaDetectionEvaluator.evaluate(event, assetId, assetName);
-            Set<String> existingRuleCodes = triggeredFindings.stream()
-                    .map(FindingDto::getRuleId)
-                    .collect(Collectors.toSet());
             for (FindingDto df : dynamicFindings) {
-                if (df != null && !existingRuleCodes.contains(df.getRuleId())) {
+                if (df != null) {
                     triggeredFindings.add(df);
-                    existingRuleCodes.add(df.getRuleId());
                 }
             }
+        } else {
+            // Fallback to built-in rules if dynamic engine is not available
+            evaluateSigmaRules(event, assetId, assetName, triggeredFindings);
         }
 
         // 3. Register triggered findings into OpenSearch Finding Adapter

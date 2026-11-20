@@ -28,17 +28,20 @@ public class IncidentController {
     }
 
     @GetMapping
-    @Operation(summary = "Query incidents with optional status and severity filtering")
+    @Operation(summary = "Query incidents with optional status, severity, priority, and text search")
     public ResponseEntity<ApiResponse<PagedResponse<IncidentDto>>> getIncidents(
             @RequestParam(required = false) IncidentStatus status,
             @RequestParam(required = false) IncidentSeverity severity,
+            @RequestParam(required = false) IncidentPriority priority,
+            @RequestParam(required = false) String assignedTo,
+            @RequestParam(required = false) String search,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "15") int size,
             @RequestParam(defaultValue = "createdAt") String sortBy,
             @RequestParam(defaultValue = "desc") String direction) {
 
         Sort sort = direction.equalsIgnoreCase("asc") ? Sort.by(sortBy).ascending() : Sort.by(sortBy).descending();
-        Page<IncidentDto> paged = incidentService.getIncidents(status, severity, PageRequest.of(page, size, sort));
+        Page<IncidentDto> paged = incidentService.getIncidents(status, severity, priority, assignedTo, search, PageRequest.of(page, size, sort));
 
         PagedResponse<IncidentDto> response = new PagedResponse<>(
                 paged.getContent(), paged.getNumber(), paged.getSize(),
@@ -71,6 +74,30 @@ public class IncidentController {
     @Operation(summary = "Get associated OpenSearch findings for this incident")
     public ResponseEntity<ApiResponse<List<IncidentFinding>>> getFindings(@PathVariable Long id) {
         return ResponseEntity.ok(ApiResponse.success(incidentService.getIncidentFindings(id)));
+    }
+
+    @GetMapping("/{id}/evidence")
+    @Operation(summary = "Retrieve coherent aggregated forensic evidence and raw events for an incident")
+    public ResponseEntity<ApiResponse<List<IncidentEvidenceDto>>> getIncidentEvidence(@PathVariable Long id) {
+        return ResponseEntity.ok(ApiResponse.success(incidentService.getIncidentEvidence(id)));
+    }
+
+    @GetMapping("/{id}/notes")
+    @Operation(summary = "Get list of analyst investigation notes for this incident")
+    public ResponseEntity<ApiResponse<List<IncidentNote>>> getNotes(@PathVariable Long id) {
+        IncidentDto inc = incidentService.getIncidentById(id);
+        return ResponseEntity.ok(ApiResponse.success(incidentService.getTimeline(id).stream()
+                .filter(t -> "NOTE".equalsIgnoreCase(t.getType()))
+                .map(t -> new IncidentNote(null, t.getActor(), t.getDescription()))
+                .toList()));
+    }
+
+    @DeleteMapping("/{id}/findings/{findingId}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST')")
+    @Operation(summary = "Detach a finding from an incident and restore finding status to OPEN")
+    public ResponseEntity<ApiResponse<Void>> detachFinding(@PathVariable Long id, @PathVariable String findingId, Authentication auth) {
+        incidentService.detachFinding(id, findingId, auth.getName());
+        return ResponseEntity.ok(ApiResponse.success("Finding detached from incident", null));
     }
 
     @PostMapping("/{id}/findings")

@@ -14,7 +14,11 @@ public class IncidentCreateRequest {
     @NotNull(message = "Severity is required")
     private IncidentSeverity severity;
 
+    private IncidentPriority priority;
+
     private Long primaryAssetId;
+
+    private String sourceFindingId;
 
     private List<String> findingIds;
 
@@ -29,8 +33,14 @@ public class IncidentCreateRequest {
     public IncidentSeverity getSeverity() { return severity; }
     public void setSeverity(IncidentSeverity severity) { this.severity = severity; }
 
+    public IncidentPriority getPriority() { return priority; }
+    public void setPriority(IncidentPriority priority) { this.priority = priority; }
+
     public Long getPrimaryAssetId() { return primaryAssetId; }
     public void setPrimaryAssetId(Long primaryAssetId) { this.primaryAssetId = primaryAssetId; }
+
+    public String getSourceFindingId() { return sourceFindingId; }
+    public void setSourceFindingId(String sourceFindingId) { this.sourceFindingId = sourceFindingId; }
 
     public List<String> getFindingIds() { return findingIds; }
     public void setFindingIds(List<String> findingIds) { this.findingIds = findingIds; }

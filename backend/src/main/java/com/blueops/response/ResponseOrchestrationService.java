@@ -263,6 +263,12 @@ public class ResponseOrchestrationService {
     }
 
     private ResponseExecution executeActionInternal(ResponseAction action) {
+        // Enforce centralized policy validation on all execution paths (request, approve, rollback)
+        if (policyValidator != null) {
+            ResponsePlaybook playbook = getPlaybook(action.getPlaybookCode());
+            policyValidator.validateRequest(playbook, action.getTargetIdentifier(), action.getTargetAsset(), action.isSimulation());
+        }
+
         long startTime = System.currentTimeMillis();
         action.setExecutionStatus("IN_PROGRESS");
         actionRepository.save(action);

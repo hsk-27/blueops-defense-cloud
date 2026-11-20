@@ -1,7 +1,10 @@
 import {
   Incident,
   IncidentSeverity,
+  IncidentPriority,
   IncidentStatus,
+  IncidentEvidence,
+  RelatedFinding,
   TimelineEntry,
   Asset,
   DetectionRule,
@@ -58,27 +61,33 @@ export const api = {
   getAttackCoverage: () => request<any>('/reports/attack-coverage'),
 
   // Incidents
-  getIncidents: (params?: { status?: string; severity?: string; page?: number; size?: number }) => {
+  getIncidents: (params?: { status?: string; severity?: string; priority?: string; assignedTo?: string; search?: string; page?: number; size?: number }) => {
     const q = new URLSearchParams();
     if (params?.status) q.append('status', params.status);
     if (params?.severity) q.append('severity', params.severity);
+    if (params?.priority) q.append('priority', params.priority);
+    if (params?.assignedTo) q.append('assignedTo', params.assignedTo);
+    if (params?.search) q.append('search', params.search);
     if (params?.page !== undefined) q.append('page', params.page.toString());
     if (params?.size !== undefined) q.append('size', params.size.toString());
     return request<{ content: Incident[]; totalElements: number; totalPages: number }>(`/incidents?${q.toString()}`);
   },
   getIncidentById: (id: number) => request<Incident>(`/incidents/${id}`),
-  createIncident: (payload: { title: string; description?: string; severity: IncidentSeverity; primaryAssetId?: number; findingIds?: string[] }) =>
+  createIncident: (payload: { title: string; description?: string; severity: IncidentSeverity; priority?: IncidentPriority; primaryAssetId?: number; sourceFindingId?: string; findingIds?: string[] }) =>
     request<Incident>('/incidents', { method: 'POST', body: JSON.stringify(payload) }),
   getTimeline: (id: number) => request<TimelineEntry[]>(`/incidents/${id}/timeline`),
   getIncidentFindings: (id: number) => request<any[]>(`/incidents/${id}/findings`),
+  getIncidentEvidence: (id: number) => request<IncidentEvidence[]>(`/incidents/${id}/evidence`),
   attachFinding: (id: number, findingId: string) =>
     request<any>(`/incidents/${id}/findings?findingId=${encodeURIComponent(findingId)}`, { method: 'POST' }),
+  detachFinding: (id: number, findingId: string) =>
+    request<void>(`/incidents/${id}/findings/${encodeURIComponent(findingId)}`, { method: 'DELETE' }),
   addNote: (id: number, noteText: string) =>
     request<void>(`/incidents/${id}/notes`, { method: 'POST', body: JSON.stringify({ noteText }) }),
   assignIncident: (id: number, assignedTo: string) =>
     request<Incident>(`/incidents/${id}/assign`, { method: 'PUT', body: JSON.stringify({ assignedTo }) }),
-  updateIncidentStatus: (id: number, status: IncidentStatus, reason?: string, resolutionRationale?: string) =>
-    request<Incident>(`/incidents/${id}/status`, { method: 'PUT', body: JSON.stringify({ status, reason, resolutionRationale }) }),
+  updateIncidentStatus: (id: number, status: IncidentStatus, reason?: string, resolutionRationale?: string, closureNotes?: string) =>
+    request<Incident>(`/incidents/${id}/status`, { method: 'PUT', body: JSON.stringify({ status, reason, resolutionRationale, closureNotes }) }),
   reopenIncident: (id: number, reason?: string) =>
     request<Incident>(`/incidents/${id}/reopen?reason=${encodeURIComponent(reason || '')}`, { method: 'POST' }),
 
@@ -93,6 +102,8 @@ export const api = {
   updateDetectionStatus: (id: number, status: string) =>
     request<DetectionRule>(`/detections/${id}/status?status=${status}`, { method: 'PUT' }),
   getFindings: () => request<Finding[]>('/detections/findings'),
+  getFindingEvidence: (findingId: string) => request<any>(`/detections/findings/${encodeURIComponent(findingId)}/evidence`),
+  getRelatedFindings: (findingId: string) => request<RelatedFinding[]>(`/detections/findings/${encodeURIComponent(findingId)}/related`),
   reloadSigmaRules: () =>
     request<{ reloadedCount: number; status: string; message: string }>('/detections/reload', { method: 'POST' }),
   getSigmaCatalog: () => request<any[]>('/detections/sigma-catalog'),

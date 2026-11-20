@@ -27,6 +27,8 @@ public class SecurityStartupValidator {
     private static final List<String> KNOWN_INSECURE_SECRETS = List.of(
             "b7c938d10b7f43a99e1d8847e923832c3f59194e432c7e436814041b65b16130",
             "c3948e9a2b71450a89274e0d9b4317f2a8934c71829045b61928374650192837",
+            "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970",
+            "404e635266556a586e3272357538782f413f4428472b4b6250645367566b5970",
             "secret",
             "changeme",
             "default_secret",
@@ -120,12 +122,29 @@ public class SecurityStartupValidator {
      * Determines if any active profile matches production aliases.
      */
     public boolean isProductionEnvironment() {
-        if (environment == null || environment.getActiveProfiles() == null) {
+        if (environment == null) {
             return false;
         }
-        for (String profile : environment.getActiveProfiles()) {
-            if (profile != null && PRODUCTION_PROFILE_ALIASES.contains(profile.trim().toLowerCase(Locale.ROOT))) {
-                return true;
+        if (environment.getActiveProfiles() != null && environment.getActiveProfiles().length > 0) {
+            for (String profile : environment.getActiveProfiles()) {
+                if (profile != null && PRODUCTION_PROFILE_ALIASES.contains(profile.trim().toLowerCase(Locale.ROOT))) {
+                    return true;
+                }
+            }
+        } else if (environment.getDefaultProfiles() != null) {
+            for (String profile : environment.getDefaultProfiles()) {
+                if (profile != null && PRODUCTION_PROFILE_ALIASES.contains(profile.trim().toLowerCase(Locale.ROOT))) {
+                    return true;
+                }
+            }
+        }
+        // Fallback check on standard environment variables
+        String springProfile = System.getenv("SPRING_PROFILES_ACTIVE");
+        if (springProfile != null) {
+            for (String p : springProfile.split(",")) {
+                if (PRODUCTION_PROFILE_ALIASES.contains(p.trim().toLowerCase(Locale.ROOT))) {
+                    return true;
+                }
             }
         }
         return false;
@@ -163,6 +182,16 @@ public class SecurityStartupValidator {
         if (input == null || input.length() < 4) return true;
         // Check for repeated identical characters (e.g. "aaaaaaaaaaaaaaaa")
         if (countUniqueCharacters(input) <= 2) return true;
+        // Check for monotonic sequential character runs (e.g. "abcdefghijklmnopqrstuvwxyz...")
+        int sequentialRun = 1;
+        for (int i = 0; i < input.length() - 1; i++) {
+            if (input.charAt(i + 1) == input.charAt(i) + 1 || input.charAt(i + 1) == input.charAt(i) - 1) {
+                sequentialRun++;
+                if (sequentialRun >= 8) return true;
+            } else {
+                sequentialRun = 1;
+            }
+        }
         // Check for simple repeated halves (e.g. "passwordpassword")
         int len = input.length();
         if (len % 2 == 0) {

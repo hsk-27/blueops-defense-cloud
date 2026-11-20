@@ -9,7 +9,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { api } from '../services/api';
-import { Incident, IncidentSeverity, IncidentStatus } from '../types';
+import { Incident, IncidentPriority, IncidentSeverity, IncidentStatus } from '../types';
 import { SeverityBadge } from '../components/SeverityBadge';
 import { StatusBadge } from '../components/StatusBadge';
 
@@ -22,6 +22,7 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedSeverity, setSelectedSeverity] = useState<string>('');
+  const [selectedPriority, setSelectedPriority] = useState<string>('');
   const [selectedStatus, setSelectedStatus] = useState<string>('');
   const [showCreateModal, setShowCreateModal] = useState(false);
 
@@ -29,6 +30,7 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
   const [newTitle, setNewTitle] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [newSeverity, setNewSeverity] = useState<IncidentSeverity>('HIGH');
+  const [newPriority, setNewPriority] = useState<IncidentPriority>('P2_HIGH');
   const [creating, setCreating] = useState(false);
 
   useEffect(() => {
@@ -39,6 +41,7 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
         setLoading(true);
         const res = await api.getIncidents({
           severity: selectedSeverity || undefined,
+          priority: selectedPriority || undefined,
           status: selectedStatus || undefined,
           size: 50
         });
@@ -54,13 +57,14 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
     return () => {
       isMounted = false;
     };
-  }, [selectedSeverity, selectedStatus]);
+  }, [selectedSeverity, selectedPriority, selectedStatus]);
 
   const handleManualRefresh = async () => {
     try {
       setLoading(true);
       const res = await api.getIncidents({
         severity: selectedSeverity || undefined,
+        priority: selectedPriority || undefined,
         status: selectedStatus || undefined,
         size: 50
       });
@@ -81,6 +85,7 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
         title: newTitle,
         description: newDesc,
         severity: newSeverity,
+        priority: newPriority,
       });
       setShowCreateModal(false);
       setNewTitle('');
@@ -99,6 +104,20 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
     (i.assignedTo && i.assignedTo.toLowerCase().includes(search.toLowerCase())) ||
     (i.primaryAssetHostname && i.primaryAssetHostname.toLowerCase().includes(search.toLowerCase()))
   );
+
+  const getPriorityBadge = (p?: IncidentPriority) => {
+    switch (p) {
+      case 'P1_CRITICAL':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-950/70 text-rose-300 border border-rose-800">P1 CRIT</span>;
+      case 'P2_HIGH':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-semibold bg-amber-950/70 text-amber-300 border border-amber-800">P2 HIGH</span>;
+      case 'P3_MEDIUM':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-medium bg-yellow-950/70 text-yellow-300 border border-yellow-800">P3 MED</span>;
+      case 'P4_LOW':
+      default:
+        return <span className="px-2 py-0.5 rounded text-[10px] font-mono text-slate-300 bg-slate-800/70 border border-slate-700">P4 LOW</span>;
+    }
+  };
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
@@ -129,6 +148,19 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
             <option value="LOW">Low</option>
           </select>
 
+          {/* Priority Filter */}
+          <select
+            value={selectedPriority}
+            onChange={(e) => setSelectedPriority(e.target.value)}
+            className="bg-[#0c0e15] border border-[#212738] rounded px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-sky-500 font-mono"
+          >
+            <option value="">All Priorities</option>
+            <option value="P1_CRITICAL">P1 Critical</option>
+            <option value="P2_HIGH">P2 High</option>
+            <option value="P3_MEDIUM">P3 Medium</option>
+            <option value="P4_LOW">P4 Low</option>
+          </select>
+
           {/* Status Filter */}
           <select
             value={selectedStatus}
@@ -142,6 +174,7 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
             <option value="CONTAINMENT_PENDING">Containment Pending</option>
             <option value="CONTAINED">Contained</option>
             <option value="RESOLVED">Resolved</option>
+            <option value="CLOSED">Closed</option>
             <option value="FALSE_POSITIVE">False Positive</option>
             <option value="REOPENED">Reopened</option>
           </select>
@@ -173,6 +206,7 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
               <tr>
                 <th className="py-2.5 px-4">Incident ID</th>
                 <th className="py-2.5 px-4">Title & Description</th>
+                <th className="py-2.5 px-4">Priority</th>
                 <th className="py-2.5 px-4">Severity</th>
                 <th className="py-2.5 px-4">Status</th>
                 <th className="py-2.5 px-4">Target Asset</th>
@@ -193,6 +227,9 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
                     <td className="py-3 px-4 max-w-sm">
                       <p className="font-semibold text-slate-100 truncate">{inc.title}</p>
                       {inc.description && <p className="text-[11px] text-slate-400 truncate mt-0.5">{inc.description}</p>}
+                    </td>
+                    <td className="py-3 px-4">
+                      {getPriorityBadge(inc.priority)}
                     </td>
                     <td className="py-3 px-4">
                       <SeverityBadge severity={inc.severity} />
@@ -225,7 +262,7 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
                 ))
               ) : (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-slate-500 font-mono text-xs">
+                  <td colSpan={9} className="py-12 text-center text-slate-500 font-mono text-xs">
                     No matching security incidents found.
                   </td>
                 </tr>
@@ -257,18 +294,33 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
                 />
               </div>
 
-              <div>
-                <label className="block text-[11px] font-mono uppercase text-slate-400 mb-1">Severity *</label>
-                <select
-                  value={newSeverity}
-                  onChange={(e) => setNewSeverity(e.target.value as IncidentSeverity)}
-                  className="w-full bg-[#0c0e15] border border-[#212738] rounded px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500 font-mono"
-                >
-                  <option value="CRITICAL">Critical</option>
-                  <option value="HIGH">High</option>
-                  <option value="MEDIUM">Medium</option>
-                  <option value="LOW">Low</option>
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-mono uppercase text-slate-400 mb-1">Severity *</label>
+                  <select
+                    value={newSeverity}
+                    onChange={(e) => setNewSeverity(e.target.value as IncidentSeverity)}
+                    className="w-full bg-[#0c0e15] border border-[#212738] rounded px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500 font-mono"
+                  >
+                    <option value="CRITICAL">Critical</option>
+                    <option value="HIGH">High</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="LOW">Low</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-mono uppercase text-slate-400 mb-1">Priority</label>
+                  <select
+                    value={newPriority}
+                    onChange={(e) => setNewPriority(e.target.value as IncidentPriority)}
+                    className="w-full bg-[#0c0e15] border border-[#212738] rounded px-3 py-2 text-xs text-slate-100 focus:outline-none focus:border-sky-500 font-mono"
+                  >
+                    <option value="P1_CRITICAL">P1 Critical</option>
+                    <option value="P2_HIGH">P2 High</option>
+                    <option value="P3_MEDIUM">P3 Medium</option>
+                    <option value="P4_LOW">P4 Low</option>
+                  </select>
+                </div>
               </div>
 
               <div>

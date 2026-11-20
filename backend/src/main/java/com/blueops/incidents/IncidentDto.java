@@ -8,6 +8,7 @@ public class IncidentDto {
     private String title;
     private String description;
     private String severity;
+    private String priority;
     private String status;
     private Long primaryAssetId;
     private String primaryAssetHostname;
@@ -15,10 +16,13 @@ public class IncidentDto {
     private String assignedTo;
     private String createdBy;
     private String resolutionRationale;
+    private String closureNotes;
     private Instant createdAt;
     private Instant updatedAt;
     private Instant containedAt;
     private Instant resolvedAt;
+    private Instant closedAt;
+    private String closedBy;
     private int findingCount;
     private int noteCount;
 
@@ -30,6 +34,7 @@ public class IncidentDto {
         this.title = incident.getTitle();
         this.description = incident.getDescription();
         this.severity = incident.getSeverity().name();
+        this.priority = incident.getPriority() != null ? incident.getPriority().name() : IncidentPriority.fromSeverity(incident.getSeverity()).name();
         this.status = incident.getStatus().name();
         if (incident.getPrimaryAsset() != null) {
             this.primaryAssetId = incident.getPrimaryAsset().getId();
@@ -39,10 +44,13 @@ public class IncidentDto {
         this.assignedTo = incident.getAssignedTo();
         this.createdBy = incident.getCreatedBy();
         this.resolutionRationale = incident.getResolutionRationale();
+        this.closureNotes = incident.getClosureNotes();
         this.createdAt = incident.getCreatedAt();
         this.updatedAt = incident.getUpdatedAt();
         this.containedAt = incident.getContainedAt();
         this.resolvedAt = incident.getResolvedAt();
+        this.closedAt = incident.getClosedAt();
+        this.closedBy = incident.getClosedBy();
         this.findingCount = incident.getFindings() != null ? incident.getFindings().size() : 0;
         this.noteCount = incident.getNotes() != null ? incident.getNotes().size() : 0;
     }
@@ -61,6 +69,9 @@ public class IncidentDto {
 
     public String getSeverity() { return severity; }
     public void setSeverity(String severity) { this.severity = severity; }
+
+    public String getPriority() { return priority; }
+    public void setPriority(String priority) { this.priority = priority; }
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
@@ -83,6 +94,9 @@ public class IncidentDto {
     public String getResolutionRationale() { return resolutionRationale; }
     public void setResolutionRationale(String resolutionRationale) { this.resolutionRationale = resolutionRationale; }
 
+    public String getClosureNotes() { return closureNotes; }
+    public void setClosureNotes(String closureNotes) { this.closureNotes = closureNotes; }
+
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 
@@ -94,6 +108,12 @@ public class IncidentDto {
 
     public Instant getResolvedAt() { return resolvedAt; }
     public void setResolvedAt(Instant resolvedAt) { this.resolvedAt = resolvedAt; }
+
+    public Instant getClosedAt() { return closedAt; }
+    public void setClosedAt(Instant closedAt) { this.closedAt = closedAt; }
+
+    public String getClosedBy() { return closedBy; }
+    public void setClosedBy(String closedBy) { this.closedBy = closedBy; }
 
     public int getFindingCount() { return findingCount; }
     public void setFindingCount(int findingCount) { this.findingCount = findingCount; }

@@ -38,6 +38,7 @@ export interface Asset {
 }
 
 export type IncidentSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type IncidentPriority = 'P1_CRITICAL' | 'P2_HIGH' | 'P3_MEDIUM' | 'P4_LOW';
 export type IncidentStatus =
   | 'NEW'
   | 'TRIAGED'
@@ -45,6 +46,7 @@ export type IncidentStatus =
   | 'CONTAINMENT_PENDING'
   | 'CONTAINED'
   | 'RESOLVED'
+  | 'CLOSED'
   | 'FALSE_POSITIVE'
   | 'REOPENED';
 
@@ -54,6 +56,7 @@ export interface Incident {
   title: string;
   description?: string;
   severity: IncidentSeverity;
+  priority?: IncidentPriority;
   status: IncidentStatus;
   primaryAssetId?: number;
   primaryAssetHostname?: string;
@@ -61,16 +64,43 @@ export interface Incident {
   assignedTo?: string;
   createdBy: string;
   resolutionRationale?: string;
+  closureNotes?: string;
   createdAt: string;
   updatedAt: string;
   containedAt?: string;
   resolvedAt?: string;
+  closedAt?: string;
+  closedBy?: string;
   findingCount: number;
   noteCount: number;
 }
 
+export interface IncidentEvidence {
+  evidenceId: string;
+  type: string;
+  findingId: string;
+  ruleId: string;
+  ruleName: string;
+  severity: string;
+  timestamp: string;
+  provider: string;
+  host: string;
+  sourceIp?: string;
+  user?: string;
+  process?: string;
+  rawPayload?: string;
+  normalizedAttributes?: Record<string, any>;
+}
+
+export interface RelatedFinding {
+  finding: Finding;
+  relationType: string;
+  relationshipRationale: string;
+  confidenceScore: number;
+}
+
 export interface TimelineEntry {
-  type: 'FINDING' | 'STATUS_CHANGE' | 'NOTE' | 'ACTION';
+  type: 'FINDING' | 'STATUS_CHANGE' | 'NOTE' | 'ACTION' | 'CLOSURE' | 'INCIDENT_CREATED';
   timestamp: string;
   title: string;
   description: string;

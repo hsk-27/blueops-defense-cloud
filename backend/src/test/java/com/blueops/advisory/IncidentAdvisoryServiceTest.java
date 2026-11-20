@@ -181,6 +181,7 @@ class IncidentAdvisoryServiceTest {
         @Override public long countByStatus(IncidentStatus status) { return 0; }
         @Override public long countBySeverity(IncidentSeverity severity) { return 0; }
         @Override public Page<Incident> findFiltered(IncidentStatus status, IncidentSeverity severity, Pageable pageable) { return Page.empty(); }
+        @Override public Page<Incident> findFilteredAdvanced(IncidentStatus status, IncidentSeverity severity, IncidentPriority priority, String assignedTo, String query, Pageable pageable) { return Page.empty(); }
         @Override public long countActiveIncidents() { return 0; }
         @Override public List<Incident> findActiveByTitleAndAsset(String title, Long assetId) { return Collections.emptyList(); }
         @Override public long countAssetsWithActiveIncidents() { return 0; }

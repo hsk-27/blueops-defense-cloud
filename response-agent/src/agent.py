@@ -11,6 +11,7 @@ import hashlib
 import time
 import json
 import logging
+import threading
 from flask import Flask, request, jsonify
 
 try:
@@ -55,13 +56,32 @@ HOSTNAME_PATTERN = re.compile(r"^[a-zA-Z0-9._-]+$")
 # Sliding-window nonce cache mapping: action_id -> received_timestamp
 PROCESSED_NONCES: dict[str, float] = {}
 NONCE_VALIDITY_WINDOW_SECONDS = 65.0  # 60s request window + 5s clock skew grace
+MAX_NONCE_CACHE_CAPACITY = 10000
+NONCE_LOCK = threading.Lock()
 
-def evict_expired_nonces(current_time: float) -> None:
-    """Purges nonces older than the sliding validity window."""
+def evict_expired_nonces_locked(current_time: float) -> None:
+    """Purges nonces older than the sliding validity window. Must be called while holding NONCE_LOCK."""
     cutoff = current_time - NONCE_VALIDITY_WINDOW_SECONDS
     expired_keys = [k for k, ts in PROCESSED_NONCES.items() if ts < cutoff]
     for k in expired_keys:
         del PROCESSED_NONCES[k]
+    # Bound memory capacity under high-volume flood attacks within the window
+    if len(PROCESSED_NONCES) > MAX_NONCE_CACHE_CAPACITY:
+        sorted_keys = sorted(PROCESSED_NONCES.keys(), key=lambda k: PROCESSED_NONCES[k])
+        for k in sorted_keys[:max(1, len(sorted_keys) // 5)]:
+            del PROCESSED_NONCES[k]
+
+def check_and_register_nonce(action_id: str, current_time: float) -> bool:
+    """
+    Atomically checks if a nonce is fresh and registers it if not present.
+    Returns True if nonce is valid and registered, False if it was already processed (replay).
+    """
+    with NONCE_LOCK:
+        evict_expired_nonces_locked(current_time)
+        if action_id in PROCESSED_NONCES:
+            return False
+        PROCESSED_NONCES[action_id] = current_time
+        return True
 
 def verify_hmac(payload: str, timestamp: int, signature: str) -> bool:
     # 1. Anti-replay expiration window: 60 seconds
@@ -114,6 +134,8 @@ def validate_target_parameter(action: str, target: str) -> tuple[bool, str]:
 
 @app.route("/health", methods=["GET"])
 def health():
+    with NONCE_LOCK:
+        tracked = len(PROCESSED_NONCES)
     return jsonify({
         "status": "HEALTHY",
         "agent": "BlueOps Response Agent v1.2",
@@ -121,13 +143,12 @@ def health():
         "execution_mode": EXECUTION_MODE,
         "driver": driver.__class__.__name__,
         "simulation_mode": EXECUTION_MODE.upper() == "SIMULATION",
-        "tracked_nonces": len(PROCESSED_NONCES)
+        "tracked_nonces": tracked
     }), 200
 
 @app.route("/api/v1/execute", methods=["POST"])
 def execute_action():
     now = time.time()
-    evict_expired_nonces(now)
 
     signature = request.headers.get("X-BlueOps-Signature")
     timestamp_header = request.headers.get("X-BlueOps-Timestamp")
@@ -147,7 +168,8 @@ def execute_action():
         logger.warning(f"HMAC verification failed for action ID {action_id}")
         return jsonify({"error": "Unauthorized: HMAC signature mismatch or expired payload"}), 401
 
-    if action_id in PROCESSED_NONCES:
+    # Atomic test-and-set nonce registration to defeat race conditions and replays
+    if not check_and_register_nonce(action_id, now):
         logger.warning(f"Replay attack detected for ActionId: {action_id}")
         return jsonify({"error": "Replay detected: ActionId already processed"}), 409
 
@@ -174,8 +196,6 @@ def execute_action():
             "message": validation_error
         }), 400
 
-    # Register nonce with arrival timestamp
-    PROCESSED_NONCES[action_id] = now
     logger.info(f"Received validated response action request: Action={resolved_action}, Target={target}, ActionId={action_id}")
 
     # Delegate execution to modular OS / simulation driver

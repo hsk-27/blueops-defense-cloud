@@ -63,8 +63,24 @@ public class TelemetryController {
 
     @GetMapping("/events")
     @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST', 'VIEWER')")
-    public ResponseEntity<List<NormalizedEvent>> getRecentEvents(@RequestParam(defaultValue = "50") int limit) {
+    public ResponseEntity<List<NormalizedEvent>> getRecentEvents(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String provider,
+            @RequestParam(required = false) String host,
+            @RequestParam(required = false) String category,
+            @RequestParam(defaultValue = "50") int limit) {
+        if (query != null || provider != null || host != null || category != null) {
+            return ResponseEntity.ok(normalizationService.searchEvents(query, provider, host, category, limit));
+        }
         return ResponseEntity.ok(normalizationService.getRecentEvents(limit));
+    }
+
+    @GetMapping("/events/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST', 'VIEWER')")
+    public ResponseEntity<NormalizedEvent> getEventById(@PathVariable String id) {
+        return normalizationService.getEventById(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @GetMapping("/dlq")
@@ -95,12 +111,27 @@ public class TelemetryController {
 
         int replayedCount = 0;
         int recoveredCount = 0;
+        int quarantinedCount = 0;
         List<FindingDto> recoveredFindings = new ArrayList<>();
 
         for (Map<String, Object> entry : dlqSnapshot) {
+            int previousReplays = 0;
+            if (entry.containsKey("dlq_replay_count")) {
+                Object rc = entry.get("dlq_replay_count");
+                if (rc instanceof Number n) previousReplays = n.intValue();
+            }
+
+            // Poison pill guard: If a payload has failed normalization >= 3 times, quarantine it
+            if (previousReplays >= 3) {
+                quarantinedCount++;
+                normalizationService.quarantinePoisonPill(entry);
+                continue;
+            }
+
             Map<String, Object> cleaned = new HashMap<>(entry);
             cleaned.remove("dlq_error");
             cleaned.remove("dlq_timestamp");
+            cleaned.put("dlq_replay_count", previousReplays + 1);
 
             NormalizedEvent event = normalizationService.normalize(cleaned);
             replayedCount++;
@@ -114,6 +145,7 @@ public class TelemetryController {
                 "status", "SUCCESS",
                 "replayedCount", replayedCount,
                 "recoveredCount", recoveredCount,
+                "quarantinedPoisonPills", quarantinedCount,
                 "findingsGenerated", recoveredFindings.size()
         ));
     }

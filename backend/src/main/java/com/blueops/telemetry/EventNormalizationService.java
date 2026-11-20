@@ -22,12 +22,15 @@ public class EventNormalizationService {
     private final AtomicLong totalReceived = new AtomicLong(0);
     private final AtomicLong totalNormalized = new AtomicLong(0);
     private final AtomicLong totalFailedDlq = new AtomicLong(0);
+    private final AtomicLong totalQuarantined = new AtomicLong(0);
 
     // Bounded in-memory store for recent telemetry events (holds last 1000 events)
     private static final int MAX_BUFFER_SIZE = 1000;
     private static final int MAX_DLQ_SIZE = 500;
+    private static final int MAX_POISON_PILL_SIZE = 200;
     private final Deque<NormalizedEvent> recentEvents = new ConcurrentLinkedDeque<>();
     private final List<Map<String, Object>> deadLetterQueue = Collections.synchronizedList(new ArrayList<>());
+    private final List<Map<String, Object>> poisonPillQueue = Collections.synchronizedList(new ArrayList<>());
 
     public NormalizedEvent normalize(Map<String, Object> raw) {
         totalReceived.incrementAndGet();
@@ -53,10 +56,15 @@ public class EventNormalizationService {
             // Event Metadata
             String action = (String) raw.getOrDefault("action", "unknown_action");
             int severity = parseSeverity(raw);
+            List<String> eventTypes = new ArrayList<>();
+            eventTypes.add("activity");
+            if (raw.containsKey("outcome")) {
+                eventTypes.add(String.valueOf(raw.get("outcome")));
+            }
             event.setEvent(new NormalizedEvent.EventMetadata(
                     eventId, provider, provider.toLowerCase() + ".security",
                     List.of(extractCategory(raw, provider)),
-                    List.of("activity"), action, severity, raw.toString()
+                    eventTypes, action, severity, raw.toString()
             ));
 
             // Host Metadata
@@ -136,6 +144,14 @@ public class EventNormalizationService {
             Map<String, Object> dlqEntry = new HashMap<>(raw);
             dlqEntry.put("dlq_error", ex.getMessage() != null ? ex.getMessage() : "Unknown normalization error");
             dlqEntry.put("dlq_timestamp", Instant.now().toString());
+
+            int replayCount = 0;
+            if (raw.containsKey("dlq_replay_count")) {
+                Object rc = raw.get("dlq_replay_count");
+                if (rc instanceof Number n) replayCount = n.intValue();
+            }
+            dlqEntry.put("dlq_replay_count", replayCount);
+
             synchronized (deadLetterQueue) {
                 while (deadLetterQueue.size() >= MAX_DLQ_SIZE) {
                     deadLetterQueue.remove(0);
@@ -144,6 +160,81 @@ public class EventNormalizationService {
             }
             return null;
         }
+    }
+
+    public void quarantinePoisonPill(Map<String, Object> entry) {
+        totalQuarantined.incrementAndGet();
+        log.warn("Poison pill detected after repeated DLQ replay failures. Quarantining payload id={}", entry.get("id"));
+        synchronized (poisonPillQueue) {
+            while (poisonPillQueue.size() >= MAX_POISON_PILL_SIZE) {
+                poisonPillQueue.remove(0);
+            }
+            poisonPillQueue.add(entry);
+        }
+    }
+
+    public List<Map<String, Object>> getPoisonPillQueue(int limit) {
+        synchronized (poisonPillQueue) {
+            List<Map<String, Object>> list = new ArrayList<>(poisonPillQueue);
+            int safeLimit = Math.min(Math.max(0, limit), list.size());
+            return list.subList(0, safeLimit);
+        }
+    }
+
+    public Optional<NormalizedEvent> getEventById(String eventId) {
+        if (eventId == null || eventId.isBlank()) return Optional.empty();
+        for (NormalizedEvent evt : recentEvents) {
+            if (eventId.equalsIgnoreCase(evt.getId())) {
+                return Optional.of(evt);
+            }
+        }
+        return Optional.empty();
+    }
+
+    public List<NormalizedEvent> searchEvents(String query, String provider, String host, String category, int limit) {
+        int safeLimit = limit <= 0 ? 50 : Math.min(limit, 200);
+        String qClean = query != null ? query.trim().toLowerCase(Locale.ROOT) : null;
+        String pClean = provider != null ? provider.trim().toLowerCase(Locale.ROOT) : null;
+        String hClean = host != null ? host.trim().toLowerCase(Locale.ROOT) : null;
+        String cClean = category != null ? category.trim().toLowerCase(Locale.ROOT) : null;
+
+        List<NormalizedEvent> results = new ArrayList<>();
+        for (NormalizedEvent evt : recentEvents) {
+            if (results.size() >= safeLimit) break;
+
+            if (pClean != null && (evt.getEvent() == null || evt.getEvent().getProvider() == null
+                    || !evt.getEvent().getProvider().toLowerCase(Locale.ROOT).contains(pClean))) {
+                continue;
+            }
+
+            if (hClean != null && (evt.getHost() == null || evt.getHost().getName() == null
+                    || !evt.getHost().getName().toLowerCase(Locale.ROOT).contains(hClean))) {
+                continue;
+            }
+
+            if (cClean != null && (evt.getEvent() == null || evt.getEvent().getCategory() == null
+                    || evt.getEvent().getCategory().stream().noneMatch(c -> c.toLowerCase(Locale.ROOT).contains(cClean)))) {
+                continue;
+            }
+
+            if (qClean != null) {
+                boolean matchesQuery = false;
+                if (evt.getEvent() != null && evt.getEvent().getOriginal() != null
+                        && evt.getEvent().getOriginal().toLowerCase(Locale.ROOT).contains(qClean)) {
+                    matchesQuery = true;
+                } else if (evt.getProcess() != null && evt.getProcess().getCommandLine() != null
+                        && evt.getProcess().getCommandLine().toLowerCase(Locale.ROOT).contains(qClean)) {
+                    matchesQuery = true;
+                } else if (evt.getUser() != null && evt.getUser().getName() != null
+                        && evt.getUser().getName().toLowerCase(Locale.ROOT).contains(qClean)) {
+                    matchesQuery = true;
+                }
+                if (!matchesQuery) continue;
+            }
+
+            results.add(evt);
+        }
+        return results;
     }
 
     public List<NormalizedEvent> getRecentEvents(int limit) {

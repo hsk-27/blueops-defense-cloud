@@ -1,12 +1,18 @@
 package com.blueops.findings;
 
 import com.blueops.common.dto.ApiResponse;
+import com.blueops.telemetry.EventNormalizationService;
+import com.blueops.telemetry.NormalizedEvent;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/detections")
@@ -14,15 +20,82 @@ import java.util.List;
 public class FindingController {
 
     private final FindingService findingService;
+    private final EventNormalizationService normalizationService;
+
+    @Autowired
+    public FindingController(FindingService findingService, @Autowired(required = false) EventNormalizationService normalizationService) {
+        this.findingService = findingService;
+        this.normalizationService = normalizationService;
+    }
 
     public FindingController(FindingService findingService) {
-        this.findingService = findingService;
+        this(findingService, null);
     }
 
     @GetMapping("/findings")
-    @Operation(summary = "List all detection findings across assets")
-    public ResponseEntity<ApiResponse<List<FindingDto>>> getAllFindings() {
+    @Operation(summary = "List and filter detection findings across assets")
+    public ResponseEntity<ApiResponse<List<FindingDto>>> getAllFindings(
+            @RequestParam(required = false) String severity,
+            @RequestParam(required = false) String ruleId,
+            @RequestParam(required = false) String status,
+            @RequestParam(required = false) String assetId,
+            @RequestParam(defaultValue = "100") int limit) {
+        if (severity != null || ruleId != null || status != null || assetId != null) {
+            return ResponseEntity.ok(ApiResponse.success(findingService.searchFindings(severity, ruleId, status, assetId, limit)));
+        }
         return ResponseEntity.ok(ApiResponse.success(findingService.getAllFindings()));
+    }
+
+    @GetMapping("/findings/{id}")
+    @Operation(summary = "Get single finding by its finding ID")
+    public ResponseEntity<ApiResponse<FindingDto>> getFindingById(@PathVariable String id) {
+        return findingService.getFindingById(id)
+                .map(f -> ResponseEntity.ok(ApiResponse.success(f)))
+                .orElseGet(() -> ResponseEntity.status(404).body(ApiResponse.error("Finding not found: " + id)));
+    }
+
+    @GetMapping("/findings/{id}/evidence")
+    @Operation(summary = "Retrieve forensic evidence and raw triggering event for a finding")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getFindingEvidence(@PathVariable String id) {
+        Optional<FindingDto> findingOpt = findingService.getFindingById(id);
+        if (findingOpt.isEmpty()) {
+            return ResponseEntity.status(404).body(ApiResponse.error("Finding not found: " + id));
+        }
+
+        FindingDto finding = findingOpt.get();
+        String docId = finding.getRelatedDocId();
+        NormalizedEvent matchedEvent = null;
+        if (normalizationService != null && docId != null) {
+            matchedEvent = normalizationService.getEventById(docId).orElse(null);
+        }
+
+        Map<String, Object> evidenceData = new java.util.HashMap<>();
+        evidenceData.put("findingId", finding.getFindingId());
+        evidenceData.put("ruleId", finding.getRuleId());
+        evidenceData.put("ruleName", finding.getRuleName());
+        evidenceData.put("relatedDocId", docId);
+        evidenceData.put("matchedDetails", finding.getDetails());
+        evidenceData.put("normalizedEvent", matchedEvent);
+        evidenceData.put("rawOriginal", (matchedEvent != null && matchedEvent.getEvent() != null) ? matchedEvent.getEvent().getOriginal() : null);
+
+        return ResponseEntity.ok(ApiResponse.success(evidenceData));
+    }
+
+    @GetMapping("/findings/{id}/related")
+    @Operation(summary = "Get related findings associated by entity, IP, tactic, or temporal proximity")
+    public ResponseEntity<ApiResponse<List<RelatedFindingDto>>> getRelatedFindings(@PathVariable String id) {
+        List<RelatedFindingDto> related = findingService.getRelatedFindings(id);
+        return ResponseEntity.ok(ApiResponse.success(related));
+    }
+
+    @PatchMapping("/findings/{id}/status")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST')")
+    @Operation(summary = "Update finding investigation status")
+    public ResponseEntity<ApiResponse<FindingDto>> updateFindingStatus(
+            @PathVariable String id,
+            @RequestParam String status) {
+        FindingDto updated = findingService.updateFindingStatus(id, status);
+        return ResponseEntity.ok(ApiResponse.success("Finding status updated to " + status, updated));
     }
 
     @GetMapping("/{id}/findings")
@@ -31,3 +104,4 @@ public class FindingController {
         return ResponseEntity.ok(ApiResponse.success(findingService.getFindingsByRule(ruleCode != null ? ruleCode : "D" + String.format("%03d", id))));
     }
 }
+

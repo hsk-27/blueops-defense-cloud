@@ -28,6 +28,10 @@ public class Incident {
     private IncidentSeverity severity;
 
     @Enumerated(EnumType.STRING)
+    @Column(length = 32)
+    private IncidentPriority priority = IncidentPriority.P3_MEDIUM;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 32)
     private IncidentStatus status = IncidentStatus.NEW;
 
@@ -44,6 +48,9 @@ public class Incident {
     @Column(name = "resolution_rationale", columnDefinition = "TEXT")
     private String resolutionRationale;
 
+    @Column(name = "closure_notes", columnDefinition = "TEXT")
+    private String closureNotes;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -55,6 +62,12 @@ public class Incident {
 
     @Column(name = "resolved_at")
     private Instant resolvedAt;
+
+    @Column(name = "closed_at")
+    private Instant closedAt;
+
+    @Column(name = "closed_by", length = 64)
+    private String closedBy;
 
     @OneToMany(mappedBy = "incident", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<IncidentFinding> findings = new ArrayList<>();
@@ -82,6 +95,9 @@ public class Incident {
     public IncidentSeverity getSeverity() { return severity; }
     public void setSeverity(IncidentSeverity severity) { this.severity = severity; }
 
+    public IncidentPriority getPriority() { return priority; }
+    public void setPriority(IncidentPriority priority) { this.priority = priority; }
+
     public IncidentStatus getStatus() { return status; }
     public void setStatus(IncidentStatus status) { this.status = status; }
 
@@ -97,6 +113,9 @@ public class Incident {
     public String getResolutionRationale() { return resolutionRationale; }
     public void setResolutionRationale(String resolutionRationale) { this.resolutionRationale = resolutionRationale; }
 
+    public String getClosureNotes() { return closureNotes; }
+    public void setClosureNotes(String closureNotes) { this.closureNotes = closureNotes; }
+
     public Instant getCreatedAt() { return createdAt; }
     public void setCreatedAt(Instant createdAt) { this.createdAt = createdAt; }
 
@@ -108,6 +127,12 @@ public class Incident {
 
     public Instant getResolvedAt() { return resolvedAt; }
     public void setResolvedAt(Instant resolvedAt) { this.resolvedAt = resolvedAt; }
+
+    public Instant getClosedAt() { return closedAt; }
+    public void setClosedAt(Instant closedAt) { this.closedAt = closedAt; }
+
+    public String getClosedBy() { return closedBy; }
+    public void setClosedBy(String closedBy) { this.closedBy = closedBy; }
 
     public List<IncidentFinding> getFindings() { return findings; }
     public void setFindings(List<IncidentFinding> findings) { this.findings = findings; }

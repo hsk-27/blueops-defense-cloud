@@ -9,6 +9,7 @@ public class IncidentStatusUpdateRequest {
 
     private String reason;
     private String resolutionRationale;
+    private String closureNotes;
 
     public IncidentStatusUpdateRequest() {}
 
@@ -20,4 +21,7 @@ public class IncidentStatusUpdateRequest {
 
     public String getResolutionRationale() { return resolutionRationale; }
     public void setResolutionRationale(String resolutionRationale) { this.resolutionRationale = resolutionRationale; }
+
+    public String getClosureNotes() { return closureNotes; }
+    public void setClosureNotes(String closureNotes) { this.closureNotes = closureNotes; }
 }

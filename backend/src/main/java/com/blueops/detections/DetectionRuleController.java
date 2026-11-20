@@ -62,6 +62,21 @@ public class DetectionRuleController {
         return ResponseEntity.ok(ApiResponse.success(summary));
     }
 
+    @GetMapping("/compatibility")
+    @Operation(summary = "Get declared Sigma detection engine compatibility profile and supported capabilities")
+    public ResponseEntity<ApiResponse<Map<String, Object>>> getSigmaCompatibilityProfile() {
+        Map<String, Object> profile = new HashMap<>();
+        profile.put("engineName", "BlueOps Dynamic Sigma Engine v1.2");
+        profile.put("conditionGrammar", List.of("and", "or", "not", "parentheses", "1 of selection*", "all of selection*", "1 of them"));
+        profile.put("fieldModifiersSupported", List.of("contains", "startswith", "endswith", "re", "all"));
+        profile.put("aggregationsSupported", List.of("count(event.id) by <entity> > N", "count(user.name) by <entity> > N", "selection_fail and selection_success by <entity>"));
+        profile.put("slidingWindowEngine", "SigmaAggregationEngine (Active, Thread-Safe Sliding Window)");
+        profile.put("supportedLogsources", List.of("windows/sysmon", "linux/auditd", "network/suricata"));
+        profile.put("unsupportedConstructs", List.of("near", "timeframe across distinct logsources", "min/max/avg statistical math aggregations"));
+        profile.put("activeRuleCount", sigmaRegistry != null ? sigmaRegistry.getLoadedRuleCount() : 0);
+        return ResponseEntity.ok(ApiResponse.success(profile));
+    }
+
     @GetMapping("/sigma-catalog")
     @Operation(summary = "List all dynamically parsed declarative Sigma YAML rules")
     public ResponseEntity<ApiResponse<List<SigmaRuleDefinition>>> getSigmaCatalog() {

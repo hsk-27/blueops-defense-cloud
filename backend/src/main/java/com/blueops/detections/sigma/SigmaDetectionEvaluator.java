@@ -4,6 +4,7 @@ import com.blueops.findings.FindingDto;
 import com.blueops.telemetry.NormalizedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -22,15 +23,25 @@ public class SigmaDetectionEvaluator {
     private final SigmaRuleRegistry ruleRegistry;
     private final SigmaFieldMatcher fieldMatcher;
     private final SigmaConditionEvaluator conditionEvaluator;
+    private final SigmaAggregationEngine aggregationEngine;
     private final AtomicLong findingSeq = new AtomicLong(2000);
 
     public SigmaDetectionEvaluator(
             SigmaRuleRegistry ruleRegistry,
             SigmaFieldMatcher fieldMatcher,
-            SigmaConditionEvaluator conditionEvaluator) {
+            SigmaConditionEvaluator conditionEvaluator,
+            @Autowired(required = false) SigmaAggregationEngine aggregationEngine) {
         this.ruleRegistry = ruleRegistry;
         this.fieldMatcher = fieldMatcher;
         this.conditionEvaluator = conditionEvaluator;
+        this.aggregationEngine = aggregationEngine != null ? aggregationEngine : new SigmaAggregationEngine();
+    }
+
+    public SigmaDetectionEvaluator(
+            SigmaRuleRegistry ruleRegistry,
+            SigmaFieldMatcher fieldMatcher,
+            SigmaConditionEvaluator conditionEvaluator) {
+        this(ruleRegistry, fieldMatcher, conditionEvaluator, null);
     }
 
     /**
@@ -78,8 +89,14 @@ public class SigmaDetectionEvaluator {
                     }
                 }
 
-                // 2. Evaluate condition expression
-                boolean matched = conditionEvaluator.evaluate(condition, selectionOutcomes);
+                // 2. Evaluate condition expression (stateful aggregation vs single-event AST)
+                boolean matched;
+                if (aggregationEngine != null && aggregationEngine.hasAggregation(condition)) {
+                    matched = aggregationEngine.evaluateAggregation(rule, event, selectionOutcomes, conditionEvaluator);
+                } else {
+                    matched = conditionEvaluator.evaluate(condition, selectionOutcomes);
+                }
+
                 if (matched) {
                     FindingDto finding = buildFinding(rule, event, assetId, assetName, condition);
                     triggered.add(finding);
