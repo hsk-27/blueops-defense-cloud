@@ -166,6 +166,18 @@ public class EventNormalizationService {
         }
     }
 
+    public int clearDeadLetterQueue() {
+        synchronized (deadLetterQueue) {
+            int count = deadLetterQueue.size();
+            deadLetterQueue.clear();
+            return count;
+        }
+    }
+
+    public Object getDeadLetterQueueLock() {
+        return deadLetterQueue;
+    }
+
     public Map<String, Object> getTelemetryStats() {
         Map<String, Object> stats = new HashMap<>();
         stats.put("totalReceived", totalReceived.get());

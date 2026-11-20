@@ -35,6 +35,7 @@ public class ResponseOrchestrationService {
     private final AssetRepository assetRepository;
     private final HmacSignatureService hmacSignatureService;
     private final AuditService auditService;
+    private final ResponsePolicyValidator policyValidator;
     private final RestTemplate restTemplate;
 
     @Value("${blueops.response-agent.url:http://localhost:5000}")
@@ -52,7 +53,8 @@ public class ResponseOrchestrationService {
             AssetRepository assetRepository,
             HmacSignatureService hmacSignatureService,
             RestTemplateBuilder restTemplateBuilder,
-            @Autowired(required = false) AuditService auditService) {
+            @Autowired(required = false) AuditService auditService,
+            @Autowired(required = false) ResponsePolicyValidator policyValidator) {
         this.playbookRepository = playbookRepository;
         this.actionRepository = actionRepository;
         this.executionRepository = executionRepository;
@@ -60,6 +62,7 @@ public class ResponseOrchestrationService {
         this.assetRepository = assetRepository;
         this.hmacSignatureService = hmacSignatureService;
         this.auditService = auditService;
+        this.policyValidator = policyValidator;
         this.restTemplate = restTemplateBuilder
                 .setConnectTimeout(Duration.ofSeconds(3))
                 .setReadTimeout(Duration.ofSeconds(5))
@@ -74,7 +77,7 @@ public class ResponseOrchestrationService {
             AssetRepository assetRepository,
             HmacSignatureService hmacSignatureService,
             RestTemplateBuilder restTemplateBuilder) {
-        this(playbookRepository, actionRepository, executionRepository, incidentRepository, assetRepository, hmacSignatureService, restTemplateBuilder, null);
+        this(playbookRepository, actionRepository, executionRepository, incidentRepository, assetRepository, hmacSignatureService, restTemplateBuilder, null, null);
     }
 
     @Transactional(readOnly = true)
@@ -92,27 +95,36 @@ public class ResponseOrchestrationService {
     public ResponseActionDto requestAction(ResponseActionRequestDto request, String requestedBy) {
         ResponsePlaybook playbook = getPlaybook(request.getPlaybookCode());
 
+        Asset targetAsset = null;
+        if (request.getTargetAssetId() != null) {
+            targetAsset = assetRepository.findById(request.getTargetAssetId()).orElse(null);
+        } else if (request.getTargetIdentifier() != null) {
+            targetAsset = assetRepository.findByHostnameIgnoreCase(request.getTargetIdentifier().trim())
+                    .or(() -> assetRepository.findByIpAddress(request.getTargetIdentifier().trim()))
+                    .orElse(null);
+        }
+
+        // Validate action request against policy bounds (RSP-001)
+        if (policyValidator != null) {
+            policyValidator.validateRequest(playbook, request.getTargetIdentifier(), targetAsset, request.isSimulation() || defaultSimulationMode);
+        }
+
+        boolean requiresApproval = playbook.isRequiresApproval()
+                || (targetAsset != null && "CRITICAL".equalsIgnoreCase(targetAsset.getCriticality()));
+
         ResponseAction action = new ResponseAction();
         action.setActionUuid(UUID.randomUUID().toString());
         action.setPlaybookCode(playbook.getPlaybookCode());
         action.setTargetIdentifier(request.getTargetIdentifier());
         action.setRequestedBy(requestedBy);
         action.setSimulation(request.isSimulation() || defaultSimulationMode);
-        action.setApprovalStatus(playbook.isRequiresApproval() ? "PENDING" : "AUTO_APPROVED");
+        action.setApprovalStatus(requiresApproval ? "PENDING" : "AUTO_APPROVED");
         action.setExecutionStatus("NOT_STARTED");
+        action.setTargetAsset(targetAsset);
 
         if (request.getIncidentId() != null) {
             Incident incident = incidentRepository.findById(request.getIncidentId()).orElse(null);
             action.setIncident(incident);
-        }
-
-        if (request.getTargetAssetId() != null) {
-            Asset asset = assetRepository.findById(request.getTargetAssetId()).orElse(null);
-            action.setTargetAsset(asset);
-        } else if (request.getTargetIdentifier() != null) {
-            assetRepository.findByHostnameIgnoreCase(request.getTargetIdentifier().trim())
-                    .or(() -> assetRepository.findByIpAddress(request.getTargetIdentifier().trim()))
-                    .ifPresent(action::setTargetAsset);
         }
 
         ResponseAction saved = actionRepository.save(action);

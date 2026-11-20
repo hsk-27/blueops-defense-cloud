@@ -33,6 +33,7 @@ public class DetectionEvaluationService {
     private final IncidentRepository incidentRepository;
     private final AssetRepository assetRepository;
     private final AssetService assetService;
+    private final com.blueops.detections.sigma.SigmaDetectionEvaluator sigmaDetectionEvaluator;
 
     private final AtomicLong findingSeq = new AtomicLong(1000);
 
@@ -58,7 +59,8 @@ public class DetectionEvaluationService {
             IncidentService incidentService,
             IncidentRepository incidentRepository,
             AssetRepository assetRepository,
-            @Autowired(required = false) AssetService assetService) {
+            @Autowired(required = false) AssetService assetService,
+            @Autowired(required = false) com.blueops.detections.sigma.SigmaDetectionEvaluator sigmaDetectionEvaluator) {
         this.iocRepository = iocRepository;
         this.matchRepository = matchRepository;
         this.findingAdapter = findingAdapter;
@@ -67,6 +69,7 @@ public class DetectionEvaluationService {
         this.incidentRepository = incidentRepository;
         this.assetRepository = assetRepository;
         this.assetService = assetService;
+        this.sigmaDetectionEvaluator = sigmaDetectionEvaluator;
     }
 
     public DetectionEvaluationService(
@@ -77,7 +80,7 @@ public class DetectionEvaluationService {
             IncidentService incidentService,
             IncidentRepository incidentRepository,
             AssetRepository assetRepository) {
-        this(iocRepository, matchRepository, findingAdapter, correlationEngine, incidentService, incidentRepository, assetRepository, null);
+        this(iocRepository, matchRepository, findingAdapter, correlationEngine, incidentService, incidentRepository, assetRepository, null, null);
     }
 
     @Transactional
@@ -106,8 +109,22 @@ public class DetectionEvaluationService {
         // 1. Threat Intelligence IOC Matching
         evaluateThreatIntel(event, asset, triggeredFindings);
 
-        // 2. Sigma Detection Rules Evaluation
+        // 2. Built-in Sigma Detection Rules Evaluation
         evaluateSigmaRules(event, assetId, assetName, triggeredFindings);
+
+        // 3. Dynamic Sigma Rule Engine Evaluation (DET-001)
+        if (sigmaDetectionEvaluator != null) {
+            List<FindingDto> dynamicFindings = sigmaDetectionEvaluator.evaluate(event, assetId, assetName);
+            Set<String> existingRuleCodes = triggeredFindings.stream()
+                    .map(FindingDto::getRuleId)
+                    .collect(Collectors.toSet());
+            for (FindingDto df : dynamicFindings) {
+                if (df != null && !existingRuleCodes.contains(df.getRuleId())) {
+                    triggeredFindings.add(df);
+                    existingRuleCodes.add(df.getRuleId());
+                }
+            }
+        }
 
         // 3. Register triggered findings into OpenSearch Finding Adapter
         for (FindingDto finding : triggeredFindings) {

@@ -2,7 +2,7 @@
 
 **Document ID:** BLUEOPS-TEST-001  
 **Classification:** Quality Assurance, Test Suite Specifications & Benchmark Standards  
-**Version:** 1.0.0  
+**Version:** 1.2.0  
 **Status:** Living Engineering Standard  
 
 ---
@@ -10,7 +10,7 @@
 ## 1. Testing Architecture Overview
 
 BlueOps enforces an evidence-based testing methodology with strict non-destructive isolation:
-1. **Backend Unit & Integration Tests (JUnit 5 + Spring Boot Test):** Unit coverage for normalization, rule evaluation, token security, and correlation.
+1. **Backend Unit & Integration Tests (JUnit 5 + Spring Boot Test):** Unit coverage for normalization, dynamic Sigma rule evaluation, condition algebra, token security, response policy, and correlation.
 2. **Frontend Component & Unit Tests (Vitest + React Testing Library):** UI state, rendering, role gating, and error boundaries.
 3. **Frontend Production Build Verification (`tsc && vite build`):** Strict TypeScript type checking across all views and API models.
 4. **Adversary Simulation Benchmark (`test-lab/run_simulations.js`):** Empirical dynamic evaluation against 10 Atomic Red Team attack scenarios and 50 benign enterprise baseline telemetry streams.
@@ -20,28 +20,32 @@ BlueOps enforces an evidence-based testing methodology with strict non-destructi
 
 ## 2. Empirical Verification Baseline
 
-As of **November 20, 2026**, the system exhibits the following baseline test results:
+As of **November 20, 2026 (Version 1.2.0)**, the system exhibits the following baseline test results:
 
 ### 2.1. Backend JUnit 5 Suite
 - **Command:** `cd backend && .\mvnw.cmd test`
-- **Execution Time:** ~41.7 seconds
 - **Results:**
-  - **Total Tests Run:** 40
-  - **Passed:** 40 (100%)
+  - **Total Tests Run:** 60
+  - **Passed:** 60 (100%)
   - **Failures:** 0
   - **Errors:** 0
   - **Skipped:** 0
-- **Key Test Classes:**
+- **Test Class Breakdown:**
   - `TelemetryNormalizationAndDetectionTest`: 15 tests covering Sysmon EventIDs 1, 3, 10, 11, Linux auditd SYSCALL, Suricata 5-tuples, DLQ routing, and rules D001–D018.
-  - `SecurityStartupValidatorTest`: 4 tests validating length bounds, weak key rejection in `prod`, and dev fallbacks.
-  - `SigmaRuleParserAndRegistryTest`: 3 tests validating SnakeYAML parsing across all 18 production Sigma YAML rules.
-  - `AuthoritativeAdvisorTest`: 5 tests verifying playbook generation and risk ranking.
-  - `JwtTokenProviderTest` & `AuthServiceTest`: 8 tests validating JWT lifecycle and credential handling.
-  - `AssetServiceTest` & `AuditServiceTest`: 5 tests validating asset risk calculation and audit trail creation.
+  - `SecurityStartupValidatorTest`: 9 tests validating byte length, Shannon information entropy ($H \ge 3.0$), pattern predictability rejection, and production aliases (`prod`, `production`, `prd`, `live`).
+  - `SigmaRuleParserAndRegistryTest`: 3 tests validating SnakeYAML parsing and concurrent lock-free reads during disk reload (4,000 queries across 8 reader threads with 0 empty reads).
+  - `SigmaFieldMatcherTest`: 4 tests validating modifiers (`|contains`, `|endswith`, `|startswith`), normalized path slashes, and list OR semantics.
+  - `SigmaConditionEvaluatorTest`: 4 tests validating boolean condition algebra (`and`, `or`, `not`, parentheses, `1 of selection*`, and aggregation clause stripping).
+  - `SigmaDetectionEvaluatorTest`: 2 tests validating end-to-end telemetry evaluation producing `FindingDto` with ATT&CK technique metadata.
+  - `ResponsePolicyValidatorTest`: 4 tests validating protected infrastructure exclusion (127.0.0.1, localhost), CLI option injection defense, and target character sets.
+  - `CorrelationEngineTest`: 4 tests validating rolling window scenario correlation.
+  - `IncidentServiceTest` & `IncidentStateMachineTest`: 6 tests validating incident lifecycle and state transitions.
+  - `IncidentAdvisoryServiceTest`: 3 tests verifying automated advisory playbook generation.
+  - `JwtTokenProviderTest` & `LoginRateLimiterTest`: 4 tests validating JWT authentication and brute-force protection.
+  - `HmacSignatureServiceTest`: 2 tests validating HMAC-SHA256 signature generation and constant-time verification.
 
 ### 2.2. Frontend Vitest Suite
 - **Command:** `cd frontend && npm.cmd test`
-- **Execution Time:** ~30.0 seconds
 - **Results:**
   - **Test Files Passed:** 3 / 3
   - **Total Tests Run:** 6
@@ -54,8 +58,7 @@ As of **November 20, 2026**, the system exhibits the following baseline test res
 
 ### 2.3. Frontend TypeScript & Production Build
 - **Command:** `cd frontend && npm.cmd run build`
-- **Execution Time:** ~14.16 seconds
-- **Result:** **0 TypeScript errors**, 1,589 modules transformed cleanly.
+- **Result:** **0 TypeScript errors**, 1,589 modules transformed cleanly into production assets (`dist/`).
 
 ### 2.4. Adversary Simulation Benchmark (Dynamic Evaluation)
 - **Command:** `node test-lab/run_simulations.js`
@@ -72,7 +75,7 @@ As of **November 20, 2026**, the system exhibits the following baseline test res
   - **False Positive Rate (FPR):** 0.0000%
   - **F1-Score:** 1.0000
   - **Overall Accuracy:** 100.00%
-  - **Mean Time to Detect (MTTD):** 3.33 seconds
+  - **Mean Time to Detect (MTTD):** 3.39 seconds
   - **Mean Time to Respond (MTTR):** 42.50 seconds
 
 ### 2.5. Deceptive Attack & Response Boundary Evaluation
@@ -101,4 +104,4 @@ As of **November 20, 2026**, the system exhibits the following baseline test res
 
 - **Synthetic Telemetry Only:** All tests operate exclusively on synthetic, benign event streams.
 - **Simulation Driver Isolation:** Pytest and integration tests against `response-agent` must run with `EXECUTION_MODE=SIMULATION`.
-- **Zero Real System Changes:** Under no circumstances should test suites execute unapproved firewall rule additions, system file modifications, or account changes against the host operating system.
+- **Zero Host Destruction:** All response actions default to `SIMULATION` mode, ensuring no real system configuration is altered.

@@ -73,6 +73,51 @@ public class TelemetryController {
         return ResponseEntity.ok(normalizationService.getDeadLetterQueue(limit));
     }
 
+    @DeleteMapping("/dlq")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> clearDeadLetterQueue() {
+        int cleared = normalizationService.clearDeadLetterQueue();
+        return ResponseEntity.ok(Map.of(
+                "status", "SUCCESS",
+                "clearedCount", cleared,
+                "message", "Dead-letter queue successfully purged."
+        ));
+    }
+
+    @PostMapping("/dlq/replay")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> replayDeadLetterQueue() {
+        List<Map<String, Object>> dlqSnapshot;
+        synchronized (normalizationService.getDeadLetterQueueLock()) {
+            dlqSnapshot = new ArrayList<>(normalizationService.getDeadLetterQueue(500));
+            normalizationService.clearDeadLetterQueue();
+        }
+
+        int replayedCount = 0;
+        int recoveredCount = 0;
+        List<FindingDto> recoveredFindings = new ArrayList<>();
+
+        for (Map<String, Object> entry : dlqSnapshot) {
+            Map<String, Object> cleaned = new HashMap<>(entry);
+            cleaned.remove("dlq_error");
+            cleaned.remove("dlq_timestamp");
+
+            NormalizedEvent event = normalizationService.normalize(cleaned);
+            replayedCount++;
+            if (event != null) {
+                recoveredCount++;
+                recoveredFindings.addAll(evaluationService.evaluate(event));
+            }
+        }
+
+        return ResponseEntity.ok(Map.of(
+                "status", "SUCCESS",
+                "replayedCount", replayedCount,
+                "recoveredCount", recoveredCount,
+                "findingsGenerated", recoveredFindings.size()
+        ));
+    }
+
     @GetMapping("/stats")
     @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST', 'VIEWER')")
     public ResponseEntity<Map<String, Object>> getTelemetryStats() {

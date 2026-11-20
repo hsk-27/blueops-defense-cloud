@@ -7,13 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.2.2] - 2026-11-20
+
+### Added
+- **Dynamic Sigma Detection Engine (Phase III - DET-001..003):**
+  - `SigmaFieldMatcher`: Extracts CES v1.0.0 fields from normalized telemetry, supporting field modifiers (`|contains`, `|endswith`, `|startswith`, `|re`), normalized path slashes, list OR semantics, and wildcard globbing.
+  - `SigmaConditionEvaluator`: Recursive-descent boolean Abstract Syntax Tree (AST) evaluator supporting boolean operators (`and`, `or`, `not`), nested parentheses, quantifier wildcards (`1 of selection*`, `all of them`), and pipeline aggregation stripping.
+  - `SigmaDetectionEvaluator`: Connects `SigmaRuleRegistry` into `DetectionEvaluationService`, achieving true real-time streaming telemetry evaluation against all loaded declarative Sigma YAML rules with deduplicated finding generation.
+- **Dead-Letter Queue Management (Phase IV - TEL-002):**
+  - Added DLQ purge endpoint (`DELETE /api/v1/telemetry/dlq`).
+  - Added DLQ replay and recovery endpoint (`POST /api/v1/telemetry/dlq/replay`).
+- **Response Policy & Blast Radius Validation (Phase VII - RSP-001):**
+  - `ResponsePolicyValidator`: Validates target character sets, blocks CLI option/flag injection (`-flags`), strictly excludes protected infrastructure (`127.0.0.1`, `localhost`, etc.), and enforces manual two-person approvals for critical-tier assets.
+- **Comprehensive Unit & Integration Test Suites:**
+  - Added `SigmaFieldMatcherTest` (4/4 passed).
+  - Added `SigmaConditionEvaluatorTest` (4/4 passed).
+  - Added `SigmaDetectionEvaluatorTest` (2/2 passed).
+  - Added `ResponsePolicyValidatorTest` (4/4 passed).
+  - Backend test suite expanded from 40 to **60 passing tests** (100% pass rate).
+
+---
+
 ## [1.2.1] - 2026-11-20
 
 ### Added
 - **Core Governance Architecture Documentation:** Created authoritative system documentation mandated by Master Project Development Directive:
   - `ARCHITECTURE.md`: Complete system architecture, component breakdown, CES v1.0.0 specification, data flow, and boundaries.
   - `DEVELOPMENT_ROADMAP.md`: Prioritized engineering backlog categorized by P0, P1, P2, P3, and P4 tasks.
-  - `TESTING.md`: Complete testing matrix, empirical verification baseline (46 JUnit tests, 6 Vitest tests, 10 Atomic Red Team, 50 Benign Baselines, 8 Deceptive Attacks, 5 Boundary Tests).
+  - `TESTING.md`: Complete testing matrix, empirical verification baseline (60 JUnit tests, 6 Vitest tests, 10 Atomic Red Team, 50 Benign Baselines, 8 Deceptive Attacks, 5 Boundary Tests).
   - `RESEARCH_NOTES.md`: Literature mapping, comparative system analysis (Wazuh, Elastic Security, Security Onion), and candidate applied research proposals.
   - `CHANGELOG.md`: Version tracking and changelog history.
 - **Enhanced Test Suites:**
