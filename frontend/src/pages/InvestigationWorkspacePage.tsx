@@ -165,7 +165,7 @@ ${findings.map((f) => `- **[${f.ruleId || 'N/A'}] ${f.ruleName || 'Finding'}** (
 ---
 
 ### Incident Timeline & Investigation Audit
-${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.entryType}] ${t.description} (User: ${t.createdBy || 'System'})`).join('\n')}
+${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.type}] ${t.description} (User: ${t.actor || 'System'})`).join('\n')}
 
 ---
 *Report generated automatically by BlueOps SOC Platform v1.0.0 on ${new Date().toISOString()}*

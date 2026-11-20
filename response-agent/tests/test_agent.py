@@ -3,7 +3,11 @@ import hmac
 import hashlib
 import json
 import pytest
-from src.agent import app, SECRET_KEY
+
+try:
+    from src.agent import app, SECRET_KEY
+except ImportError:
+    from agent import app, SECRET_KEY
 
 @pytest.fixture
 def client():

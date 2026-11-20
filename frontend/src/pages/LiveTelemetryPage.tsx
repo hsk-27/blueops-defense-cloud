@@ -87,7 +87,7 @@ export const LiveTelemetryPage: React.FC = () => {
       setTimeout(() => {
         setShowIngestModal(false);
         setIngestStatus(null);
-        fetchTelemetry();
+        handleManualRefresh();
       }, 1500);
     } catch (err: any) {
       setIngestStatus(`Error: ${err.message}`);

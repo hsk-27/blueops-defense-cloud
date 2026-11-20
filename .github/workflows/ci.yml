@@ -75,7 +75,9 @@ jobs:
 
       - name: Run Pytest Suite
         working-directory: response-agent
-        run: pytest
+        env:
+          PYTHONPATH: .
+        run: python -m pytest
 
   adversary-simulation-test:
     name: Adversary Simulations & Empirical Benchmark

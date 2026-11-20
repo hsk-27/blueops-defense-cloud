@@ -85,7 +85,7 @@ export const IncidentCenterPage: React.FC<IncidentCenterProps> = ({ onSelectInci
       setShowCreateModal(false);
       setNewTitle('');
       setNewDesc('');
-      await fetchIncidents();
+      await handleManualRefresh();
     } catch (err: any) {
       alert(err.message || 'Failed to create incident');
     } finally {

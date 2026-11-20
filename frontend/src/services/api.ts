@@ -12,7 +12,8 @@ import {
   ResponseExecution,
   AuditLog,
   SocOverviewMetrics,
-  IncidentRecommendation
+  IncidentRecommendation,
+  IocMatch
 } from '../types';
 
 const BASE_URL = '/api/v1';
