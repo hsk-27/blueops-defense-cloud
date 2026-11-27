@@ -99,10 +99,10 @@ Rather than building a disconnected second response framework, M6 reconciled, pr
 
 ---
 
-## 10. AGENT HARDENING & CONTAINMENT
+## 10. AGENT HARDENING & HYPOTHETICAL CONTAINMENT
 
-- `response-agent/src/drivers.py` was hardened with `ALLOW_LIVE_HOST_DISRUPTION = os.environ.get("BLUEOPS_ALLOW_LIVE_HOST_DISRUPTION", "false").lower() == "true"`.
-- When false (default), `WindowsDriver` and `LinuxDriver` suppress subprocess calls (`netsh`, `iptables`, `net user`), returning safe `CONTAINED_LAB_SANDBOX` emulation payloads.
+- `response-agent/src/drivers.py` executes strictly as non-destructive **hypothetical** sandbox handlers (`HYPOTHETICAL_LAB_SANDBOX`); all host OS subprocess calls (`netsh`, `iptables`, `net user`, `usermod`) have been removed to guarantee zero laptop mutation regardless of environment flags.
+- See `AGENTS.md` and `SECURITY.md` for mandatory AI/operator rules forbidding host-threatening overrides.
 
 ---
 

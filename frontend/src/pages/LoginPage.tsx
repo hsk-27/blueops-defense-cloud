@@ -6,7 +6,7 @@ import { api } from '../services/api';
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
   const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('AdminPass123!');
+  const [password, setPassword] = useState('Admin@BlueOps2026!');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -114,7 +114,7 @@ export const LoginPage: React.FC = () => {
           <div className="grid grid-cols-3 gap-2 text-xs font-mono">
             <button
               type="button"
-              onClick={() => selectPersona('admin', 'AdminPass123!')}
+              onClick={() => selectPersona('admin', 'Admin@BlueOps2026!')}
               className={`p-2 rounded-lg border text-left transition ${
                 username === 'admin'
                   ? 'bg-blue-950/60 border-blue-600 text-blue-300'
@@ -126,7 +126,7 @@ export const LoginPage: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => selectPersona('analyst', 'AnalystPass123!')}
+              onClick={() => selectPersona('analyst', 'Analyst@BlueOps2026!')}
               className={`p-2 rounded-lg border text-left transition ${
                 username === 'analyst'
                   ? 'bg-blue-950/60 border-blue-600 text-blue-300'
@@ -138,7 +138,7 @@ export const LoginPage: React.FC = () => {
             </button>
             <button
               type="button"
-              onClick={() => selectPersona('viewer', 'ViewerPass123!')}
+              onClick={() => selectPersona('viewer', 'Viewer@BlueOps2026!')}
               className={`p-2 rounded-lg border text-left transition ${
                 username === 'viewer'
                   ? 'bg-blue-950/60 border-blue-600 text-blue-300'
@@ -153,19 +153,19 @@ export const LoginPage: React.FC = () => {
 
       </div>
 
-      {/* Enterprise Security Compliance Footer */}
+      {/* Honest Runtime Notice Footer */}
       <footer className="mt-8 text-center space-y-1.5 text-[11px] font-mono text-slate-400 relative z-10">
         <div className="flex items-center justify-center space-x-3 text-slate-400">
           <span className="flex items-center space-x-1">
             <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
-            <span>SOC 2 Type II Certified</span>
+            <span>Lab & Development Mode</span>
           </span>
           <span>•</span>
-          <span>FIPS 140-3 Cryptographic Boundary</span>
+          <span>Safe Simulation Default</span>
           <span>•</span>
-          <span>NIST SP 800-61r2 Compliant</span>
+          <span>RBAC & HMAC Guarded</span>
         </div>
-        <p className="text-slate-400 text-xs font-semibold">© 2026 BlueOps Technologies Inc. All rights reserved.</p>
+        <p className="text-slate-400 text-xs font-semibold">BlueOps Defense Cloud · Open-Source Modular SIEM/SOAR</p>
       </footer>
     </div>
   );

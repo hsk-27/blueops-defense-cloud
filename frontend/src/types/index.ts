@@ -234,8 +234,8 @@ export interface SocOverviewMetrics {
   assetsWithAlerts: number;
   totalDetectionRules: number;
   activeDetectionRules: number;
-  meanTimeToDetectSeconds: number;
-  meanTimeToRespondSeconds: number;
+  meanTimeToDetectSeconds?: number | null;
+  meanTimeToRespondSeconds?: number | null;
   subsystemHealth: Record<string, string>;
   recentIncidents: Array<{
     id: number;
@@ -383,6 +383,7 @@ export type ProposalStatus =
   | 'READY'
   | 'EXECUTING'
   | 'EXECUTION_FAILED'
+  | 'SIMULATED'
   | 'EXECUTED'
   | 'VERIFICATION_PENDING'
   | 'VERIFIED'
@@ -390,7 +391,14 @@ export type ProposalStatus =
   | 'CANCELLED'
   | 'EXPIRED';
 
-export type VerificationStatus = 'NOT_STARTED' | 'PENDING' | 'VERIFIED' | 'FAILED' | 'INCONCLUSIVE';
+export type VerificationStatus =
+  | 'NOT_STARTED'
+  | 'PENDING'
+  | 'SIMULATION_ONLY'
+  | 'UNAVAILABLE'
+  | 'VERIFIED'
+  | 'FAILED'
+  | 'INCONCLUSIVE';
 
 export interface ResponseActionCatalogItem {
   id: number;

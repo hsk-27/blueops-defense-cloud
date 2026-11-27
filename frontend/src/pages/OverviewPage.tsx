@@ -19,6 +19,7 @@ import { StatusBadge } from '../components/StatusBadge';
 export const OverviewPage: React.FC<{ onNavigateToIncident: (id: number) => void }> = ({ onNavigateToIncident }) => {
   const [metrics, setMetrics] = useState<SocOverviewMetrics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -27,9 +28,14 @@ export const OverviewPage: React.FC<{ onNavigateToIncident: (id: number) => void
       try {
         if (isInitial) setLoading(true);
         const data = await api.getSocOverview();
-        if (isMounted) setMetrics(data);
-      } catch (err) {
-        console.error('Failed to load SOC overview:', err);
+        if (isMounted) {
+          setMetrics(data);
+          setError(null);
+        }
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err?.message || 'Failed to load SOC overview metrics');
+        }
       } finally {
         if (isMounted && isInitial) setLoading(false);
       }
@@ -54,6 +60,12 @@ export const OverviewPage: React.FC<{ onNavigateToIncident: (id: number) => void
 
   return (
     <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      {error && (
+        <div role="alert" className="p-3 bg-rose-950/60 border border-rose-800 rounded-md flex items-center space-x-2 text-xs font-mono text-rose-200">
+          <AlertOctagon className="w-4 h-4 text-rose-400 shrink-0" />
+          <span>Overview Metrics Error: {error}</span>
+        </div>
+      )}
       {/* Top Banner: Key Operations Summary */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Total Active Incidents */}
@@ -95,9 +107,11 @@ export const OverviewPage: React.FC<{ onNavigateToIncident: (id: number) => void
             <Clock className="w-4 h-4 text-emerald-400" />
           </div>
           <div className="text-3xl font-extrabold text-emerald-400 mb-2 font-mono">
-            {metrics?.meanTimeToDetectSeconds || 4.8}s
+            {metrics?.meanTimeToDetectSeconds != null ? `${metrics.meanTimeToDetectSeconds}s` : 'N/A'}
           </div>
-          <p className="text-[11px] text-slate-500 font-mono">Real-time OpenSearch Analytics</p>
+          <p className="text-[11px] text-slate-500 font-mono">
+            {metrics?.meanTimeToDetectSeconds != null ? 'Measured detection latency' : 'No empirical MTTD telemetry recorded'}
+          </p>
         </div>
 
         {/* MTTR */}
@@ -107,23 +121,25 @@ export const OverviewPage: React.FC<{ onNavigateToIncident: (id: number) => void
             <Activity className="w-4 h-4 text-indigo-400" />
           </div>
           <div className="text-3xl font-extrabold text-indigo-400 mb-2 font-mono">
-            {Math.round(metrics?.meanTimeToRespondSeconds || 120)}s
+            {metrics?.meanTimeToRespondSeconds != null ? `${Math.round(metrics.meanTimeToRespondSeconds)}s` : 'N/A'}
           </div>
-          <p className="text-[11px] text-slate-500 font-mono">Orchestrated Playbook Remediation</p>
+          <p className="text-[11px] text-slate-500 font-mono">
+            {metrics?.meanTimeToRespondSeconds != null ? 'From contained incidents' : 'No contained incidents recorded yet'}
+          </p>
         </div>
       </div>
 
       {/* Subsystem Health Grid */}
       <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
         <h3 className="text-[11px] font-mono uppercase text-slate-400 tracking-wider mb-3 flex items-center space-x-2">
-          <span>Infrastructure & Telemetry Collector Health</span>
+          <span>Infrastructure & Telemetry Collector Status</span>
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {metrics?.subsystemHealth &&
             Object.entries(metrics.subsystemHealth).map(([key, val]) => {
               const upper = (val || '').toUpperCase();
-              const isHealthy = upper.includes('UP') || upper.includes('HEALTHY') || upper.includes('ONLINE') || upper.includes('ACTIVE');
-              const isDegraded = upper.includes('DEGRADED') || upper.includes('WARN');
+              const isHealthy = upper.includes('UP') || upper.includes('HEALTHY') || upper.includes('ONLINE') || upper.includes('ACTIVE') || upper.includes('OPERATIONAL') || upper.includes('CONNECTED') || upper.includes('RECEIVING');
+              const isDegraded = upper.includes('DEGRADED') || upper.includes('WARN') || upper.includes('STANDBY') || upper.includes('FALLBACK') || upper.includes('SIMULATION') || upper.includes('CONFIGURED');
 
               return (
                 <div key={key} className="bg-[#0c0e15] border border-[#212738] rounded p-2.5">

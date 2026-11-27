@@ -129,9 +129,7 @@ public class DetectionEvaluationService {
                     finding.getRuleId(), finding.getRuleName(), assetId, finding.getFindingId());
         }
 
-        // 4. Multi-Stage Correlation Engine
-        evaluateCorrelation(assetId, asset);
-
+        // Cross-event correlation is executed authoritatively by CorrelationService in the ingestion spine
         return triggeredFindings;
     }
 
@@ -359,75 +357,5 @@ public class DetectionEvaluationService {
                 fId, ruleId, ruleName, severity, tactic, techId, techName,
                 assetId, assetName, event.getTimestamp(), "UNASSIGNED", event.getId(), details
         );
-    }
-
-    private void evaluateCorrelation(String assetId, Asset asset) {
-        try {
-            List<FindingDto> allFindings = findingAdapter.fetchFindings();
-            List<CorrelationEngine.CorrelatedScenario> scenarios = correlationEngine.evaluateFindings(allFindings);
-
-            for (CorrelationEngine.CorrelatedScenario sc : scenarios) {
-                if (!sc.assetId().equalsIgnoreCase(assetId)) continue;
-
-                Long assetDbId = asset != null ? asset.getId() : null;
-                List<Incident> activeIncidents = incidentRepository.findActiveByTitleAndAsset(sc.title(), assetDbId);
-
-                if (activeIncidents.isEmpty()) {
-                    // Automatically generate incident for this correlated attack scenario
-                    IncidentCreateRequest req = new IncidentCreateRequest();
-                    req.setTitle(sc.title());
-                    req.setDescription(sc.description() + "\n\nCorrelation Explanation: " + sc.explanation());
-                    req.setSeverity(sc.severity());
-                    if (asset != null) {
-                        req.setPrimaryAssetId(asset.getId());
-                    }
-                    req.setFindingIds(sc.matchedFindingIds());
-
-                    IncidentDto incident = incidentService.createIncident(req, "system:correlation-engine");
-                    log.warn(">>> CORRELATION ENGINE AUTO-TRIGGERED INCIDENT: [{}] {} (ID: {}) on asset {}",
-                            sc.scenarioCode(), sc.title(), incident.getIncidentNumber(), assetId);
-
-                    // Add automated triage note
-                    IncidentNoteRequest note = new IncidentNoteRequest();
-                    note.setNoteText("Automated Correlation Engine: Detected sequence of " + sc.matchedFindingIds().size() +
-                            " security findings matching scenario " + sc.scenarioCode() + " within the correlation window.");
-                    incidentService.addNote(incident.getId(), note, "system:correlation-engine");
-                } else {
-                    // Existing active incident: link newly observed findings in this attack chain
-                    Incident existing = activeIncidents.get(0);
-                    Set<String> attachedIds = existing.getFindings().stream()
-                            .map(IncidentFinding::getOpensearchFindingId)
-                            .collect(Collectors.toSet());
-                    List<String> newIds = new ArrayList<>();
-                    for (String fid : sc.matchedFindingIds()) {
-                        if (!attachedIds.contains(fid)) {
-                            Optional<FindingDto> findingOpt = findingAdapter.getFindingById(fid);
-                            if (findingOpt.isPresent()) {
-                                FindingDto f = findingOpt.get();
-                                IncidentFinding incFinding = new IncidentFinding(
-                                        existing, f.getFindingId(), f.getRuleId(), f.getRuleName(),
-                                        f.getRuleSeverity(), f.getTimestamp(), f.getRelatedDocId(),
-                                        f.getDetails() != null ? f.getDetails().toString() : null
-                                );
-                                existing.getFindings().add(incFinding);
-                                f.setStatus("LINKED_TO_INCIDENT");
-                                newIds.add(fid);
-                            }
-                        }
-                    }
-                    if (!newIds.isEmpty()) {
-                        existing.setUpdatedAt(Instant.now());
-                        incidentRepository.save(existing);
-                        IncidentNoteRequest note = new IncidentNoteRequest();
-                        note.setNoteText("Correlation Engine Update: Associated additional findings: " +
-                                String.join(", ", newIds));
-                        incidentService.addNote(existing.getId(), note, "system:correlation-engine");
-                        log.info("Appended new findings to active incident {}: {}", existing.getIncidentNumber(), newIds);
-                    }
-                }
-            }
-        } catch (Exception ex) {
-            log.error("Failed to run correlation evaluation: {}", ex.getMessage(), ex);
-        }
     }
 }

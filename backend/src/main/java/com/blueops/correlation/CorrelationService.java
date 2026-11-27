@@ -5,12 +5,14 @@ import com.blueops.entities.EntityRecord;
 import com.blueops.entities.EntityRepository;
 import com.blueops.entities.EntityType;
 import com.blueops.findings.FindingDto;
+import com.blueops.findings.OpenSearchFindingAdapter;
 import com.blueops.incidents.IncidentCreateRequest;
 import com.blueops.incidents.IncidentDto;
 import com.blueops.incidents.IncidentService;
 import com.blueops.incidents.IncidentSeverity;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -34,6 +36,7 @@ public class CorrelationService {
     private final CorrelationEntityRepository entityAssociationRepository;
     private final EntityRepository entityRepository;
     private final IncidentService incidentService;
+    private final OpenSearchFindingAdapter findingAdapter;
 
     public CorrelationService(CorrelationRepository correlationRepository,
                               CorrelationRuleRepository ruleRepository,
@@ -41,16 +44,30 @@ public class CorrelationService {
                               CorrelationEntityRepository entityAssociationRepository,
                               EntityRepository entityRepository,
                               IncidentService incidentService) {
+        this(correlationRepository, ruleRepository, findingAssociationRepository,
+                entityAssociationRepository, entityRepository, incidentService, null);
+    }
+
+    @Autowired
+    public CorrelationService(CorrelationRepository correlationRepository,
+                              CorrelationRuleRepository ruleRepository,
+                              CorrelationFindingRepository findingAssociationRepository,
+                              CorrelationEntityRepository entityAssociationRepository,
+                              EntityRepository entityRepository,
+                              IncidentService incidentService,
+                              @Autowired(required = false) OpenSearchFindingAdapter findingAdapter) {
         this.correlationRepository = correlationRepository;
         this.ruleRepository = ruleRepository;
         this.findingAssociationRepository = findingAssociationRepository;
         this.entityAssociationRepository = entityAssociationRepository;
         this.entityRepository = entityRepository;
         this.incidentService = incidentService;
+        this.findingAdapter = findingAdapter;
     }
 
     /**
-     * Evaluates security findings against configured correlation rules and persists actionable correlation records.
+     * Evaluates incoming findings together with recent real operational findings in the correlation window
+     * and persists actionable correlation records without demo-finding contamination.
      */
     @Transactional
     public List<CorrelationRecord> evaluateAndPersist(List<FindingDto> findings) {
@@ -58,9 +75,23 @@ public class CorrelationService {
         if (findings == null || findings.isEmpty()) return generated;
 
         Instant horizon = Instant.now().minus(Duration.ofHours(24));
-        List<FindingDto> validFindings = findings.stream()
-                .filter(f -> f != null && f.getFindingId() != null && (f.getTimestamp() == null || f.getTimestamp().isAfter(horizon)))
-                .toList();
+        Map<String, FindingDto> mergedById = new LinkedHashMap<>();
+
+        if (findingAdapter != null) {
+            for (FindingDto historical : findingAdapter.fetchOperationalFindings()) {
+                if (isEligibleOperationalFinding(historical, horizon)) {
+                    mergedById.put(historical.getFindingId(), historical);
+                }
+            }
+        }
+        for (FindingDto incoming : findings) {
+            if (isEligibleOperationalFinding(incoming, horizon)) {
+                mergedById.put(incoming.getFindingId(), incoming);
+            }
+        }
+
+        List<FindingDto> validFindings = new ArrayList<>(mergedById.values());
+        if (validFindings.isEmpty()) return generated;
 
         // 1. Evaluate Host-Grouped Correlations
         Map<String, List<FindingDto>> byHost = validFindings.stream()
@@ -193,10 +224,29 @@ public class CorrelationService {
         Instant lastTime = matchedFindings.stream()
                 .map(FindingDto::getTimestamp).filter(Objects::nonNull).max(Instant::compareTo).orElse(Instant.now());
 
-        // Check for existing open correlation for this rule and primary entity within 2 hours to prevent alert flapping
+        // Check for existing active/promoted correlation covering the same findings to prevent alert flapping or duplicate promotion
         List<CorrelationRecord> existing = correlationRepository.findByPrimaryEntityCanonicalId(primaryCanonicalId);
-        boolean duplicate = existing.stream().anyMatch(c -> c.getRuleId().equalsIgnoreCase(ruleId) && c.getStatus() == CorrelationStatus.OPEN);
-        if (duplicate) return;
+        Set<String> candidateFindingIds = matchedFindings.stream()
+                .map(FindingDto::getFindingId)
+                .collect(Collectors.toSet());
+
+        for (CorrelationRecord existingCorr : existing) {
+            if (!existingCorr.getRuleId().equalsIgnoreCase(ruleId)) {
+                continue;
+            }
+            if (existingCorr.getStatus() == CorrelationStatus.OPEN) {
+                return;
+            }
+            if (existingCorr.getStatus() == CorrelationStatus.PROMOTED_TO_INCIDENT) {
+                Set<String> alreadyAssociated = findingAssociationRepository.findByCorrelationId(existingCorr.getId())
+                        .stream()
+                        .map(CorrelationFindingRecord::getFindingId)
+                        .collect(Collectors.toSet());
+                if (alreadyAssociated.containsAll(candidateFindingIds)) {
+                    return;
+                }
+            }
+        }
 
         String correlationId = "CORR-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         CorrelationRecord record = new CorrelationRecord(
@@ -285,12 +335,18 @@ public class CorrelationService {
     }
 
     /**
-     * Promotes a verified correlation result directly into a formalized Incident.
+     * Promotes a verified correlation result directly into a formalized Incident (idempotent if already promoted).
      */
     @Transactional
     public IncidentDto promoteToIncident(Long id, String operatorUsername) {
         CorrelationRecord record = correlationRepository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("Correlation record not found with ID: " + id));
+
+        if (record.getStatus() == CorrelationStatus.PROMOTED_TO_INCIDENT && record.getIncidentId() != null) {
+            log.info("Correlation [{}] already promoted to Incident id={}; returning existing incident.",
+                    record.getCorrelationId(), record.getIncidentId());
+            return incidentService.getIncidentById(record.getIncidentId());
+        }
 
         List<CorrelationFindingRecord> associations = findingAssociationRepository.findByCorrelationId(record.getId());
         List<String> findingIds = associations.stream().map(CorrelationFindingRecord::getFindingId).toList();
@@ -310,6 +366,13 @@ public class CorrelationService {
 
         log.info("Correlation [{}] promoted to Incident [{}] by {}", record.getCorrelationId(), incident.getIncidentNumber(), operatorUsername);
         return incident;
+    }
+
+    private boolean isEligibleOperationalFinding(FindingDto finding, Instant horizon) {
+        return finding != null
+                && finding.getFindingId() != null
+                && !OpenSearchFindingAdapter.isDemoFinding(finding)
+                && (finding.getTimestamp() == null || finding.getTimestamp().isAfter(horizon));
     }
 
     // --- Mappers ---

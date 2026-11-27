@@ -31,21 +31,18 @@ BlueOps is architected as a modular, container-ready defensive cybersecurity pla
 
 ---
 
-## 2. Docker Compose Deployment Topology
+## 2. Lab / Demonstration Docker Compose Topology
 
-The primary orchestrated deployment packages all core subsystems with network isolation:
+> **IMPORTANT SECURITY NOTICE:** The repository's root `docker-compose.yml` is a **lab / demonstration** topology only. It exposes plain HTTP (`:80` via `frontend/nginx.conf`), runs single-node OpenSearch with `DISABLE_SECURITY_PLUGIN=true`, and must **not** be exposed directly to untrusted networks without an external TLS reverse proxy and strong `.env` secrets.
 
 ```mermaid
 flowchart TD
-    subgraph Public/DMZ
-        LB["Nginx Reverse Proxy / TLS (:443)"]
-    end
-
-    subgraph Internal_Frontend_Network
-        UI["BlueOps Frontend Container (:80)"]
+    subgraph Lab_Host_Access["Lab Host Access (HTTP :3000 -> :80)"]
+        UI["BlueOps Frontend Container (nginx :80)"]
     end
 
     subgraph Internal_Backend_Network
+        FB["Fluent Bit (:5140/:24224)"]
         BE["BlueOps Spring Boot Backend (:8080)"]
         RA["Response Agent Container (:5000)"]
     end
@@ -55,14 +52,16 @@ flowchart TD
         OS[("OpenSearch 2.13 (:9200)")]
     end
 
-    LB --> UI
-    LB --> BE
+    UI --> BE
+    FB -->|"HTTP + X-BlueOps-Ingest-Key"| BE
+    FB -->|"Raw telemetry archival"| OS
     BE --> PG
     BE --> OS
     BE -->|HMAC-SHA256 Token| RA
 ```
 
-### 2.1 Production `docker-compose.yml` Configuration
+### 2.1 Reference Production `docker-compose` Example
+The snippet below illustrates how a hardened operator-managed deployment adds required secret guards (`:?`), Nginx TLS termination (Section 4.2), and non-default keys — the root `docker-compose.yml` itself remains lab/demo-scoped:
 
 ```yaml
 version: '3.8'
@@ -178,20 +177,25 @@ volumes:
 
 All parameters can be securely configured using environment variables. Hardcoded secrets are explicitly rejected by `SecurityStartupValidator` when running under `prod` profiles.
 
-| Environment Variable | Default Value | Description | Production Mandate |
+| Environment Variable | Default Value | Description | Security / Deployment Guidance |
 | :--- | :--- | :--- | :--- |
-| `SPRING_PROFILES_ACTIVE` | `dev` | Active Spring profile (`dev`, `prod`, `test`) | Set to `prod` in staging and live networks |
-| `SERVER_PORT` | `8080` | Internal Spring Boot HTTP port | Internal container port |
-| `JWT_SECRET` | *(lab dev key)* | 256-bit secret used for signing JWT tokens | **Must be generated via CSPRNG** (>= 32 chars, Shannon entropy > 4.5) |
+| `SPRING_PROFILES_ACTIVE` | `dev` | Active Spring profile (`dev`, `prod`, `test`) | Use `dev` locally (H2); `prod` enforces non-default secrets |
+| `SERVER_PORT` | `8080` | Backend HTTP port | Internal container port |
+| `JWT_SECRET` | *(dev fallback only)* | 256-bit secret used for signing JWT tokens | **Mandatory CSPRNG key** (>= 32 bytes, high entropy) in `prod` |
 | `JWT_EXPIRATION_MS` | `3600000` | Access token lifespan (1 hour) | Recommended: 3600000 (1h) |
-| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/blueops` | PostgreSQL JDBC connection URL | Point to managed cluster with SSL enabled |
-| `SPRING_DATASOURCE_USERNAME` | `blueops` | Database username | Least-privilege account |
-| `SPRING_DATASOURCE_PASSWORD` | *(lab dev pass)* | Database user password | **Strong random password required** |
+| `BLUEOPS_INGEST_API_KEY` | *(empty — fail closed)* | API key for Fluent Bit `POST /api/v1/telemetry/ingest` | Set matching key in `backend` and `fluent-bit` containers |
+| `BLUEOPS_DEMO_SEED_FINDINGS` | `false` | Optional demo finding seed toggle | Keep `false` so operational store starts empty |
+| `SPRING_DATASOURCE_URL` | `jdbc:postgresql://localhost:5432/blueops_db` | PostgreSQL JDBC connection URL | Point to PostgreSQL instance |
+| `SPRING_DATASOURCE_USERNAME` | `blueops_user` | Database username | Least-privilege account |
+| `SPRING_DATASOURCE_PASSWORD` | *(required in prod)* | Database user password | **Strong random password required** |
 | `BLUEOPS_OPENSEARCH_URI` | `http://localhost:9200` | OpenSearch REST URI | HTTP/HTTPS endpoint |
-| `BLUEOPS_OPENSEARCH_ENABLED`| `true` | Enable remote OpenSearch indexing | Fallback in-memory active if unreachable |
-| `RESPONSE_AGENT_SECRET` | *(lab dev key)* | HMAC-SHA256 shared key for response agent | **Must be 64-hex char secret** |
-| `RESPONSE_AGENT_SIMULATION_MODE` | `true` | Enforces simulation adapter in backend | **Keep true in all non-isolated environments** |
-| `ALLOW_LIVE_HOST_DISRUPTION` | `false` | Hardware/host protection latch | **Keep false to prevent host mutation** |
+| `BLUEOPS_OPENSEARCH_ENABLED` | `true` (`false` in `dev`) | Enable remote OpenSearch indexing | Fallback in-memory active if disabled/unreachable |
+| `RESPONSE_AGENT_URL` | `http://localhost:5000` | Python response agent base URL | Set to `http://response-agent:5000` in Compose |
+| `RESPONSE_AGENT_SECRET` | *(dev fallback only)* | Shared HMAC-SHA256 secret (backend + Python agent) | **Mandatory strong 256-bit secret** in `prod` |
+| `RESPONSE_AGENT_SIMULATION_MODE` | `true` | Enforces safe `SIMULATION` mode in agent & reporting | **Keep `true`; see `AGENTS.md` AI/Operator Safety Guard** |
+| `BLUEOPS_ALLOW_LIVE_EXECUTION` | `false` | Backend SOAR & legacy response live-dispatch guard | **Keep `false` unless running in non-laptop isolated sandbox** |
+| `EXECUTION_MODE` | `SIMULATION` | Agent driver selection label (`SIMULATION` or hypothetical platform driver) | `drivers.py` executes hypothetically with zero OS subprocesses |
+| `BLUEOPS_ALLOW_LIVE_HOST_DISRUPTION` | `false` | Legacy host-protection flag (ignored; OS commands removed from `drivers.py`) | **Keep `false` and do not re-introduce host OS mutations** |
 
 ---
 

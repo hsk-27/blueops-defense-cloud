@@ -10,6 +10,7 @@ public enum ProposalStatus {
     READY,
     EXECUTING,
     EXECUTION_FAILED,
+    SIMULATED,
     EXECUTED,
     VERIFICATION_PENDING,
     VERIFIED,

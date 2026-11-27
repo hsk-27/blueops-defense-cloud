@@ -12,11 +12,13 @@ try {
 
 # Authenticate
 $token = $null
+$adminUser = if ($env:BLUEOPS_ADMIN_USERNAME) { $env:BLUEOPS_ADMIN_USERNAME } else { "admin" }
+$adminPass = if ($env:BLUEOPS_ADMIN_PASSWORD) { $env:BLUEOPS_ADMIN_PASSWORD } else { "Admin@BlueOps2026!" }
 try {
-    $loginBody = @{ username = "admin"; password = "AdminPass123!" } | ConvertTo-Json
+    $loginBody = @{ username = $adminUser; password = $adminPass } | ConvertTo-Json
     $auth = Invoke-RestMethod -Uri "$BackendUrl/api/v1/auth/login" -Method Post -Body $loginBody -ContentType "application/json" -TimeoutSec 5
-    $token = $auth.data.token
-    Write-Host "[+] Authentication: SUCCESSFUL (Token acquired)" -ForegroundColor Green
+    $token = $auth.data.accessToken
+    Write-Host "[+] Authentication: SUCCESSFUL (Access token acquired)" -ForegroundColor Green
 } catch {
     Write-Host "[-] Authentication: FAILED ($($_.Exception.Message))" -ForegroundColor Yellow
 }

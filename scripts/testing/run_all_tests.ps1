@@ -9,24 +9,35 @@ Write-Host "          BlueOps Universal Test Suite Execution            " -Foreg
 Write-Host "============================================================" -ForegroundColor Cyan
 
 # 1. Backend Tests
-Write-Host "[1/4] Running Backend JUnit 5 Tests..." -ForegroundColor Yellow
+Write-Host "[1/5] Running Backend JUnit 5 Tests..." -ForegroundColor Yellow
 Set-Location "$RootDir\backend"
-.\mvnw.cmd -o test
+.\mvnw.cmd -B -o test
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 # 2. Frontend Tests & Build
-Write-Host "[2/4] Running Frontend Vitest Suite & Production Build..." -ForegroundColor Yellow
+Write-Host "[2/5] Running Frontend Vitest Suite & Production Build..." -ForegroundColor Yellow
 Set-Location "$RootDir\frontend"
 node node_modules\vitest\vitest.mjs run
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 node node_modules\vite\bin\vite.js build
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-# 3. Dynamic Empirical Benchmark
-Write-Host "[3/4] Running Dynamic Empirical Research Benchmark..." -ForegroundColor Yellow
+# 3. Response Agent Pytest Suite (runs with Flask or built-in stdlib fallback)
+Write-Host "[3/5] Running Response Agent Contract Tests (Pytest)..." -ForegroundColor Yellow
+Set-Location "$RootDir\response-agent"
+python -m pytest -q
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+
+# 4. Dynamic Empirical Benchmark
+Write-Host "[4/5] Running Standalone JS Rule-Logic Smoke Check..." -ForegroundColor Yellow
 Set-Location $RootDir
 node test-lab\run_simulations.js
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
-# 4. Deceptive Adversary Simulation Suite
-Write-Host "[4/4] Running Deceptive Adversary Simulation Suite..." -ForegroundColor Yellow
+# 5. Deceptive Adversary Simulation Suite
+Write-Host "[5/5] Running Deceptive Adversary Simulation Suite..." -ForegroundColor Yellow
 node test-lab\adversary-simulation\deceptive_attack_suite.js
+if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Green

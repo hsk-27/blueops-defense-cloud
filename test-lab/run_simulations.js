@@ -385,27 +385,28 @@ function evaluateTelemetryEvent(event) {
   return triggeredRules;
 }
 
-function runDynamicBenchmark() {
+function runRuleLogicSmokeBenchmark() {
   console.log('=================================================================');
-  console.log('   BLUEOPS EMPIRICAL RESEARCH BENCHMARK: DYNAMIC EVALUATION     ');
+  console.log('  BLUEOPS STANDALONE JS RULE-LOGIC SMOKE TEST (NON-PRODUCTION)   ');
   console.log('=================================================================');
+  console.log('Note: Evaluates standalone JS rule heuristics offline only.');
+  console.log('Does NOT benchmark live Spring Boot, OpenSearch, or host MTTR.\n');
 
   const scenarioResults = [];
   let truePositives = 0;
   let falseNegatives = 0;
-  let totalAdversaryMttdMs = 0;
+  let totalRuleEvalMs = 0;
 
   // 1. Evaluate 10 Adversary Scenarios
-  console.log(`\n[PHASE 1] Executing ${ADVERSARY_SCENARIOS.length} Atomic Red Team Adversary Simulations...`);
-  
+  console.log(`[PHASE 1] Executing ${ADVERSARY_SCENARIOS.length} Synthetic Scenario Heuristic Checks...`);
+
   for (const s of ADVERSARY_SCENARIOS) {
     const start = performance.now();
     const findings = evaluateTelemetryEvent(s.telemetry);
     const elapsedMs = performance.now() - start;
 
-    // Realistic pipeline ingestion latency jitter (1.5s - 5.5s)
-    const simulatedMttdSec = Number((1.5 + (Math.random() * 3.5) + (elapsedMs / 1000)).toFixed(2));
-    totalAdversaryMttdMs += simulatedMttdSec;
+    const measuredEvalMs = Number(elapsedMs.toFixed(4));
+    totalRuleEvalMs += measuredEvalMs;
 
     const matchedExpected = findings.some(f => f.ruleId === s.expectedRule);
     if (matchedExpected) {
@@ -423,11 +424,11 @@ function runDynamicBenchmark() {
       expectedRule: s.expectedRule,
       detectedRules: findings.map(f => f.ruleId),
       detected: matchedExpected,
-      detectionLatencySec: simulatedMttdSec
+      ruleEvaluationTimeMs: measuredEvalMs
     });
 
     console.log(`  [${matchedExpected ? 'PASS' : 'FAIL'}] ${s.code} - ${s.name}`);
-    console.log(`         Expected: ${s.expectedRule} | Found: [${findings.map(f => f.ruleId).join(', ')}] | Latency: ${simulatedMttdSec}s`);
+    console.log(`         Expected: ${s.expectedRule} | Found: [${findings.map(f => f.ruleId).join(', ')}] | Eval Time: ${measuredEvalMs}ms`);
   }
 
   // 2. Evaluate 50 Benign Baseline Scenarios
@@ -461,11 +462,10 @@ function runDynamicBenchmark() {
   const f1Score = (2 * (precision * recall)) / (precision + recall);
   const accuracy = (truePositives + trueNegatives) / totalEvents;
 
-  const avgMttd = totalAdversaryMttdMs / totalAdversary;
-  const avgMttr = 42.5; // Empirically validated SOC analyst review (35s) + agent HMAC verification & rollback window (7.5s)
+  const avgRuleEvalMs = totalRuleEvalMs / totalAdversary;
 
   console.log('\n=================================================================');
-  console.log('                 EMPIRICAL BENCHMARK METRICS SUMMARY             ');
+  console.log('        STANDALONE JS RULE-LOGIC SMOKE TEST METRICS SUMMARY       ');
   console.log('=================================================================');
   console.log(`  Adversary Scenarios Evaluated:    ${totalAdversary}`);
   console.log(`  Benign Baselines Evaluated:       ${totalBenign}`);
@@ -474,18 +474,18 @@ function runDynamicBenchmark() {
   console.log(`  True Negatives (TN):              ${trueNegatives} / ${totalBenign}`);
   console.log(`  False Negatives (FN):             ${falseNegatives}`);
   console.log('-----------------------------------------------------------------');
-  console.log(`  Precision:                        ${(precision * 100).toFixed(2)}%`);
-  console.log(`  Recall (Sensitivity):             ${(recall * 100).toFixed(2)}%`);
+  console.log(`  Precision (Smoke Fixtures):       ${(precision * 100).toFixed(2)}%`);
+  console.log(`  Recall (Smoke Fixtures):          ${(recall * 100).toFixed(2)}%`);
   console.log(`  Specificity:                      ${(specificity * 100).toFixed(2)}%`);
   console.log(`  False Positive Rate (FPR):        ${(fpr * 100).toFixed(4)}%`);
   console.log(`  F1-Score:                         ${f1Score.toFixed(4)}`);
   console.log(`  Overall Accuracy:                 ${(accuracy * 100).toFixed(2)}%`);
   console.log('-----------------------------------------------------------------');
-  console.log(`  Mean Time to Detect (MTTD):       ${avgMttd.toFixed(2)} seconds`);
-  console.log(`  Mean Time to Respond (MTTR):      ${avgMttr.toFixed(2)} seconds`);
+  console.log(`  Mean JS Heuristic Eval Time:      ${avgRuleEvalMs.toFixed(4)} ms`);
+  console.log(`  End-to-End MTTD / MTTR:           Not measured (offline smoke script)`);
   console.log('=================================================================');
 
-  // Export JSON Report for research reproduction and auditing
+  // Export JSON Report for auditing
   const resultsDir = path.join(__dirname, 'results');
   if (!fs.existsSync(resultsDir)) {
     fs.mkdirSync(resultsDir, { recursive: true });
@@ -494,9 +494,9 @@ function runDynamicBenchmark() {
   const report = {
     benchmarkMetadata: {
       generatedAt: new Date().toISOString(),
-      platform: 'BlueOps Enterprise Threat Detection & Response Platform',
-      version: '1.0.0-PROD',
-      evaluationEngine: 'Dynamic Sigma + Threat Intel + Common Schema Evaluator'
+      classification: 'STANDALONE_JS_RULE_LOGIC_SMOKE_TEST',
+      warning: 'Measures standalone JS heuristic matching on local synthetic fixtures only; does not measure live backend ingestion MTTD or incident response MTTR.',
+      evaluationEngine: 'Standalone JS Rule-Logic Heuristic Smoke Evaluator'
     },
     counts: {
       totalEvaluations: totalEvents,
@@ -514,8 +514,9 @@ function runDynamicBenchmark() {
       falsePositiveRate: Number(fpr.toFixed(4)),
       f1Score: Number(f1Score.toFixed(4)),
       accuracy: Number(accuracy.toFixed(4)),
-      meanTimeToDetectSeconds: Number(avgMttd.toFixed(2)),
-      meanTimeToRespondSeconds: Number(avgMttr.toFixed(2))
+      meanRuleEvalDurationMs: Number(avgRuleEvalMs.toFixed(4)),
+      meanTimeToDetectSeconds: null,
+      meanTimeToRespondSeconds: null
     },
     adversaryDetails: scenarioResults,
     falsePositiveDetails: fpDetails
@@ -523,7 +524,7 @@ function runDynamicBenchmark() {
 
   const outFile = path.join(resultsDir, 'benchmark_report.json');
   fs.writeFileSync(outFile, JSON.stringify(report, null, 2));
-  console.log(`\nEmpirical research benchmark report exported to: ${outFile}\n`);
+  console.log(`\nSmoke test report exported to: ${outFile}\n`);
 }
 
-runDynamicBenchmark();
+runRuleLogicSmokeBenchmark();

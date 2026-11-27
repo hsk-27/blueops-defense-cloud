@@ -44,6 +44,9 @@ public class ResponseOrchestrationService {
     @Value("${blueops.response-agent.simulation-mode:true}")
     private boolean defaultSimulationMode;
 
+    @Value("${blueops.response.allow-live-execution:false}")
+    private boolean allowLiveExecution;
+
     @Autowired
     public ResponseOrchestrationService(
             ResponsePlaybookRepository playbookRepository,
@@ -117,7 +120,7 @@ public class ResponseOrchestrationService {
         action.setPlaybookCode(playbook.getPlaybookCode());
         action.setTargetIdentifier(request.getTargetIdentifier());
         action.setRequestedBy(requestedBy);
-        action.setSimulation(request.isSimulation() || defaultSimulationMode);
+        action.setSimulation(!allowLiveExecution || request.isSimulation() || defaultSimulationMode);
         action.setApprovalStatus(requiresApproval ? "PENDING" : "AUTO_APPROVED");
         action.setExecutionStatus("NOT_STARTED");
         action.setTargetAsset(targetAsset);
@@ -277,8 +280,8 @@ public class ResponseOrchestrationService {
         execution.setAction(action);
         execution.setExecutedAt(Instant.now());
 
-        if (action.isSimulation()) {
-            // Simulated execution
+        if (!allowLiveExecution || action.isSimulation()) {
+            // Hypothetical / simulated execution (non-mutating host protection active)
             long duration = 45L + (long) (Math.random() * 30);
             execution.setExecutionDurationMs(duration);
             execution.setSuccess(true);

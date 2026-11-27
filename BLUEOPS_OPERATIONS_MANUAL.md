@@ -119,30 +119,36 @@ When a detection rule evaluates to `true`, a finding is generated and persisted.
 
 BlueOps incorporates strict human-in-the-loop and Separation of Duties policy controls to prevent accidental host disruption or unauthorized execution.
 
-### 6.1 SOAR Safety Guarantees
-- **Deny-by-Default:** Any action, target, or parameter not explicitly allowlisted is immediately rejected.
-- **Zero Host Mutation Guard:** In all testing and development environments, `ALLOW_LIVE_HOST_DISRUPTION = false`. Drivers operate in simulated lab mode.
-- **Two-Man Rule (Separation of Duties):** The user who creates a response proposal (`proposer`) cannot approve that same proposal. A distinct administrative user (`approver`) must review and approve.
-- **Pre-Flight Policy Preview:** The engine evaluates target safety, CIDR boundaries, and risk tier before any proposal is submitted.
+### 6.1 SOAR Safety Guarantees & RBAC
+- **Least-Privilege RBAC:**
+  - `ROLE_VIEWER`: Read-only access to `/api/v1/response/soar/**` (`catalog`, `targets`, `proposals`, `verification`).
+  - `ROLE_ANALYST`: May evaluate `policy-preview`, create `proposals`, and `cancel` pending proposals.
+  - `ROLE_ADMIN`: Required for `approve`, `deny`, and `execute`.
+- **Fail-Closed Target Registry:** `ResponsePolicyEngine` rejects unregistered targets, non-`AUTHORIZED` targets (`RESTRICTED`/`REVOKED`), protected targets, and incompatible action/target types (`IP` vs `HOST` vs `USER`).
+- **Zero Host Mutation Guard:** In all testing and development environments, `BLUEOPS_ALLOW_LIVE_HOST_DISRUPTION=false` and `RESPONSE_AGENT_SIMULATION_MODE=true`. Drivers operate in simulated lab mode.
+- **Two-Man Rule (Separation of Duties):** For `HIGH` and `CRITICAL` proposals, the proposer cannot self-approve.
 
 ### 6.2 Response Action Execution Lifecycle
 ```
 Finding / Incident
        │
        ▼
-1. Pre-Flight Preview (POST /api/v1/response/soar/policy-preview)
+1. Pre-Flight Preview (POST /api/v1/response/soar/policy-preview) [ADMIN/ANALYST]
        │
        ▼
-2. Create Proposal (POST /api/v1/response/soar/proposals) [Status: PENDING_APPROVAL]
+2. Create Proposal (POST /api/v1/response/soar/proposals) [PENDING_APPROVAL]
        │
        ▼
-3. Independent Approval (POST /api/v1/response/soar/proposals/{id}/approve) [Status: APPROVED]
+3. Admin Approval (POST /api/v1/response/soar/proposals/{id}/approve) [APPROVED, SoD checked]
        │
        ▼
-4. Execution (POST /api/v1/response/soar/proposals/{id}/execute)
-       │  (HMAC-SHA256 Token Generation & Nonce Registration)
+4. Execution (POST /api/v1/response/soar/proposals/{id}/execute) [ADMIN ONLY]
+       │  (Supports ACT-001..ACT-007; ACT-008 fails closed with 501 UNSUPPORTED_ACTION)
        ▼
-5. Independent Verification (ResponseVerificationEngine state probe & SHA-256 evidence record)
+5. Truthful Outcome Recording (ResponseVerificationEngine)
+   - SIMULATION execution -> VerificationStatus.SIMULATION_ONLY / ProposalStatus.SIMULATED
+   - LIVE without independent state probe -> VerificationStatus.UNAVAILABLE / ProposalStatus.EXECUTED
+   - Verified probe payload present -> VerificationStatus.VERIFIED / ProposalStatus.VERIFIED
 ```
 
 ---

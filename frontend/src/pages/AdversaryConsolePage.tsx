@@ -28,7 +28,7 @@ const SCENARIOS: AttackScenarioDef[] = [
       'Stage 2: Execution of obfuscated Base64 PowerShell download cradle (D008)',
       'Stage 3: Outbound egress to non-standard port 4444 matching IOC IP (D014, D015)',
       'Stage 4: Execution of wevtutil.exe to clear Windows Security Event Log (D013)',
-      'Stage 5: Multi-stage correlation trigger C002 -> Auto-create CRITICAL Incident'
+      'Stage 5: Correlation evaluation triggers CORR-002 (ready for analyst promotion)'
     ]
   },
   {
@@ -43,7 +43,7 @@ const SCENARIOS: AttackScenarioDef[] = [
       'Stage 2: Successful SSH login with compromised credentials (D002)',
       'Stage 3: Interactive root shell spawned via sudo (D004)',
       'Stage 4: Tampering with kernel audit subsystem (auditctl -D) (D006)',
-      'Stage 5: Multi-stage correlation trigger C001 -> Auto-create CRITICAL Incident'
+      'Stage 5: Correlation evaluation triggers CORR-001 (ready for analyst promotion)'
     ]
   },
   {
@@ -104,8 +104,7 @@ export const AdversaryConsolePage: React.FC<AdversaryConsoleProps> = ({ onNaviga
     try {
       log('Injecting security telemetry sequence into BlueOps ingestion pipeline...');
       const res = await api.simulateAttack(selectedScenario.id);
-      log(`Injection complete: ${res.eventsInjected} events ingested, ${res.findingsGenerated} findings generated.`);
-      log(`Multi-stage correlation engine evaluated: Scenario ${res.scenario} satisfied.`);
+      log(`Injection complete: ${res.eventsInjected} events ingested, ${res.findingsGenerated} findings generated, ${res.correlationsGenerated ?? 0} correlation(s) created.`);
       setSimulationResult(res);
     } catch (err: any) {
       log(`Simulation error: ${err.message}`);
@@ -140,27 +139,27 @@ export const AdversaryConsolePage: React.FC<AdversaryConsoleProps> = ({ onNaviga
         </div>
       </div>
 
-      {/* Benchmark Summary Metrics */}
+      {/* Live Emulation Telemetry Summary (No Hardcoded Benchmark Claims) */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
-          <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Detection Precision</div>
-          <div className="text-2xl font-bold text-emerald-400 mt-1 font-mono">90.9%</div>
-          <div className="text-[11px] text-slate-500 mt-0.5 font-mono">Empirical benchmark test</div>
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Selected Scenario</div>
+          <div className="text-2xl font-bold text-rose-400 mt-1 font-mono">{selectedScenario.id}</div>
+          <div className="text-[11px] text-slate-500 mt-0.5 font-mono">{selectedScenario.severity} severity</div>
         </div>
         <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
-          <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Adversary Recall</div>
-          <div className="text-2xl font-bold text-sky-400 mt-1 font-mono">100.0%</div>
-          <div className="text-[11px] text-slate-500 mt-0.5 font-mono">Zero false negatives</div>
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Events Injected</div>
+          <div className="text-2xl font-bold text-sky-400 mt-1 font-mono">{simulationResult ? simulationResult.eventsInjected : '--'}</div>
+          <div className="text-[11px] text-slate-500 mt-0.5 font-mono">{simulationResult ? 'Last emulation run' : 'Run scenario to measure'}</div>
         </div>
         <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
-          <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Mean Time to Detect (MTTD)</div>
-          <div className="text-2xl font-bold text-amber-400 mt-1 font-mono">3.43s</div>
-          <div className="text-[11px] text-slate-500 mt-0.5 font-mono">End-to-end ingestion latency</div>
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Findings Generated</div>
+          <div className="text-2xl font-bold text-emerald-400 mt-1 font-mono">{simulationResult ? simulationResult.findingsGenerated : '--'}</div>
+          <div className="text-[11px] text-slate-500 mt-0.5 font-mono">{simulationResult ? 'Evaluated via Sigma & IOC' : 'Awaiting run'}</div>
         </div>
         <div className="bg-[#11141d] border border-[#212738] rounded-md p-4">
-          <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Mean Time to Respond (MTTR)</div>
-          <div className="text-2xl font-bold text-indigo-400 mt-1 font-mono">42.0s</div>
-          <div className="text-[11px] text-slate-500 mt-0.5 font-mono">Automated execution</div>
+          <div className="text-[10px] text-slate-400 uppercase tracking-wider font-mono">Correlations Created</div>
+          <div className="text-2xl font-bold text-indigo-400 mt-1 font-mono">{simulationResult ? (simulationResult.correlationsGenerated ?? 0) : '--'}</div>
+          <div className="text-[11px] text-slate-500 mt-0.5 font-mono">Authoritative CorrelationService</div>
         </div>
       </div>
 

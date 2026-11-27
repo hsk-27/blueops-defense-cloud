@@ -1,9 +1,9 @@
 {
   "benchmarkMetadata": {
-    "generatedAt": "2026-11-20T13:44:03.519Z",
-    "platform": "BlueOps Enterprise Threat Detection & Response Platform",
-    "version": "1.0.0-PROD",
-    "evaluationEngine": "Dynamic Sigma + Threat Intel + Common Schema Evaluator"
+    "generatedAt": "2026-11-27T17:26:25.584Z",
+    "classification": "STANDALONE_JS_RULE_LOGIC_SMOKE_TEST",
+    "warning": "Measures standalone JS heuristic matching on local synthetic fixtures only; does not measure live backend ingestion MTTD or incident response MTTR.",
+    "evaluationEngine": "Standalone JS Rule-Logic Heuristic Smoke Evaluator"
   },
   "counts": {
     "totalEvaluations": 60,
@@ -21,8 +21,9 @@
     "falsePositiveRate": 0,
     "f1Score": 1,
     "accuracy": 1,
-    "meanTimeToDetectSeconds": 3.2,
-    "meanTimeToRespondSeconds": 42.5
+    "meanRuleEvalDurationMs": 0.0282,
+    "meanTimeToDetectSeconds": null,
+    "meanTimeToRespondSeconds": null
   },
   "adversaryDetails": [
     {
@@ -37,7 +38,7 @@
         "D017"
       ],
       "detected": true,
-      "detectionLatencySec": 4.54
+      "ruleEvaluationTimeMs": 0.1647
     },
     {
       "scenarioCode": "T002",
@@ -50,7 +51,7 @@
         "D002"
       ],
       "detected": true,
-      "detectionLatencySec": 3.07
+      "ruleEvaluationTimeMs": 0.0556
     },
     {
       "scenarioCode": "T003",
@@ -63,7 +64,7 @@
         "D004"
       ],
       "detected": true,
-      "detectionLatencySec": 4.34
+      "ruleEvaluationTimeMs": 0.0075
     },
     {
       "scenarioCode": "T004",
@@ -76,7 +77,7 @@
         "D007"
       ],
       "detected": true,
-      "detectionLatencySec": 2.96
+      "ruleEvaluationTimeMs": 0.0068
     },
     {
       "scenarioCode": "T005",
@@ -89,7 +90,7 @@
         "D008"
       ],
       "detected": true,
-      "detectionLatencySec": 1.87
+      "ruleEvaluationTimeMs": 0.0069
     },
     {
       "scenarioCode": "T006",
@@ -102,7 +103,7 @@
         "D009"
       ],
       "detected": true,
-      "detectionLatencySec": 2.47
+      "ruleEvaluationTimeMs": 0.0062
     },
     {
       "scenarioCode": "T007",
@@ -116,7 +117,7 @@
         "D010"
       ],
       "detected": true,
-      "detectionLatencySec": 4.01
+      "ruleEvaluationTimeMs": 0.0066
     },
     {
       "scenarioCode": "T008",
@@ -129,7 +130,7 @@
         "D011"
       ],
       "detected": true,
-      "detectionLatencySec": 4.32
+      "ruleEvaluationTimeMs": 0.0055
     },
     {
       "scenarioCode": "T009",
@@ -142,7 +143,7 @@
         "D013"
       ],
       "detected": true,
-      "detectionLatencySec": 1.9
+      "ruleEvaluationTimeMs": 0.0071
     },
     {
       "scenarioCode": "T010",
@@ -156,7 +157,7 @@
         "D014"
       ],
       "detected": true,
-      "detectionLatencySec": 2.48
+      "ruleEvaluationTimeMs": 0.0148
     }
   ],
   "falsePositiveDetails": []

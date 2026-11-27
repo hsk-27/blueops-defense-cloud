@@ -16,15 +16,17 @@ fi
 # Authenticate
 echo "[*] Authenticating with BlueOps Backend..."
 TOKEN=""
+ADMIN_USER="${BLUEOPS_ADMIN_USERNAME:-admin}"
+ADMIN_PASS="${BLUEOPS_ADMIN_PASSWORD:-Admin@BlueOps2026!}"
 AUTH_RESP=$(curl -s -X POST "$BACKEND_URL/api/v1/auth/login" \
     -H "Content-Type: application/json" \
-    -d '{"username":"admin","password":"AdminPass123!"}' || true)
+    -d "{\"username\":\"$ADMIN_USER\",\"password\":\"$ADMIN_PASS\"}" || true)
 
-if echo "$AUTH_RESP" | grep -q "token"; then
-    TOKEN=$(echo "$AUTH_RESP" | grep -o '"token":"[^"]*' | cut -d'"' -f4)
-    echo "[+] Authentication: SUCCESSFUL (Token acquired)"
+if echo "$AUTH_RESP" | grep -q '"accessToken"'; then
+    TOKEN=$(echo "$AUTH_RESP" | grep -o '"accessToken":"[^"]*' | cut -d'"' -f4)
+    echo "[+] Authentication: SUCCESSFUL (Access token acquired)"
 else
-    echo "[-] Authentication: FAILED (Token not acquired)"
+    echo "[-] Authentication: FAILED (Access token not acquired)"
 fi
 
 # Verification of sample Sysmon ingestion

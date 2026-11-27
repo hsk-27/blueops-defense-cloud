@@ -93,11 +93,36 @@ class ResponsePolicyAndLifecycleSecurityTest {
         tgtHost.setCriticality("STANDARD");
         targetRepository.save(tgtHost);
 
+        ResponseTargetRecord tgtUser = new ResponseTargetRecord();
+        tgtUser.setTargetId("TGT-003");
+        tgtUser.setTargetType("USER");
+        tgtUser.setIdentifier("CORP\\analyst");
+        tgtUser.setDisplayName("Synthetic Lab User");
+        tgtUser.setCriticality("STANDARD");
+        targetRepository.save(tgtUser);
+
+        ResponseTargetRecord tgtRestricted = new ResponseTargetRecord();
+        tgtRestricted.setTargetId("TGT-REST");
+        tgtRestricted.setTargetType("IP");
+        tgtRestricted.setIdentifier("203.0.113.99");
+        tgtRestricted.setDisplayName("Restricted Non-Authorized Target");
+        tgtRestricted.setTrustStatus("RESTRICTED");
+        targetRepository.save(tgtRestricted);
+
+        ResponseTargetRecord tgtRevoked = new ResponseTargetRecord();
+        tgtRevoked.setTargetId("TGT-REV");
+        tgtRevoked.setTargetType("IP");
+        tgtRevoked.setIdentifier("203.0.113.100");
+        tgtRevoked.setDisplayName("Revoked Target");
+        tgtRevoked.setTrustStatus("REVOKED");
+        targetRepository.save(tgtRevoked);
+
         ResponseTargetRecord tgtProtected = new ResponseTargetRecord();
         tgtProtected.setTargetId("TGT-PROT");
         tgtProtected.setTargetType("IP");
         tgtProtected.setIdentifier("10.0.0.1");
         tgtProtected.setDisplayName("Protected Core Gateway");
+        tgtProtected.setTrustStatus("RESTRICTED");
         tgtProtected.setProtected(true);
         targetRepository.save(tgtProtected);
 
@@ -252,11 +277,13 @@ class ResponsePolicyAndLifecycleSecurityTest {
 
         // 3. Execute Proposal
         ResponseProposalDto executed = orchestrator.executeProposal(created.getId(), "lead-bob");
-        assertEquals("VERIFIED", executed.getStatus());
+        assertEquals("SIMULATED", executed.getStatus());
         assertNotNull(executed.getVerification());
-        assertEquals("VERIFIED", executed.getVerification().getStatus());
-        assertTrue(executed.getVerification().getExpectedOutcome().contains("DROP rule active"));
-        assertTrue(executed.getVerification().getObservedOutcome().contains("Simulated lab firewall table query confirmed"));
+        assertEquals("SIMULATION_ONLY", executed.getVerification().getStatus());
+        assertTrue(executed.getVerification().isSimulation());
+        assertEquals("SIMULATION_DRY_RUN", executed.getVerification().getVerificationMethod());
+        assertTrue(executed.getVerification().getObservedOutcome().contains("Simulation only (dry-run)"));
+        assertFalse(executed.getVerification().getObservedOutcome().contains("table query confirmed"));
     }
 
     @Test
@@ -298,6 +325,33 @@ class ResponsePolicyAndLifecycleSecurityTest {
         assertTrue(result.isSuccess());
         assertEquals("SIMULATION", result.getMode());
         assertTrue(result.getPayload().contains("simulatedArtifact"));
-        assertTrue(result.getPayload().contains("Simulated policy applied successfully"));
+        assertTrue(result.getPayload().contains("Simulated action ran in safe lab containment"));
+    }
+
+    @Test
+    @DisplayName("Security: Rejects unregistered, restricted, revoked, and mismatched-type targets (fail-closed)")
+    void testPolicyFailClosed_UnregisteredTrustStatusAndTypeMismatchRejected() {
+        PolicyEvaluationResultDto unregistered = policyEngine.evaluate(
+                blockIpAction, "192.0.2.77", ResponseExecutionMode.SIMULATION, "analyst-1", Map.of()
+        );
+        assertEquals(ResponsePolicyOutcome.DENY, unregistered.getOutcome());
+        assertTrue(unregistered.getPolicyViolations().stream().anyMatch(v -> v.contains("not registered")));
+
+        PolicyEvaluationResultDto restricted = policyEngine.evaluate(
+                blockIpAction, "203.0.113.99", ResponseExecutionMode.SIMULATION, "analyst-1", Map.of()
+        );
+        assertEquals(ResponsePolicyOutcome.DENY, restricted.getOutcome());
+        assertTrue(restricted.getPolicyViolations().stream().anyMatch(v -> v.contains("AUTHORIZED")));
+
+        PolicyEvaluationResultDto revoked = policyEngine.evaluate(
+                blockIpAction, "203.0.113.100", ResponseExecutionMode.SIMULATION, "analyst-1", Map.of()
+        );
+        assertEquals(ResponsePolicyOutcome.DENY, revoked.getOutcome());
+
+        PolicyEvaluationResultDto typeMismatch = policyEngine.evaluate(
+                blockIpAction, "WIN-PROD-01", ResponseExecutionMode.SIMULATION, "analyst-1", Map.of()
+        );
+        assertEquals(ResponsePolicyOutcome.DENY, typeMismatch.getOutcome());
+        assertTrue(typeMismatch.getPolicyViolations().stream().anyMatch(v -> v.contains("Target type mismatch")));
     }
 }

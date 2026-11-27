@@ -243,7 +243,9 @@ public class ResponseSoarOrchestrator {
         ResponseProposalRecord proposal = proposalRepository.findById(proposalId)
                 .orElseThrow(() -> new ResourceNotFoundException("ResponseProposal", "id", proposalId));
 
-        if (proposal.getStatus() == ProposalStatus.EXECUTED || proposal.getStatus() == ProposalStatus.VERIFIED) {
+        if (proposal.getStatus() == ProposalStatus.EXECUTED
+                || proposal.getStatus() == ProposalStatus.SIMULATED
+                || proposal.getStatus() == ProposalStatus.VERIFIED) {
             throw new InvalidActionException("Cannot cancel an action that has already completed execution.");
         }
 
@@ -309,10 +311,17 @@ public class ResponseSoarOrchestrator {
                                 result.isSuccess() ? "SUCCESS" : "FAILED", result.getDurationMs(), result.getMessage()));
             }
 
-            // Trigger Independent Verification Engine (M6.10)
+            // Record Outcome & Independent Verification (M6.10) without fabricating claims
             ResponseVerificationRecord verification = verificationEngine.verifyOutcome(proposal, result);
-            if (verification.getStatus() == VerificationStatus.VERIFIED) {
+            if (!result.isSuccess() || verification.getStatus() == VerificationStatus.FAILED) {
+                proposal.setStatus(ProposalStatus.EXECUTION_FAILED);
+            } else if (verification.getStatus() == VerificationStatus.SIMULATION_ONLY) {
+                proposal.setStatus(ProposalStatus.SIMULATED);
+            } else if (verification.getStatus() == VerificationStatus.VERIFIED) {
                 proposal.setStatus(ProposalStatus.VERIFIED);
+            } else if (verification.getStatus() == VerificationStatus.UNAVAILABLE
+                    || verification.getStatus() == VerificationStatus.INCONCLUSIVE) {
+                proposal.setStatus(ProposalStatus.EXECUTED);
             } else {
                 proposal.setStatus(ProposalStatus.VERIFICATION_FAILED);
             }

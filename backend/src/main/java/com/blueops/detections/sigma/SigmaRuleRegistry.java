@@ -145,11 +145,12 @@ public class SigmaRuleRegistry {
         if (customSigmaPath != null && !customSigmaPath.isBlank()) {
             candidates.add(Paths.get(customSigmaPath));
         }
-        // Standard relative paths from workspace and backend
+        // Standard portable relative and container paths (no developer machine absolute paths)
         candidates.add(Paths.get("detection-rules", "sigma"));
         candidates.add(Paths.get("..", "detection-rules", "sigma"));
+        candidates.add(Paths.get("..", "..", "detection-rules", "sigma"));
         candidates.add(Paths.get(".", "detection-rules", "sigma"));
-        candidates.add(Paths.get("C:", "Users", "Dell", ".gemini", "antigravity", "scratch", "blueops-defense-cloud", "detection-rules", "sigma"));
+        candidates.add(Paths.get("/app", "detection-rules", "sigma"));
         return candidates;
     }
 }

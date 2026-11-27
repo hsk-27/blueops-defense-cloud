@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,18 +30,21 @@ public class ResponseSoarController {
     }
 
     @GetMapping("/catalog")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST', 'VIEWER')")
     @Operation(summary = "List supported response actions from the response catalog")
     public ResponseEntity<List<ResponseActionCatalogDto>> getActionCatalog() {
         return ResponseEntity.ok(orchestrator.getActionCatalog());
     }
 
     @GetMapping("/targets")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST', 'VIEWER')")
     @Operation(summary = "List registered and authorized response targets")
     public ResponseEntity<List<ResponseTargetDto>> getAuthorizedTargets() {
         return ResponseEntity.ok(orchestrator.getAuthorizedTargets());
     }
 
     @PostMapping("/policy-preview")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST')")
     @Operation(summary = "Pre-flight evaluate policy constraints for a proposed response action")
     public ResponseEntity<PolicyEvaluationResultDto> previewPolicy(
             @RequestBody CreateProposalRequestDto request,
@@ -50,6 +54,7 @@ public class ResponseSoarController {
     }
 
     @PostMapping("/proposals")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST')")
     @Operation(summary = "Create and register a new response proposal")
     public ResponseEntity<ResponseProposalDto> createProposal(
             @RequestBody CreateProposalRequestDto request,
@@ -60,6 +65,7 @@ public class ResponseSoarController {
     }
 
     @GetMapping("/proposals")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST', 'VIEWER')")
     @Operation(summary = "List response proposals with optional status filtering and pagination")
     public ResponseEntity<Page<ResponseProposalDto>> getProposals(
             @RequestParam(required = false) ProposalStatus status,
@@ -73,18 +79,21 @@ public class ResponseSoarController {
     }
 
     @GetMapping("/proposals/{id}")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST', 'VIEWER')")
     @Operation(summary = "Get response proposal details including policy outcome and verification")
     public ResponseEntity<ResponseProposalDto> getProposalById(@PathVariable Long id) {
         return ResponseEntity.ok(orchestrator.getProposalById(id));
     }
 
     @GetMapping("/incidents/{incidentId}/proposals")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST', 'VIEWER')")
     @Operation(summary = "Get all response proposals associated with an incident")
     public ResponseEntity<List<ResponseProposalDto>> getProposalsByIncident(@PathVariable Long incidentId) {
         return ResponseEntity.ok(orchestrator.getProposalsByIncident(incidentId));
     }
 
     @PostMapping("/proposals/{id}/approve")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Approve a pending response proposal (enforcing Separation of Duties)")
     public ResponseEntity<ResponseProposalDto> approveProposal(
             @PathVariable Long id,
@@ -95,6 +104,7 @@ public class ResponseSoarController {
     }
 
     @PostMapping("/proposals/{id}/deny")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Deny a pending response proposal with reason")
     public ResponseEntity<ResponseProposalDto> denyProposal(
             @PathVariable Long id,
@@ -106,6 +116,7 @@ public class ResponseSoarController {
     }
 
     @PostMapping("/proposals/{id}/cancel")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST')")
     @Operation(summary = "Cancel an active or pending response proposal")
     public ResponseEntity<ResponseProposalDto> cancelProposal(
             @PathVariable Long id,
@@ -117,6 +128,7 @@ public class ResponseSoarController {
     }
 
     @PostMapping("/proposals/{id}/execute")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(summary = "Dispatch execution for an approved proposal and trigger independent verification")
     public ResponseEntity<ResponseProposalDto> executeProposal(
             @PathVariable Long id,
@@ -126,6 +138,7 @@ public class ResponseSoarController {
     }
 
     @GetMapping("/proposals/{id}/verification")
+    @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST', 'VIEWER')")
     @Operation(summary = "Retrieve independent verification outcome and evidence for an executed proposal")
     public ResponseEntity<ResponseVerificationDto> getVerification(@PathVariable Long id) {
         return orchestrator.getLatestVerification(id)

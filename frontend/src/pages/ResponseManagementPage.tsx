@@ -35,12 +35,14 @@ export const ResponseManagementPage: React.FC<{
   initialIncidentId?: number;
 }> = ({ initialPlaybook, initialTarget, initialIncidentId }) => {
   const { user, isAdmin } = useAuth();
+  const canProposeOrCancel = user?.role === 'ROLE_ADMIN' || user?.role === 'ROLE_ANALYST';
   const [activeTab, setActiveTab] = useState<'proposals' | 'catalog' | 'targets' | 'history'>('proposals');
 
   const [proposals, setProposals] = useState<ResponseProposal[]>([]);
   const [catalog, setCatalog] = useState<ResponseActionCatalogItem[]>([]);
   const [targets, setTargets] = useState<ResponseTargetItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
 
   // Proposal Creation Modal & Policy Preview State
   const [showModal, setShowModal] = useState(!!initialPlaybook);
@@ -57,16 +59,17 @@ export const ResponseManagementPage: React.FC<{
   const loadData = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
       const [propsRes, catRes, tgtRes] = await Promise.all([
-        api.getResponseProposals(undefined, 0, 50).catch(() => ({ content: [] })),
-        api.getResponseCatalog().catch(() => []),
-        api.getResponseTargets().catch(() => [])
+        api.getResponseProposals(undefined, 0, 50),
+        api.getResponseCatalog(),
+        api.getResponseTargets()
       ]);
       setProposals(propsRes?.content || []);
-      setCatalog(catRes || []);
-      setTargets(tgtRes || []);
-    } catch (err) {
-      console.error('Failed loading SOAR response data:', err);
+      setCatalog(Array.isArray(catRes) ? catRes : []);
+      setTargets(Array.isArray(tgtRes) ? tgtRes : []);
+    } catch (err: any) {
+      setLoadError(err?.message || 'Failed loading SOAR response data');
     } finally {
       setLoading(false);
     }
@@ -170,8 +173,13 @@ export const ResponseManagementPage: React.FC<{
     switch (status) {
       case 'VERIFIED':
         return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 flex items-center space-x-1"><CheckCircle2 className="w-3 h-3" /><span>VERIFIED</span></span>;
+      case 'SIMULATED':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-500/20 text-sky-300 border border-sky-500/40">SIMULATED ONLY</span>;
       case 'EXECUTED':
-        return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">EXECUTED</span>;
+        return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">EXECUTED (UNVERIFIED)</span>;
+      case 'EXECUTION_FAILED':
+      case 'VERIFICATION_FAILED':
+        return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">{status}</span>;
       case 'APPROVED':
       case 'READY':
         return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-sky-500/20 text-sky-300 border border-sky-500/30">APPROVED / READY</span>;
@@ -184,6 +192,39 @@ export const ResponseManagementPage: React.FC<{
         return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-500/20 text-slate-400 border border-slate-500/30">CANCELLED</span>;
       default:
         return <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-slate-300">{status}</span>;
+    }
+  };
+
+  const getVerificationBadge = (verification?: any) => {
+    const status = verification?.status || 'UNAVAILABLE';
+    switch (status) {
+      case 'VERIFIED':
+        return (
+          <span className="px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold flex items-center space-x-1">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            <span>VERIFIED</span>
+          </span>
+        );
+      case 'SIMULATION_ONLY':
+        return (
+          <span className="px-2.5 py-0.5 rounded bg-sky-500/20 text-sky-300 border border-sky-500/40 font-bold">
+            SIMULATION ONLY
+          </span>
+        );
+      case 'UNAVAILABLE':
+      case 'INCONCLUSIVE':
+        return (
+          <span className="px-2.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 font-bold">
+            VERIFICATION {status}
+          </span>
+        );
+      case 'FAILED':
+      default:
+        return (
+          <span className="px-2.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 font-bold">
+            {status}
+          </span>
+        );
     }
   };
 
@@ -208,19 +249,36 @@ export const ResponseManagementPage: React.FC<{
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-1">
-              Separation of duties enforced. All response actions run in bounded simulation adapters with independent post-execution verification.
+              Least-privilege RBAC and Separation of Duties enforced. Simulations run in dry-run containment without mutating host state or fabricating verification proofs.
             </p>
           </div>
         </div>
 
-        <button
-          onClick={() => { setShowModal(true); setPolicyPreview(null); }}
-          className="bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-xs px-3.5 py-2 rounded-lg flex items-center space-x-2 transition shrink-0 shadow-md"
-        >
-          <Play className="w-3.5 h-3.5" />
-          <span>New Response Proposal</span>
-        </button>
+        {canProposeOrCancel && (
+          <button
+            onClick={() => { setShowModal(true); setPolicyPreview(null); }}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-xs px-3.5 py-2 rounded-lg flex items-center space-x-2 transition shrink-0 shadow-md"
+          >
+            <Play className="w-3.5 h-3.5" />
+            <span>New Response Proposal</span>
+          </button>
+        )}
       </div>
+
+      {loadError && (
+        <div role="alert" className="p-3 bg-rose-950/60 border border-rose-800 rounded-lg flex items-center justify-between text-xs font-mono text-rose-200">
+          <div className="flex items-center space-x-2">
+            <AlertOctagon className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>SOAR Governance API Error: {loadError}</span>
+          </div>
+          <button
+            onClick={loadData}
+            className="px-2.5 py-1 bg-rose-900/60 hover:bg-rose-800/80 border border-rose-700 rounded text-[11px]"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Navigation Tabs */}
       <div className="flex space-x-2 border-b border-[#212738] pb-2 font-mono text-xs">
@@ -306,11 +364,21 @@ export const ResponseManagementPage: React.FC<{
                         )}
                       </td>
                       <td className="p-3 text-right space-x-1.5">
-                        {prop.status === 'PENDING_APPROVAL' && (
+                        {prop.status === 'PENDING_APPROVAL' && isAdmin && (
                           <>
                             <button
                               onClick={() => handleApprove(prop.id)}
-                              className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[10px] transition"
+                              disabled={Boolean(
+                                (prop.riskLevel === 'HIGH' || prop.riskLevel === 'CRITICAL') &&
+                                user?.username?.toLowerCase() === prop.proposedBy?.toLowerCase()
+                              )}
+                              title={
+                                (prop.riskLevel === 'HIGH' || prop.riskLevel === 'CRITICAL') &&
+                                user?.username?.toLowerCase() === prop.proposedBy?.toLowerCase()
+                                  ? 'Separation of Duties prevents self-approval of HIGH/CRITICAL actions'
+                                  : 'Approve proposal'
+                              }
+                              className="px-2.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-mono text-[10px] transition disabled:opacity-40 disabled:cursor-not-allowed"
                             >
                               Approve
                             </button>
@@ -322,12 +390,12 @@ export const ResponseManagementPage: React.FC<{
                             </button>
                           </>
                         )}
-                        {(prop.status === 'APPROVED' || prop.status === 'READY') && (
+                        {(prop.status === 'APPROVED' || prop.status === 'READY') && isAdmin && (
                           <button
                             onClick={() => handleExecute(prop.id)}
                             className="px-2.5 py-1 rounded bg-indigo-600 hover:bg-indigo-500 text-white font-mono text-[10px] transition"
                           >
-                            Dispatch Sim
+                            {prop.executionMode === 'SIMULATION' ? 'Dispatch Sim' : 'Execute Live'}
                           </button>
                         )}
                         {prop.verification && (
@@ -335,10 +403,10 @@ export const ResponseManagementPage: React.FC<{
                             onClick={() => setSelectedVerification(prop.verification)}
                             className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-sky-400 border border-slate-700 font-mono text-[10px] transition"
                           >
-                            Evidence
+                            Outcome
                           </button>
                         )}
-                        {prop.status === 'PENDING_APPROVAL' && (
+                        {prop.status === 'PENDING_APPROVAL' && canProposeOrCancel && (
                           <button
                             onClick={() => handleCancel(prop.id)}
                             className="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 font-mono text-[10px] transition"
@@ -377,16 +445,18 @@ export const ResponseManagementPage: React.FC<{
                 <div>Timeout: <span className="text-slate-200">{item.timeoutSeconds}s</span></div>
                 <div>Verification: <span className="text-cyan-400">{item.verificationMethod}</span></div>
               </div>
-              <button
-                onClick={() => {
-                  setSelectedAction(item.actionCode);
-                  setShowModal(true);
-                  setPolicyPreview(null);
-                }}
-                className="w-full py-1.5 mt-2 rounded bg-[#1e293b] hover:bg-[#283548] text-sky-400 font-mono text-xs transition border border-sky-500/20"
-              >
-                Propose This Action
-              </button>
+              {canProposeOrCancel && (
+                <button
+                  onClick={() => {
+                    setSelectedAction(item.actionCode);
+                    setShowModal(true);
+                    setPolicyPreview(null);
+                  }}
+                  className="w-full py-1.5 mt-2 rounded bg-[#1e293b] hover:bg-[#283548] text-sky-400 font-mono text-xs transition border border-sky-500/20"
+                >
+                  Propose This Action
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -461,10 +531,7 @@ export const ResponseManagementPage: React.FC<{
                     <span className="text-slate-400">{p.actionName} ({p.actionCode})</span>
                     <span className="text-amber-300">Target: {p.targetIdentifier}</span>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold flex items-center space-x-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    <span>INDEPENDENTLY VERIFIED</span>
-                  </span>
+                  {getVerificationBadge(p.verification)}
                 </div>
                 <div className="grid grid-cols-2 gap-4 text-slate-300">
                   <div className="space-y-1">
@@ -475,14 +542,14 @@ export const ResponseManagementPage: React.FC<{
                   </div>
                   <div className="space-y-1">
                     <span className="text-[10px] text-slate-500 uppercase">Observed Outcome</span>
-                    <p className="bg-[#0c0e15] p-2.5 rounded border border-[#212738] text-emerald-400">
+                    <p className="bg-[#0c0e15] p-2.5 rounded border border-[#212738] text-slate-200">
                       {p.verification?.observedOutcome}
                     </p>
                   </div>
                 </div>
                 {p.verification?.evidencePayload && (
                   <div className="space-y-1 pt-2">
-                    <span className="text-[10px] text-slate-500 uppercase">Cryptographic Evidence Payload</span>
+                    <span className="text-[10px] text-slate-500 uppercase">Outcome Record Payload</span>
                     <pre className="p-2.5 bg-[#0c0e15] rounded border border-[#212738] text-[11px] text-slate-400 overflow-x-auto font-mono">
                       {p.verification.evidencePayload}
                     </pre>
@@ -615,17 +682,20 @@ export const ResponseManagementPage: React.FC<{
           <div className="bg-[#11141d] border border-[#212738] rounded-xl max-w-xl w-full p-6 space-y-4 shadow-2xl font-mono text-xs">
             <div className="flex items-center justify-between border-b border-[#212738] pb-3">
               <h3 className="text-sm font-bold text-slate-100 flex items-center space-x-2">
-                <FileCheck className="w-4 h-4 text-emerald-400" />
-                <span>Independent Verification Evidence ({selectedVerification.verificationUuid})</span>
+                <FileCheck className="w-4 h-4 text-sky-400" />
+                <span>Outcome Verification Record ({selectedVerification.verificationUuid})</span>
               </h3>
               <button onClick={() => setSelectedVerification(null)} className="text-slate-400 hover:text-slate-200">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <div className="space-y-3">
-              <div>
-                <span className="text-[10px] text-slate-500 uppercase">Verification Method</span>
-                <p className="text-slate-200 font-bold">{selectedVerification.verificationMethod}</p>
+              <div className="flex items-center justify-between">
+                <div>
+                  <span className="text-[10px] text-slate-500 uppercase">Verification Method</span>
+                  <p className="text-slate-200 font-bold">{selectedVerification.verificationMethod}</p>
+                </div>
+                {getVerificationBadge(selectedVerification)}
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 uppercase">Expected Outcome</span>
@@ -635,12 +705,12 @@ export const ResponseManagementPage: React.FC<{
               </div>
               <div>
                 <span className="text-[10px] text-slate-500 uppercase">Observed Outcome</span>
-                <p className="bg-[#0c0e15] p-2.5 rounded border border-[#212738] text-emerald-400 font-semibold">
+                <p className="bg-[#0c0e15] p-2.5 rounded border border-[#212738] text-slate-200 font-semibold">
                   {selectedVerification.observedOutcome}
                 </p>
               </div>
               <div>
-                <span className="text-[10px] text-slate-500 uppercase">Cryptographic Audit Evidence</span>
+                <span className="text-[10px] text-slate-500 uppercase">Recorded Outcome Payload</span>
                 <pre className="p-3 bg-[#0c0e15] rounded border border-[#212738] text-[11px] text-slate-300 overflow-x-auto">
                   {selectedVerification.evidencePayload}
                 </pre>

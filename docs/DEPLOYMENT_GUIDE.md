@@ -1,20 +1,21 @@
-# BlueOps — Enterprise SOC Platform Deployment Guide
+# BlueOps — Lab / Demo Deployment Guide
+
+> **Lab / Demo Notice:** The default `docker-compose.yml` topology is scoped for isolated **lab and evaluation** deployments only (plain HTTP `:80` Nginx without TLS termination, single-node OpenSearch with `DISABLE_SECURITY_PLUGIN=true`). Before running with `SPRING_PROFILES_ACTIVE=prod`, supply strong CSPRNG values for `POSTGRES_PASSWORD`, `JWT_SECRET`, `RESPONSE_AGENT_SECRET`, and `BLUEOPS_INGEST_API_KEY` in `.env` and place an external TLS reverse proxy in front of the stack.
 
 ## 1. Prerequisites
 - Docker Engine 24+ and Docker Compose v2+
-- Java 21 or Java 23 (for native host development)
+- Java 21+ (for native host development)
 - Node.js 20+ (for frontend development)
-- Host RAM: 16 GB physical memory recommended
+- Host RAM: 8–16 GB physical memory recommended
 
 ---
 
-## 2. Central Platform Deployment (Docker Compose)
+## 2. Lab Stack Deployment (Docker Compose)
 
 ### Step 1: Clone & Configure Environment
 ```bash
-cd blueops
 cp .env.example .env
-# Customize passwords and JWT secrets in .env if desired
+# In .env, set strong secrets for POSTGRES_PASSWORD, JWT_SECRET, RESPONSE_AGENT_SECRET, and BLUEOPS_INGEST_API_KEY
 ```
 
 ### Step 2: Launch Supporting Data Infrastructure

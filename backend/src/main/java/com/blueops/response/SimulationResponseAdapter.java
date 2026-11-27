@@ -34,7 +34,7 @@ public class SimulationResponseAdapter implements ResponseAdapter {
         long duration = 40L + (long) (Math.random() * 25);
 
         String payload = String.format(
-                "{\"executionMode\":\"SIMULATION\",\"status\":\"SUCCESS\",\"actionCode\":\"%s\",\"actionName\":\"%s\",\"target\":\"%s\",\"targetType\":\"%s\",\"remediation\":\"Simulated policy applied successfully in safe lab containment.\",\"simulatedArtifact\":\"sim-ref-%s\"}",
+                "{\"executionMode\":\"SIMULATION\",\"status\":\"SIMULATED\",\"actionCode\":\"%s\",\"actionName\":\"%s\",\"target\":\"%s\",\"targetType\":\"%s\",\"remediation\":\"Simulated action ran in safe lab containment (no real host or network change).\",\"simulatedArtifact\":\"sim-ref-%s\"}",
                 proposal.getActionCode(),
                 proposal.getActionName(),
                 proposal.getTargetIdentifier(),
@@ -46,7 +46,7 @@ public class SimulationResponseAdapter implements ResponseAdapter {
                 true,
                 200,
                 "SIMULATION",
-                "Simulated action applied and verified in contained lab sandbox",
+                "Simulated action completed in safe lab containment (not independently verified)",
                 payload,
                 duration
         );

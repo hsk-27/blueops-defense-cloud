@@ -1,5 +1,6 @@
 package com.blueops.telemetry;
 
+import com.blueops.correlation.CorrelationRecord;
 import com.blueops.correlation.CorrelationService;
 import com.blueops.entities.EntityExtractionService;
 import com.blueops.findings.FindingDto;
@@ -18,6 +19,7 @@ public class TelemetryController {
     private final EntityExtractionService entityExtractionService;
     private final CorrelationService correlationService;
 
+    @org.springframework.beans.factory.annotation.Autowired
     public TelemetryController(EventNormalizationService normalizationService,
                                DetectionEvaluationService evaluationService,
                                EntityExtractionService entityExtractionService,
@@ -35,53 +37,17 @@ public class TelemetryController {
     @PostMapping("/ingest")
     @PreAuthorize("hasAnyRole('ADMIN', 'ANALYST')")
     public ResponseEntity<Map<String, Object>> ingestTelemetry(@RequestBody Object payload) {
-        List<Map<String, Object>> rawEvents = new ArrayList<>();
-        if (payload instanceof List<?> list) {
-            for (Object item : list) {
-                if (item instanceof Map<?, ?> map) {
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> castMap = (Map<String, Object>) map;
-                    rawEvents.add(castMap);
-                }
-            }
-        } else if (payload instanceof Map<?, ?> map) {
-            @SuppressWarnings("unchecked")
-            Map<String, Object> castMap = (Map<String, Object>) map;
-            rawEvents.add(castMap);
-        }
-
-        int normalizedCount = 0;
-        int findingsCount = 0;
-        List<FindingDto> newFindings = new ArrayList<>();
-
-        for (Map<String, Object> raw : rawEvents) {
-            NormalizedEvent event = normalizationService.normalize(raw);
-            if (event != null) {
-                normalizedCount++;
-                if (entityExtractionService != null) {
-                    entityExtractionService.extractFromEvent(event);
-                }
-                List<FindingDto> findings = evaluationService.evaluate(event);
-                findingsCount += findings.size();
-                newFindings.addAll(findings);
-                if (entityExtractionService != null) {
-                    for (FindingDto f : findings) {
-                        entityExtractionService.extractFromFinding(f);
-                    }
-                }
-            }
-        }
-
-        if (correlationService != null && !newFindings.isEmpty()) {
-            correlationService.evaluateAndPersist(newFindings);
-        }
+        List<Map<String, Object>> rawEvents = extractRawEvents(payload);
+        PipelineExecutionSummary summary = runUnifiedPipeline(rawEvents);
 
         Map<String, Object> response = new HashMap<>();
         response.put("status", "SUCCESS");
-        response.put("received", rawEvents.size());
-        response.put("normalized", normalizedCount);
-        response.put("findingsGenerated", findingsCount);
-        response.put("findings", newFindings);
+        response.put("received", summary.receivedCount());
+        response.put("normalized", summary.normalizedCount());
+        response.put("findingsGenerated", summary.findings().size());
+        response.put("findings", summary.findings());
+        response.put("correlationsGenerated", summary.correlations().size());
+        response.put("correlationIds", summary.correlations().stream().map(CorrelationRecord::getCorrelationId).toList());
 
         return ResponseEntity.ok(response);
     }
@@ -186,26 +152,73 @@ public class TelemetryController {
     public ResponseEntity<Map<String, Object>> simulateAttack(@RequestBody Map<String, String> request) {
         String scenario = request.getOrDefault("scenario", "C002");
         List<Map<String, Object>> attackEvents = generateAttackEvents(scenario);
-
-        int findingsCount = 0;
-        List<FindingDto> allFindings = new ArrayList<>();
-        for (Map<String, Object> raw : attackEvents) {
-            NormalizedEvent event = normalizationService.normalize(raw);
-            if (event != null) {
-                List<FindingDto> findings = evaluationService.evaluate(event);
-                findingsCount += findings.size();
-                allFindings.addAll(findings);
-            }
-        }
+        PipelineExecutionSummary summary = runUnifiedPipeline(attackEvents);
 
         Map<String, Object> res = new HashMap<>();
         res.put("scenario", scenario);
-        res.put("eventsInjected", attackEvents.size());
-        res.put("findingsGenerated", findingsCount);
-        res.put("findings", allFindings);
-        res.put("message", "Simulated attack sequence successfully ingested and evaluated against detection engine.");
+        res.put("eventsInjected", summary.receivedCount());
+        res.put("normalized", summary.normalizedCount());
+        res.put("findingsGenerated", summary.findings().size());
+        res.put("findings", summary.findings());
+        res.put("correlationsGenerated", summary.correlations().size());
+        res.put("correlationIds", summary.correlations().stream().map(CorrelationRecord::getCorrelationId).toList());
+        res.put("message", "Simulated attack sequence successfully ingested and evaluated through unified detection & correlation pipeline.");
         return ResponseEntity.ok(res);
     }
+
+    private List<Map<String, Object>> extractRawEvents(Object payload) {
+        List<Map<String, Object>> rawEvents = new ArrayList<>();
+        if (payload instanceof List<?> list) {
+            for (Object item : list) {
+                if (item instanceof Map<?, ?> map) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> castMap = (Map<String, Object>) map;
+                    rawEvents.add(castMap);
+                }
+            }
+        } else if (payload instanceof Map<?, ?> map) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> castMap = (Map<String, Object>) map;
+            rawEvents.add(castMap);
+        }
+        return rawEvents;
+    }
+
+    private PipelineExecutionSummary runUnifiedPipeline(List<Map<String, Object>> rawEvents) {
+        int normalizedCount = 0;
+        List<FindingDto> allFindings = new ArrayList<>();
+
+        for (Map<String, Object> raw : rawEvents) {
+            NormalizedEvent event = normalizationService.normalize(raw);
+            if (event != null) {
+                normalizedCount++;
+                if (entityExtractionService != null) {
+                    entityExtractionService.extractFromEvent(event);
+                }
+                List<FindingDto> findings = evaluationService.evaluate(event);
+                allFindings.addAll(findings);
+                if (entityExtractionService != null) {
+                    for (FindingDto f : findings) {
+                        entityExtractionService.extractFromFinding(f);
+                    }
+                }
+            }
+        }
+
+        List<CorrelationRecord> correlations = Collections.emptyList();
+        if (correlationService != null && !allFindings.isEmpty()) {
+            correlations = correlationService.evaluateAndPersist(allFindings);
+        }
+
+        return new PipelineExecutionSummary(rawEvents.size(), normalizedCount, allFindings, correlations);
+    }
+
+    private record PipelineExecutionSummary(
+            int receivedCount,
+            int normalizedCount,
+            List<FindingDto> findings,
+            List<CorrelationRecord> correlations
+    ) {}
 
     private List<Map<String, Object>> generateAttackEvents(String scenario) {
         List<Map<String, Object>> events = new ArrayList<>();

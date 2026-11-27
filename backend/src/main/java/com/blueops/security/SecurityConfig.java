@@ -50,7 +50,9 @@ public class SecurityConfig {
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(
-                    "/api/v1/auth/**",
+                    "/api/v1/auth/login",
+                    "/api/v1/auth/refresh",
+                    "/api/v1/auth/logout",
                     "/api/v1/system/health",
                     "/actuator/health",
                     "/actuator/info",
@@ -63,6 +65,14 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.POST, "/api/v1/response/actions/*/reject").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/response/actions/*/execute").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.POST, "/api/v1/response/actions/*/rollback").hasRole("ADMIN")
+                // Controlled SOAR governance endpoints (least-privilege RBAC)
+                .requestMatchers(HttpMethod.GET, "/api/v1/response/soar/**").hasAnyRole("ADMIN", "ANALYST", "VIEWER")
+                .requestMatchers(HttpMethod.POST, "/api/v1/response/soar/policy-preview").hasAnyRole("ADMIN", "ANALYST")
+                .requestMatchers(HttpMethod.POST, "/api/v1/response/soar/proposals").hasAnyRole("ADMIN", "ANALYST")
+                .requestMatchers(HttpMethod.POST, "/api/v1/response/soar/proposals/*/cancel").hasAnyRole("ADMIN", "ANALYST")
+                .requestMatchers(HttpMethod.POST, "/api/v1/response/soar/proposals/*/approve").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/response/soar/proposals/*/deny").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.POST, "/api/v1/response/soar/proposals/*/execute").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/assets/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/threat-intel/**").hasRole("ADMIN")
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/detections/**", "/api/v1/detection-rules/**").hasRole("ADMIN")

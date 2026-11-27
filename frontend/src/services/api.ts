@@ -21,33 +21,93 @@ import {
 
 const BASE_URL = '/api/v1';
 
-function getAuthHeaders(): HeadersInit {
+export class ApiError extends Error {
+  status: number;
+  details?: unknown;
+
+  constructor(message: string, status: number, details?: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.details = details;
+  }
+}
+
+function getAuthHeaders(extraHeaders?: HeadersInit): Record<string, string> {
   const token = localStorage.getItem('blueops_token');
-  return {
+  const base: Record<string, string> = {
     'Content-Type': 'application/json',
     ...(token ? { Authorization: `Bearer ${token}` } : {})
   };
+  if (extraHeaders && !Array.isArray(extraHeaders) && !(extraHeaders instanceof Headers)) {
+    return { ...base, ...(extraHeaders as Record<string, string>) };
+  }
+  return base;
+}
+
+function isApiResponseEnvelope(
+  payload: unknown
+): payload is { success: boolean; message?: string; data?: unknown; timestamp?: string } {
+  if (typeof payload !== 'object' || payload === null || Array.isArray(payload)) {
+    return false;
+  }
+  const obj = payload as Record<string, unknown>;
+  return typeof obj.success === 'boolean' && 'message' in obj && 'timestamp' in obj;
+}
+
+async function parseBodySafely(res: Response): Promise<{ parsed: unknown; rawText: string }> {
+  const rawText = await res.text();
+  if (!rawText || rawText.trim().length === 0) {
+    return { parsed: undefined, rawText: '' };
+  }
+  try {
+    return { parsed: JSON.parse(rawText), rawText };
+  } catch {
+    return { parsed: rawText, rawText };
+  }
 }
 
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${BASE_URL}${endpoint}`, {
     ...options,
-    headers: {
-      ...getAuthHeaders(),
-      ...(options.headers || {})
-    }
+    headers: getAuthHeaders(options.headers)
   });
 
   if (res.status === 401) {
     localStorage.removeItem('blueops_token');
+    localStorage.removeItem('blueops_refresh_token');
     localStorage.removeItem('blueops_user');
   }
 
-  const json = await res.json();
+  const { parsed, rawText } = await parseBodySafely(res);
+
   if (!res.ok) {
-    throw new Error(json.message || `Request failed with status ${res.status}`);
+    let errorMessage = `Request failed with status ${res.status}`;
+    if (typeof parsed === 'object' && parsed !== null) {
+      const errObj = parsed as Record<string, unknown>;
+      if (typeof errObj.message === 'string' && errObj.message.trim().length > 0) {
+        errorMessage = errObj.message;
+      } else if (typeof errObj.error === 'string' && errObj.error.trim().length > 0) {
+        errorMessage = errObj.error;
+      }
+    } else if (typeof rawText === 'string' && rawText.trim().length > 0) {
+      errorMessage = rawText.trim();
+    }
+    throw new ApiError(errorMessage, res.status, parsed);
   }
-  return json.data;
+
+  if (res.status === 204 || parsed === undefined) {
+    return undefined as T;
+  }
+
+  if (isApiResponseEnvelope(parsed)) {
+    if (!parsed.success) {
+      throw new ApiError(parsed.message || 'Operation failed', res.status, parsed);
+    }
+    return parsed.data as T;
+  }
+
+  return parsed as T;
 }
 
 export const api = {

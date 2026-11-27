@@ -87,31 +87,76 @@ CREATE INDEX IF NOT EXISTS idx_proposals_uuid ON response_proposals(proposal_uui
 CREATE INDEX IF NOT EXISTS idx_targets_identifier ON response_targets(identifier);
 CREATE INDEX IF NOT EXISTS idx_verifications_proposal ON response_verifications(proposal_id);
 
--- Seed Response Action Catalog
+-- Seed Response Action Catalog (portable across PostgreSQL and H2)
 INSERT INTO response_action_catalog (action_code, name, description, category, target_type, risk_level, requires_approval, simulation_supported, rollback_supported, reversal_action_code, timeout_seconds, verification_method, parameter_schema)
-VALUES
-('ACT-001', 'Block Lab Network Source IP', 'Applies dynamic perimeter drop rules against confirmed malicious network traffic.', 'DEFENSIVE_CONTAINMENT', 'IP', 'MODERATE', TRUE, TRUE, TRUE, 'ACT-004', 15, 'FIREWALL_DROP_QUERY', '{"targetIp":"string"}'),
-('ACT-002', 'Disable Compromised User Identity', 'Suspends authentication credentials for an account actively participating in attack lineage.', 'ACCESS_CONTROL', 'USERNAME', 'HIGH', TRUE, TRUE, TRUE, 'ACT-005', 20, 'IDENTITY_STATUS_CHECK', '{"username":"string"}'),
-('ACT-003', 'Isolate Compromised Host Endpoint', 'Enforces strict network quarantine isolating host from all traffic except telemetry management.', 'DEFENSIVE_CONTAINMENT', 'ASSET', 'CRITICAL', TRUE, TRUE, TRUE, 'ACT-006', 30, 'ENDPOINT_ISOLATION_PROBE', '{"hostname":"string"}'),
-('ACT-004', 'Restore Lab Network Source IP', 'Removes perimeter drop rule, restoring normal IP connectivity.', 'REMEDIATION', 'IP', 'LOW', FALSE, TRUE, FALSE, NULL, 15, 'FIREWALL_ALLOW_QUERY', '{"targetIp":"string"}'),
-('ACT-005', 'Re-enable User Identity', 'Restores account authentication capability following incident containment and credential rotation.', 'REMEDIATION', 'USERNAME', 'MODERATE', TRUE, TRUE, FALSE, NULL, 20, 'IDENTITY_STATUS_CHECK', '{"username":"string"}'),
-('ACT-006', 'Reconnect Isolated Host Endpoint', 'Revokes quarantine policy and rejoins endpoint to standard production network segment.', 'REMEDIATION', 'ASSET', 'HIGH', TRUE, TRUE, FALSE, NULL, 30, 'ENDPOINT_CONNECTIVITY_PROBE', '{"hostname":"string"}'),
-('ACT-007', 'Acquire Volatile Forensic Triage Archive', 'Captures process memory dump, open socket state, and volatile logs for offline forensic analysis.', 'FORENSIC_ACQUISITION', 'ASSET', 'LOW', FALSE, TRUE, FALSE, NULL, 60, 'FORENSIC_ARTIFACT_SHA256_VERIFICATION', '{"hostname":"string","memoryDump":true}'),
-('ACT-008', 'Terminate Malicious Child Process', 'Sends SIGKILL/TerminateProcess to confirmed adversary execution lineage node.', 'DEFENSIVE_CONTAINMENT', 'ASSET', 'HIGH', TRUE, TRUE, FALSE, NULL, 10, 'PROCESS_TABLE_ABSENCE_CHECK', '{"hostname":"string","pid":1234,"processName":"powershell.exe"}')
-ON CONFLICT (action_code) DO NOTHING;
+SELECT 'ACT-001', 'Block Lab Network Source IP', 'Applies dynamic perimeter drop rules against confirmed malicious network traffic.', 'DEFENSIVE_CONTAINMENT', 'IP', 'MODERATE', TRUE, TRUE, TRUE, 'ACT-004', 15, 'FIREWALL_DROP_QUERY', '{"targetIp":"string"}'
+WHERE NOT EXISTS (SELECT 1 FROM response_action_catalog WHERE action_code = 'ACT-001');
 
--- Seed Authorized Synthetic Targets (Strict Blast Radius Bounds)
+INSERT INTO response_action_catalog (action_code, name, description, category, target_type, risk_level, requires_approval, simulation_supported, rollback_supported, reversal_action_code, timeout_seconds, verification_method, parameter_schema)
+SELECT 'ACT-002', 'Disable Compromised User Identity', 'Suspends authentication credentials for an account actively participating in attack lineage.', 'ACCESS_CONTROL', 'USERNAME', 'HIGH', TRUE, TRUE, TRUE, 'ACT-005', 20, 'IDENTITY_STATUS_CHECK', '{"username":"string"}'
+WHERE NOT EXISTS (SELECT 1 FROM response_action_catalog WHERE action_code = 'ACT-002');
+
+INSERT INTO response_action_catalog (action_code, name, description, category, target_type, risk_level, requires_approval, simulation_supported, rollback_supported, reversal_action_code, timeout_seconds, verification_method, parameter_schema)
+SELECT 'ACT-003', 'Isolate Compromised Host Endpoint', 'Enforces strict network quarantine isolating host from all traffic except telemetry management.', 'DEFENSIVE_CONTAINMENT', 'ASSET', 'CRITICAL', TRUE, TRUE, TRUE, 'ACT-006', 30, 'ENDPOINT_ISOLATION_PROBE', '{"hostname":"string"}'
+WHERE NOT EXISTS (SELECT 1 FROM response_action_catalog WHERE action_code = 'ACT-003');
+
+INSERT INTO response_action_catalog (action_code, name, description, category, target_type, risk_level, requires_approval, simulation_supported, rollback_supported, reversal_action_code, timeout_seconds, verification_method, parameter_schema)
+SELECT 'ACT-004', 'Restore Lab Network Source IP', 'Removes perimeter drop rule, restoring normal IP connectivity.', 'REMEDIATION', 'IP', 'LOW', FALSE, TRUE, FALSE, NULL, 15, 'FIREWALL_ALLOW_QUERY', '{"targetIp":"string"}'
+WHERE NOT EXISTS (SELECT 1 FROM response_action_catalog WHERE action_code = 'ACT-004');
+
+INSERT INTO response_action_catalog (action_code, name, description, category, target_type, risk_level, requires_approval, simulation_supported, rollback_supported, reversal_action_code, timeout_seconds, verification_method, parameter_schema)
+SELECT 'ACT-005', 'Re-enable User Identity', 'Restores account authentication capability following incident containment and credential rotation.', 'REMEDIATION', 'USERNAME', 'MODERATE', TRUE, TRUE, FALSE, NULL, 20, 'IDENTITY_STATUS_CHECK', '{"username":"string"}'
+WHERE NOT EXISTS (SELECT 1 FROM response_action_catalog WHERE action_code = 'ACT-005');
+
+INSERT INTO response_action_catalog (action_code, name, description, category, target_type, risk_level, requires_approval, simulation_supported, rollback_supported, reversal_action_code, timeout_seconds, verification_method, parameter_schema)
+SELECT 'ACT-006', 'Reconnect Isolated Host Endpoint', 'Revokes quarantine policy and rejoins endpoint to standard production network segment.', 'REMEDIATION', 'ASSET', 'HIGH', TRUE, TRUE, FALSE, NULL, 30, 'ENDPOINT_CONNECTIVITY_PROBE', '{"hostname":"string"}'
+WHERE NOT EXISTS (SELECT 1 FROM response_action_catalog WHERE action_code = 'ACT-006');
+
+INSERT INTO response_action_catalog (action_code, name, description, category, target_type, risk_level, requires_approval, simulation_supported, rollback_supported, reversal_action_code, timeout_seconds, verification_method, parameter_schema)
+SELECT 'ACT-007', 'Acquire Volatile Forensic Triage Archive', 'Captures process memory dump, open socket state, and volatile logs for offline forensic analysis.', 'FORENSIC_ACQUISITION', 'ASSET', 'LOW', FALSE, TRUE, FALSE, NULL, 60, 'FORENSIC_ARTIFACT_SHA256_VERIFICATION', '{"hostname":"string","memoryDump":true}'
+WHERE NOT EXISTS (SELECT 1 FROM response_action_catalog WHERE action_code = 'ACT-007');
+
+INSERT INTO response_action_catalog (action_code, name, description, category, target_type, risk_level, requires_approval, simulation_supported, rollback_supported, reversal_action_code, timeout_seconds, verification_method, parameter_schema)
+SELECT 'ACT-008', 'Terminate Malicious Child Process', 'Sends SIGKILL/TerminateProcess to confirmed adversary execution lineage node.', 'DEFENSIVE_CONTAINMENT', 'ASSET', 'HIGH', TRUE, TRUE, FALSE, NULL, 10, 'PROCESS_TABLE_ABSENCE_CHECK', '{"hostname":"string","pid":1234,"processName":"powershell.exe"}'
+WHERE NOT EXISTS (SELECT 1 FROM response_action_catalog WHERE action_code = 'ACT-008');
+
+-- Seed Authorized Synthetic Targets (Strict Blast Radius Bounds; portable across PostgreSQL and H2)
 INSERT INTO response_targets (target_id, target_type, identifier, display_name, criticality, environment, trust_status, is_protected)
-VALUES
-('TGT-LAB-IP-01', 'IP', '198.51.100.24', 'External Attack Source (Lab)', 'LOW', 'SYNTHETIC_TEST', 'AUTHORIZED', FALSE),
-('TGT-LAB-IP-02', 'IP', '203.0.113.88', 'CobaltStrike C2 Lab Node', 'LOW', 'SYNTHETIC_TEST', 'AUTHORIZED', FALSE),
-('TGT-LAB-USR-01', 'USER', 'CORP\\analyst', 'Compromised Lab Domain Account', 'STANDARD', 'SYNTHETIC_TEST', 'AUTHORIZED', FALSE),
-('TGT-LAB-USR-02', 'USER', 'root', 'Linux Gateway Root Account', 'HIGH', 'SYNTHETIC_TEST', 'AUTHORIZED', FALSE),
-('TGT-LAB-HST-01', 'HOST', 'WIN-PROD-01', 'Synthetic Windows 11 Enterprise Node', 'STANDARD', 'SYNTHETIC_TEST', 'AUTHORIZED', FALSE),
-('TGT-LAB-HST-02', 'HOST', 'LNX-GATEWAY', 'Synthetic Linux Gateway Node', 'HIGH', 'SYNTHETIC_TEST', 'AUTHORIZED', FALSE),
--- Protected Critical Infrastructure (Cannot be isolated or blocked)
-('TGT-PROT-GW-01', 'IP', '10.0.0.1', 'Default Gateway (Protected)', 'CRITICAL', 'LAB', 'RESTRICTED', TRUE),
-('TGT-PROT-DNS-01', 'IP', '10.0.0.2', 'Core DNS Server (Protected)', 'CRITICAL', 'LAB', 'RESTRICTED', TRUE),
-('TGT-PROT-HOST-01', 'HOST', 'localhost', 'Localhost Developer Machine', 'CRITICAL', 'LAB', 'RESTRICTED', TRUE),
-('TGT-PROT-HOST-02', 'IP', '127.0.0.1', 'Loopback Adapter', 'CRITICAL', 'LAB', 'RESTRICTED', TRUE)
-ON CONFLICT (target_id) DO NOTHING;
+SELECT 'TGT-LAB-IP-01', 'IP', '198.51.100.24', 'External Attack Source (Lab)', 'LOW', 'SYNTHETIC_TEST', 'AUTHORIZED', FALSE
+WHERE NOT EXISTS (SELECT 1 FROM response_targets WHERE target_id = 'TGT-LAB-IP-01');
+
+INSERT INTO response_targets (target_id, target_type, identifier, display_name, criticality, environment, trust_status, is_protected)
+SELECT 'TGT-LAB-IP-02', 'IP', '203.0.113.88', 'CobaltStrike C2 Lab Node', 'LOW', 'SYNTHETIC_TEST', 'AUTHORIZED', FALSE
+WHERE NOT EXISTS (SELECT 1 FROM response_targets WHERE target_id = 'TGT-LAB-IP-02');
+
+INSERT INTO response_targets (target_id, target_type, identifier, display_name, criticality, environment, trust_status, is_protected)
+SELECT 'TGT-LAB-USR-01', 'USER', 'CORP\analyst', 'Compromised Lab Domain Account', 'STANDARD', 'SYNTHETIC_TEST', 'AUTHORIZED', FALSE
+WHERE NOT EXISTS (SELECT 1 FROM response_targets WHERE target_id = 'TGT-LAB-USR-01');
+
+INSERT INTO response_targets (target_id, target_type, identifier, display_name, criticality, environment, trust_status, is_protected)
+SELECT 'TGT-LAB-USR-02', 'USER', 'root', 'Linux Gateway Root Account', 'HIGH', 'SYNTHETIC_TEST', 'AUTHORIZED', FALSE
+WHERE NOT EXISTS (SELECT 1 FROM response_targets WHERE target_id = 'TGT-LAB-USR-02');
+
+INSERT INTO response_targets (target_id, target_type, identifier, display_name, criticality, environment, trust_status, is_protected)
+SELECT 'TGT-LAB-HST-01', 'HOST', 'WIN-PROD-01', 'Synthetic Windows 11 Enterprise Node', 'STANDARD', 'SYNTHETIC_TEST', 'AUTHORIZED', FALSE
+WHERE NOT EXISTS (SELECT 1 FROM response_targets WHERE target_id = 'TGT-LAB-HST-01');
+
+INSERT INTO response_targets (target_id, target_type, identifier, display_name, criticality, environment, trust_status, is_protected)
+SELECT 'TGT-LAB-HST-02', 'HOST', 'LNX-GATEWAY', 'Synthetic Linux Gateway Node', 'HIGH', 'SYNTHETIC_TEST', 'AUTHORIZED', FALSE
+WHERE NOT EXISTS (SELECT 1 FROM response_targets WHERE target_id = 'TGT-LAB-HST-02');
+
+INSERT INTO response_targets (target_id, target_type, identifier, display_name, criticality, environment, trust_status, is_protected)
+SELECT 'TGT-PROT-GW-01', 'IP', '10.0.0.1', 'Default Gateway (Protected)', 'CRITICAL', 'LAB', 'RESTRICTED', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM response_targets WHERE target_id = 'TGT-PROT-GW-01');
+
+INSERT INTO response_targets (target_id, target_type, identifier, display_name, criticality, environment, trust_status, is_protected)
+SELECT 'TGT-PROT-DNS-01', 'IP', '10.0.0.2', 'Core DNS Server (Protected)', 'CRITICAL', 'LAB', 'RESTRICTED', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM response_targets WHERE target_id = 'TGT-PROT-DNS-01');
+
+INSERT INTO response_targets (target_id, target_type, identifier, display_name, criticality, environment, trust_status, is_protected)
+SELECT 'TGT-PROT-HOST-01', 'HOST', 'localhost', 'Localhost Developer Machine', 'CRITICAL', 'LAB', 'RESTRICTED', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM response_targets WHERE target_id = 'TGT-PROT-HOST-01');
+
+INSERT INTO response_targets (target_id, target_type, identifier, display_name, criticality, environment, trust_status, is_protected)
+SELECT 'TGT-PROT-HOST-02', 'IP', '127.0.0.1', 'Loopback Adapter', 'CRITICAL', 'LAB', 'RESTRICTED', TRUE
+WHERE NOT EXISTS (SELECT 1 FROM response_targets WHERE target_id = 'TGT-PROT-HOST-02');

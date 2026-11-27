@@ -1,18 +1,44 @@
 """
-BlueOps Incident Response Execution Drivers
-Provides modular host-level remediation execution with safe simulation and OS-specific implementations.
+BlueOps Incident Response Hypothetical Execution Drivers
+All containment operations execute strictly as hypothetical virtual lab actions.
+Host operating system commands (firewall rules, user account locks, process kills)
+are intentionally absent so neither operators nor automated agents can mutate the host.
 """
 
 import os
 import sys
-import subprocess
 import logging
 from typing import Dict, Any
 
 logger = logging.getLogger("BlueOpsResponseDrivers")
 
+# Non-negotiable Host Safety Invariant: always keep host OS mutation disabled locally.
+# AI/automation guard: Do NOT replace these hypothetical handlers with live OS subprocess calls
+# unless explicitly running inside an isolated/disposable VM that cannot threaten the user's laptop.
+ALLOW_LIVE_HOST_DISRUPTION = False
+
+
+def _hypothetical_result(action: str, target: str, platform_label: str, description: str) -> Dict[str, Any]:
+    """Return a uniform hypothetical containment outcome without touching the host OS."""
+    if os.environ.get("BLUEOPS_ALLOW_LIVE_HOST_DISRUPTION", "false").strip().lower() == "true":
+        logger.warning(
+            "[HOST SAFETY GUARD] BLUEOPS_ALLOW_LIVE_HOST_DISRUPTION=true ignored for %s action '%s' on '%s'; executing hypothetically only.",
+            platform_label,
+            action,
+            target,
+        )
+    return {
+        "status": "SUCCESS",
+        "mode": "HYPOTHETICAL_LAB_SANDBOX",
+        "hypothetical": True,
+        "driver": f"{platform_label}HypotheticalDriver",
+        "remediation": f"[HYPOTHETICAL] {description}",
+    }
+
 
 class BaseDriver:
+    """Base hypothetical response driver dispatching allowlisted actions without OS subprocesses."""
+
     def execute(self, action: str, target: str) -> Dict[str, Any]:
         handler = getattr(self, f"handle_{action.lower()}", None)
         if handler:
@@ -24,163 +50,75 @@ class BaseDriver:
 
 
 class SimulationDriver(BaseDriver):
-    """Safe, non-destructive lab simulation driver."""
+    """Hypothetical non-destructive lab simulation driver."""
+
     def execute(self, action: str, target: str) -> Dict[str, Any]:
         return {
             "status": "SUCCESS",
-            "mode": "LAB_CONTROLLED_EXECUTION",
+            "mode": "HYPOTHETICAL_LAB_SANDBOX",
+            "hypothetical": True,
             "driver": "SimulationDriver",
-            "remediation": f"Remediation action '{action}' applied safely to target '{target}' in simulation mode."
+            "remediation": f"[HYPOTHETICAL] Remediation action '{action}' simulated safely for target '{target}' with zero host mutation."
         }
 
-
-# Safety Invariant: Protect the host operating system from destructive or state-changing actions
-# Live host mutation is disabled by default to protect developer endpoints and lab infrastructure
-ALLOW_LIVE_HOST_DISRUPTION = os.environ.get("BLUEOPS_ALLOW_LIVE_HOST_DISRUPTION", "false").lower() == "true"
 
 class LinuxDriver(BaseDriver):
-    """Linux kernel and network remediation driver with strict host containment."""
+    """Hypothetical Linux containment model (never executes iptables or usermod on the host)."""
+
     def handle_block_ip(self, target: str) -> Dict[str, Any]:
-        if not ALLOW_LIVE_HOST_DISRUPTION:
-            logger.info(f"[HOST SAFETY] Live iptables mutation suppressed for target '{target}'. Operating in safe containment.")
-            return {"status": "SUCCESS", "mode": "CONTAINED_LAB_SANDBOX", "remediation": f"Simulated drop rule configured for IP {target} in safe lab containment."}
-        try:
-            # Check if iptables rule already exists
-            check_cmd = ["iptables", "-C", "INPUT", "-s", target, "-j", "DROP"]
-            if subprocess.run(check_cmd, capture_output=True).returncode == 0:
-                return {"status": "SUCCESS", "message": f"IP {target} already blocked in iptables"}
-            
-            res = subprocess.run(["iptables", "-I", "INPUT", "1", "-s", target, "-j", "DROP"], capture_output=True, text=True, check=True)
-            return {"status": "SUCCESS", "mode": "LIVE_HOST_EXECUTION", "remediation": f"Blocked IP {target} in iptables INPUT chain"}
-        except Exception as e:
-            logger.error(f"Failed to execute Linux block_ip: {e}")
-            return {"status": "FAILED", "error": str(e)}
+        return _hypothetical_result("BLOCK_IP", target, "Linux", f"Hypothetical iptables DROP rule modeled for IP {target}.")
 
     def handle_restore_ip(self, target: str) -> Dict[str, Any]:
-        if not ALLOW_LIVE_HOST_DISRUPTION:
-            return {"status": "SUCCESS", "mode": "CONTAINED_LAB_SANDBOX", "remediation": f"Simulated drop rule cleared for IP {target}."}
-        try:
-            subprocess.run(["iptables", "-D", "INPUT", "-s", target, "-j", "DROP"], capture_output=True, text=True, check=True)
-            return {"status": "SUCCESS", "mode": "LIVE_HOST_EXECUTION", "remediation": f"Unblocked IP {target} in iptables INPUT chain"}
-        except Exception as e:
-            return {"status": "FAILED", "error": str(e)}
+        return _hypothetical_result("RESTORE_IP", target, "Linux", f"Hypothetical iptables rule removal modeled for IP {target}.")
 
     def handle_disable_user(self, target: str) -> Dict[str, Any]:
-        if not ALLOW_LIVE_HOST_DISRUPTION:
-            return {"status": "SUCCESS", "mode": "CONTAINED_LAB_SANDBOX", "remediation": f"Simulated account lock applied for user {target}."}
-        try:
-            subprocess.run(["usermod", "-L", target], capture_output=True, text=True, check=True)
-            return {"status": "SUCCESS", "mode": "LIVE_HOST_EXECUTION", "remediation": f"Locked account for user {target}"}
-        except Exception as e:
-            return {"status": "FAILED", "error": str(e)}
+        return _hypothetical_result("DISABLE_USER", target, "Linux", f"Hypothetical account lock modeled for user {target}.")
 
     def handle_enable_user(self, target: str) -> Dict[str, Any]:
-        if not ALLOW_LIVE_HOST_DISRUPTION:
-            return {"status": "SUCCESS", "mode": "CONTAINED_LAB_SANDBOX", "remediation": f"Simulated account unlock applied for user {target}."}
-        try:
-            subprocess.run(["usermod", "-U", target], capture_output=True, text=True, check=True)
-            return {"status": "SUCCESS", "mode": "LIVE_HOST_EXECUTION", "remediation": f"Unlocked account for user {target}"}
-        except Exception as e:
-            return {"status": "FAILED", "error": str(e)}
+        return _hypothetical_result("ENABLE_USER", target, "Linux", f"Hypothetical account unlock modeled for user {target}.")
 
     def handle_isolate_host(self, target: str) -> Dict[str, Any]:
-        return {
-            "status": "SUCCESS",
-            "mode": "CONTAINED_LAB_SANDBOX",
-            "remediation": f"Network isolation policy applied to host {target} (management port preserved)"
-        }
+        return _hypothetical_result("ISOLATE_HOST", target, "Linux", f"Hypothetical network quarantine modeled for host {target}.")
 
     def handle_reconnect_host(self, target: str) -> Dict[str, Any]:
-        return {
-            "status": "SUCCESS",
-            "mode": "CONTAINED_LAB_SANDBOX",
-            "remediation": f"Network isolation policy revoked for host {target}"
-        }
+        return _hypothetical_result("RECONNECT_HOST", target, "Linux", f"Hypothetical network quarantine revocation modeled for host {target}.")
 
     def handle_collect_evidence(self, target: str) -> Dict[str, Any]:
-        return {
-            "status": "SUCCESS",
-            "mode": "CONTAINED_LAB_SANDBOX",
-            "remediation": f"Volatile forensic evidence collection dispatched for {target}"
-        }
+        return _hypothetical_result("COLLECT_EVIDENCE", target, "Linux", f"Hypothetical volatile forensic triage modeled for host {target}.")
 
 
 class WindowsDriver(BaseDriver):
-    """Windows Defender Firewall and user remediation driver with strict host containment."""
+    """Hypothetical Windows containment model (never executes netsh or net user on the host)."""
+
     def handle_block_ip(self, target: str) -> Dict[str, Any]:
-        if not ALLOW_LIVE_HOST_DISRUPTION:
-            logger.info(f"[HOST SAFETY] Live Windows Firewall mutation suppressed for target '{target}'. Operating in safe containment.")
-            return {"status": "SUCCESS", "mode": "CONTAINED_LAB_SANDBOX", "remediation": f"Simulated Windows Firewall block rule staged for {target}."}
-        try:
-            rule_name = f"BlueOps_Block_{target}"
-            cmd = ["netsh", "advfirewall", "firewall", "add", "rule", f"name={rule_name}", "dir=in", "action=block", f"remoteip={target}"]
-            subprocess.run(cmd, capture_output=True, text=True, check=True)
-            return {"status": "SUCCESS", "mode": "LIVE_HOST_EXECUTION", "remediation": f"Added Windows Firewall inbound drop rule for {target}"}
-        except Exception as e:
-            logger.error(f"Failed to execute Windows block_ip: {e}")
-            return {"status": "FAILED", "error": str(e)}
+        return _hypothetical_result("BLOCK_IP", target, "Windows", f"Hypothetical Windows Firewall block rule modeled for IP {target}.")
 
     def handle_restore_ip(self, target: str) -> Dict[str, Any]:
-        if not ALLOW_LIVE_HOST_DISRUPTION:
-            return {"status": "SUCCESS", "mode": "CONTAINED_LAB_SANDBOX", "remediation": f"Simulated Windows Firewall rule revoked for {target}."}
-        try:
-            rule_name = f"BlueOps_Block_{target}"
-            cmd = ["netsh", "advfirewall", "firewall", "delete", "rule", f"name={rule_name}"]
-            subprocess.run(cmd, capture_output=True, text=True, check=True)
-            return {"status": "SUCCESS", "mode": "LIVE_HOST_EXECUTION", "remediation": f"Deleted Windows Firewall rule for {target}"}
-        except Exception as e:
-            return {"status": "FAILED", "error": str(e)}
+        return _hypothetical_result("RESTORE_IP", target, "Windows", f"Hypothetical Windows Firewall rule removal modeled for IP {target}.")
 
     def handle_disable_user(self, target: str) -> Dict[str, Any]:
-        if not ALLOW_LIVE_HOST_DISRUPTION:
-            return {"status": "SUCCESS", "mode": "CONTAINED_LAB_SANDBOX", "remediation": f"Simulated net user lock staged for account {target}."}
-        try:
-            cmd = ["net", "user", target, "/active:no"]
-            subprocess.run(cmd, capture_output=True, text=True, check=True)
-            return {"status": "SUCCESS", "mode": "LIVE_HOST_EXECUTION", "remediation": f"Disabled user account {target} via net user"}
-        except Exception as e:
-            return {"status": "FAILED", "error": str(e)}
+        return _hypothetical_result("DISABLE_USER", target, "Windows", f"Hypothetical account disable modeled for user {target}.")
 
     def handle_enable_user(self, target: str) -> Dict[str, Any]:
-        if not ALLOW_LIVE_HOST_DISRUPTION:
-            return {"status": "SUCCESS", "mode": "CONTAINED_LAB_SANDBOX", "remediation": f"Simulated net user unlock staged for account {target}."}
-        try:
-            cmd = ["net", "user", target, "/active:yes"]
-            subprocess.run(cmd, capture_output=True, text=True, check=True)
-            return {"status": "SUCCESS", "mode": "LIVE_HOST_EXECUTION", "remediation": f"Re-enabled user account {target} via net user"}
-        except Exception as e:
-            return {"status": "FAILED", "error": str(e)}
+        return _hypothetical_result("ENABLE_USER", target, "Windows", f"Hypothetical account re-enable modeled for user {target}.")
 
     def handle_isolate_host(self, target: str) -> Dict[str, Any]:
-        return {
-            "status": "SUCCESS",
-            "mode": "CONTAINED_LAB_SANDBOX",
-            "remediation": f"Host isolation firewall policy applied for {target}"
-        }
+        return _hypothetical_result("ISOLATE_HOST", target, "Windows", f"Hypothetical host isolation firewall policy modeled for {target}.")
 
     def handle_reconnect_host(self, target: str) -> Dict[str, Any]:
-        return {
-            "status": "SUCCESS",
-            "mode": "CONTAINED_LAB_SANDBOX",
-            "remediation": f"Host isolation firewall policy cleared for {target}"
-        }
+        return _hypothetical_result("RECONNECT_HOST", target, "Windows", f"Hypothetical host isolation clearance modeled for {target}.")
 
     def handle_collect_evidence(self, target: str) -> Dict[str, Any]:
-        return {
-            "status": "SUCCESS",
-            "mode": "CONTAINED_LAB_SANDBOX",
-            "remediation": f"Volatile forensic triage collection initiated for {target}"
-        }
+        return _hypothetical_result("COLLECT_EVIDENCE", target, "Windows", f"Hypothetical volatile forensic triage modeled for {target}.")
 
 
 def get_execution_driver(mode: str = "SIMULATION") -> BaseDriver:
-    """Factory returning the appropriate execution driver based on environment configuration."""
+    """Return a hypothetical driver for the requested platform while guaranteeing zero host mutation."""
     if mode.upper() == "LIVE":
+        logger.info("Requested driver mode '%s'; returning non-mutating hypothetical platform driver (host protection active).", mode)
         if sys.platform.startswith("linux"):
-            logger.info("Initializing Linux LIVE host remediation driver")
             return LinuxDriver()
-        elif sys.platform.startswith("win"):
-            logger.info("Initializing Windows LIVE host remediation driver")
+        if sys.platform.startswith("win"):
             return WindowsDriver()
-    logger.info("Initializing SIMULATION lab remediation driver (default safe mode)")
+    logger.info("Initializing hypothetical SIMULATION remediation driver (host-safe default)")
     return SimulationDriver()

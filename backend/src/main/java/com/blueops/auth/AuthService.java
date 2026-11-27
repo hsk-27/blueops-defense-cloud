@@ -85,7 +85,7 @@ public class AuthService {
 
     public LoginResponse refresh(RefreshTokenRequest request) {
         String refreshToken = request.getRefreshToken();
-        if (!tokenProvider.validateToken(refreshToken)) {
+        if (!tokenProvider.validateRefreshToken(refreshToken)) {
             throw new UnauthorizedException("Invalid or expired refresh token");
         }
 

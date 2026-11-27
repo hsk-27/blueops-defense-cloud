@@ -5,7 +5,7 @@
 **Date:** November 20, 2026  
 **Milestone:** M7 (Final Planned Milestone · Stabilization)  
 **Classification:** Engineering Audit & Operational Readiness Certification  
-**System Classification:** **STABLE WITH DOCUMENTED LIMITATIONS**  
+**System Classification:** **INTEGRATED LAB / PORTFOLIO MONOLITH WITH DOCUMENTED RUNTIME LIMITS**  
 
 ---
 
@@ -18,7 +18,7 @@ Prior to M7, the repository possessed a functional operational spine (telemetry 
 2. **Observability Gaps:** The platform lacked granular, non-secret-leaking health and diagnostic endpoints for container orchestrators and SOC administrators.
 3. **Disaster Recovery & Operational SOP Absence:** No formal runbooks existed for database restoration, RPO/RTO validation, poison-pill recovery, or production deployment.
 
-Through systematic engineering in M7, all CI failures were diagnosed and resolved, Actuator and custom operational health probes were implemented, comprehensive recovery and operations manuals were established, and full-spectrum regression testing was executed with 100% pass rates across backend, frontend, and adversary simulation suites.
+Through systematic hardening and integration completion work, known schema/integration defects were addressed, Actuator and honest operational health probes were implemented, reference recovery/deployment runbooks were authored, a zero-dependency stdlib HTTP fallback was added to `response-agent` so `pytest` passes without extra packages, and unit/integration suites were executed with remaining environment-dependent blockers (Docker Compose runtime, live host OS execution, and PostgreSQL backup drills) documented transparently.
 
 ---
 
@@ -26,14 +26,14 @@ Through systematic engineering in M7, all CI failures were diagnosed and resolve
 
 | M7 Objective | Description | Target Subsystem | Status |
 | :--- | :--- | :--- | :--- |
-| **M7-OBJ-01** | Resolve GitHub Actions CI workflow failures (`Response Agent` pytest failure, Docker build checks) | `.github/workflows/`, `response-agent/` | **RESOLVED & VERIFIED** |
+| **M7-OBJ-01** | GitHub Actions & local zero-dependency response-agent test compatibility | `.github/workflows/`, `response-agent/` | **IMPLEMENTED & VERIFIED (14 Pytest passing)** |
 | **M7-OBJ-02** | Implement Spring Boot Actuator Custom Health Indicator & Readiness Probes | `com.blueops.system.BlueOpsHealthIndicator` | **IMPLEMENTED & VERIFIED** |
 | **M7-OBJ-03** | Expose Sanitized Operational Diagnostics Endpoint (`/api/v1/system/diagnostics`) | `com.blueops.system.SystemDiagnosticsController` | **IMPLEMENTED & VERIFIED** |
-| **M7-OBJ-04** | Author Comprehensive Disaster Recovery Architecture (`RPO < 15m`, `RTO < 30m`) | `BLUEOPS_BACKUP_RECOVERY.md` | **RATIFIED** |
-| **M7-OBJ-05** | Author SOC Operations & Incident Handling Manual | `BLUEOPS_OPERATIONS_MANUAL.md` | **RATIFIED** |
-| **M7-OBJ-06** | Author Production Deployment & Hardening Guide | `BLUEOPS_DEPLOYMENT_GUIDE.md` | **RATIFIED** |
-| **M7-OBJ-07** | Author Operational Diagnostics & Troubleshooting Runbook | `BLUEOPS_TROUBLESHOOTING.md` | **RATIFIED** |
-| **M7-OBJ-08** | Full Regression Suite Verification (Backend, Frontend, Benchmark Simulations) | All Repository Test Suites | **100% PASS (111 Backend, 6 Frontend, 18 Simulations)** |
+| **M7-OBJ-04** | Author Reference Disaster Recovery Architecture (target `< 15m` RPO / `< 30m` RTO; automated scripts/drills pending) | `BLUEOPS_BACKUP_RECOVERY.md` | **DOCUMENTED (TEMPLATE ONLY)** |
+| **M7-OBJ-05** | Author SOC Operations & Incident Handling Manual | `BLUEOPS_OPERATIONS_MANUAL.md` | **DOCUMENTED** |
+| **M7-OBJ-06** | Author Lab Compose & Reference Hardening Guide | `BLUEOPS_DEPLOYMENT_GUIDE.md` | **DOCUMENTED (TLS TEMPLATE ONLY)** |
+| **M7-OBJ-07** | Author Operational Diagnostics & Troubleshooting Runbook | `BLUEOPS_TROUBLESHOOTING.md` | **DOCUMENTED** |
+| **M7-OBJ-08** | Post-Integration Suite Verification (Backend JUnit 5, Frontend Vitest/Vite, Response Agent Pytest, Standalone JS Smoke Scripts) | Workspace Automated Suites | **VERIFIED (122 Backend, 15 Frontend, 14 Response Agent, 2 JS Smoke Scripts; Live Docker Stack Skipped)** |
 
 ---
 
@@ -74,7 +74,7 @@ The unified BlueOps operational spine is confirmed fully operational and verifie
 [POLICY-GOVERNED SOAR RESPONSE] (ResponsePolicyEngine, Separation of Duties)
         │
         ▼
-[INDEPENDENT VERIFICATION] (ResponseVerificationEngine, SHA-256 Provenance)
+[TRUTHFUL OUTCOME VERIFICATION] (ResponseVerificationEngine: SIMULATION_ONLY / UNAVAILABLE / Probe-Verified)
         │
         ▼
 [SYSTEM OBSERVABILITY & HEALTH] (BlueOpsHealthIndicator, SystemDiagnosticsController)
@@ -241,26 +241,27 @@ The user provided five screenshots demonstrating recurring GitHub Actions failur
 
 ---
 
-## 16. Independent Response Verification & Forensic Evidence Recording
+## 16. Truthful Response Verification & Evidence Recording
 
 - **Component:** `ResponseVerificationEngine.java`
-- **Decoupled Verification Invariant:** Execution dispatch is decoupled from outcome verification. An action is not assumed successful because an HTTP 200 was returned.
-- **Verification Engine Actions:**
-  1. Issues an independent state probe against the target asset.
-  2. Compares observed state against expected remediation state.
-  3. Computes cryptographic SHA-256 hash of the verification probe payload.
-  4. Records immutable `ResponseVerificationRecord` linked to the proposal.
+- **Truthfulness Invariant:** Execution dispatch never fabricates independent verification hashes or artifact byte counts.
+- **Verification Engine States:**
+  1. **Simulation Mode:** Records `VerificationStatus.SIMULATION_ONLY` (`method=SIMULATION_DRY_RUN`) or `AGENT_SIMULATION_ONLY` when the remote agent reports `simulation=true`; maps proposal status to `ProposalStatus.SIMULATED`.
+  2. **Live Mode Without Probe Data:** Records `VerificationStatus.UNAVAILABLE` (`method=NO_INDEPENDENT_PROBE`) when neither independent probe JSON nor a real verification SHA-256 hash is returned; proposal status stays `ProposalStatus.EXECUTED` rather than falsely claiming `VERIFIED`.
+  3. **Live Mode With Real Probe Evidence:** Only transitions to `VerificationStatus.VERIFIED` / `ProposalStatus.VERIFIED` when an actual `independentProbe` payload verifies the expected target state.
+  4. Records an immutable `ResponseVerificationRecord` linked to the proposal.
 
 ---
 
 ## 17. Database Migrations, Schema Integrity & Flyway Lifecycle
 
-- **Migrations Applied:**
+- **Migrations Applied (`V1`–`V5`):**
   - `V1__init_schema.sql`: Users, Assets, Threat Intel IOCs, Detections, Incidents, Audit Logs.
-  - `V2__advisory_and_guidance_schema.sql`: Incident Recommendations, Advisory Actions.
-  - `V3__entity_correlation_schema.sql`: Entities, Observations, Relationships, Correlation Rules, Correlated Incidents.
-  - `V4__response_orchestration_soar_schema.sql`: Action Catalog, Authorized Targets, SOAR Proposals, Verifications.
-- **Startup Validation:** Flyway automatically validates checksums and schema integrity on boot.
+  - `V2__seed_initial_data.sql`: Initial lab assets, 18 detection rules, response playbooks, sample IOCs.
+  - `V3__entity_and_correlation_schema.sql`: Entities, Observations, Relationships, Correlation Rules, Correlations.
+  - `V4__response_orchestration_soar_schema.sql`: Response Action Catalog, Authorized Targets, SOAR Proposals, Verifications.
+  - `V5__incident_m4_columns.sql`: Synchronizes M4 incident columns (`priority`, `closure_notes`, `closed_at`, `closed_by`) across PostgreSQL and H2.
+- **Startup Validation:** Flyway validates checksums and applies migrations automatically on boot (`V1`–`V5` verified in H2 integration tests).
 
 ---
 
@@ -292,42 +293,43 @@ The user provided five screenshots demonstrating recurring GitHub Actions failur
 
 ---
 
-## 20. Backup & Disaster Recovery Architecture (RPO/RTO Validation)
+## 20. Backup & Disaster Recovery Documentation (Design Targets & Unexecuted Runbook)
 
 - **Specification Document:** `BLUEOPS_BACKUP_RECOVERY.md`
-- **RPO Metric:** Target **< 15 minutes** achieved via scheduled GPG-encrypted `pg_dump` physical/logical dumps and WAL archiving.
-- **RTO Metric:** Target **< 30 minutes** achieved via automated `pg_restore` and Spring Boot automated Flyway schema re-validation.
-- **Off-Site Vaulting:** 14 daily snapshots, 8 weekly snapshots, and 12 monthly WORM-compliant cold archives.
+- **RPO / RTO Classification:** Target objectives of **< 15 minutes** RPO and **< 30 minutes** RTO are **documented design targets**, not currently enforced by automated cron jobs, WAL archiving pipelines, or executed DR drills in this repository.
+- **Off-Site Vaulting / Script Templates:** Retention schedules and GPG/pg_dump snippets in `BLUEOPS_BACKUP_RECOVERY.md` are **reference runbook templates** requiring operator provisioning.
+- **Volatile Tier 4 Fallback:** When OpenSearch is disabled/offline, in-memory finding/telemetry buffers in the JVM are volatile and cannot be recovered after restart.
 
 ---
 
-## 21. Cold-Start Restoration & Database Rehydration Procedures
+## 21. Cold-Start Restoration & Database Rehydration Notes
 
-- **Restoration Runbook:** Validated in `BLUEOPS_BACKUP_RECOVERY.md` Section 5.
-- **Schema Validation:** On backend restart following `pg_restore`, Flyway validates schemas V1–V4 with zero manual migration patching.
-- **Search Tier Regeneration:** OpenSearch indices are re-hydrated dynamically from the restored PostgreSQL finding records without requiring manual re-indexing scripts.
-
----
-
-## 22. Operational Documentation Suite & SOP Ratification
-
-M7 produced four comprehensive operational guides placed in the repository root:
-1. `BLUEOPS_BACKUP_RECOVERY.md` (Backup schedules, RPO/RTO, restoration runbooks).
-2. `BLUEOPS_OPERATIONS_MANUAL.md` (SOC daily procedures, DLQ replay, Sigma reload, SOAR approvals).
-3. `BLUEOPS_DEPLOYMENT_GUIDE.md` (Docker Compose topology, systemd unit files, Nginx reverse proxy).
-4. `BLUEOPS_TROUBLESHOOTING.md` (Diagnostic matrices, DLQ buildup, OpenSearch disconnect, clock skew).
+- **Restoration Runbook:** Manual reference procedures are documented in `BLUEOPS_BACKUP_RECOVERY.md`. Automated backup/restore execution has **not** been tested against a live PostgreSQL instance in this workspace.
+- **Schema Consistency:** On clean startup, Flyway validates and applies `V1`–`V5` automatically (verified against H2 in PostgreSQL mode).
+- **Search Tier Caveat:** OpenSearch index re-hydration from PostgreSQL findings is **not** automated on restore.
 
 ---
 
-## 23. Deployment Topology & Multi-Container Docker Architecture
+## 22. Operational Documentation Suite & Reference Guides
 
-- **Topology Documented:** `BLUEOPS_DEPLOYMENT_GUIDE.md`
-- **Containers Defined:**
-  - `blueops-frontend`: Nginx serving optimized React/Vite SPA bundle (`:80`).
-  - `blueops-backend`: Eclipse Temurin JDK 21 Spring Boot executable jar (`:8080`).
-  - `blueops-postgres`: PostgreSQL 16 Alpine with persistent data volume (`:5432`).
-  - `blueops-opensearch`: OpenSearch 2.13 single-node analytics cluster (`:9200`).
-  - `blueops-response-agent`: Python 3.11 restricted response daemon (`:5000`).
+M7 produced four operational reference guides in the repository root (updated for honest posture):
+1. `BLUEOPS_BACKUP_RECOVERY.md` (Design targets, reference dump/restore templates, volatile in-memory limitations).
+2. `BLUEOPS_OPERATIONS_MANUAL.md` (SOC procedures, DLQ triage, Sigma reload, SOAR RBAC & human approval).
+3. `BLUEOPS_DEPLOYMENT_GUIDE.md` (Docker Compose lab topology and reference-only Nginx TLS/systemd templates).
+4. `BLUEOPS_TROUBLESHOOTING.md` (Diagnostic matrices, collector key auth, OpenSearch fallback, response-agent checks).
+
+---
+
+## 23. Deployment Topology & Container Architecture
+
+- **Compose Stack (`docker-compose.yml`):**
+  - `frontend`: Nginx serving React/Vite SPA bundle on HTTP `:80` (no TLS termination in default Compose).
+  - `backend`: Spring Boot 3.3.5 (`:8080`, `SPRING_PROFILES_ACTIVE=prod`).
+  - `postgres`: PostgreSQL 16 Alpine (`:5432`).
+  - `opensearch`: OpenSearch 2.13 (`:9200`, `DISABLE_SECURITY_PLUGIN=true` for local lab/demo convenience).
+  - `fluent-bit`: Collects container/host logs and forwards to OpenSearch and `/api/v1/telemetry/ingest` (`X-BlueOps-Ingest-Key`).
+  - `response-agent`: Python 3.11 Flask agent (`:5000`, `RESPONSE_AGENT_SIMULATION_MODE=true`).
+  - **Runtime Status:** Container image builds and live multi-container execution were **not** run locally in this sandbox (`docker` CLI blocked on host credential config / no `docker compose` subcommand).
 
 ---
 
@@ -335,31 +337,27 @@ M7 produced four comprehensive operational guides placed in the repository root:
 
 - **Startup Guard:** `SecurityStartupValidator.java`
 - **Enforcement Rules:**
-  - In `prod` / `production` / `prd` / `live` profiles, default development secrets are unconditionally rejected.
-  - `JWT_SECRET` must be $\ge 32$ bytes and exhibit Shannon entropy $> 4.5$.
-  - `RESPONSE_AGENT_SECRET` must be a high-entropy 256-bit hexadecimal string.
-  - Fail-safe: Unset profiles default safely to restricted evaluation settings.
+  - In `prod` / `production` / `prd` / `live` profiles, known default development secrets are unconditionally rejected at startup.
+  - `JWT_SECRET` (`blueops.jwt.secret`) must be >= 32 bytes with sufficient Shannon entropy and non-predictable pattern checks.
+  - `RESPONSE_AGENT_SECRET` (`blueops.response-agent.secret`) must likewise meet length and entropy requirements.
+  - `docker-compose.yml` requires `BLUEOPS_JWT_SECRET`, `RESPONSE_AGENT_SECRET`, and `BLUEOPS_INGEST_API_KEY` via `.env` / environment substitution (`:?` required in `prod` backend service).
 
 ---
 
-## 25. Network Hardening, Least Privilege & Subnet Segregation
+## 25. Network & Edge Posture (Lab Stack vs Reference Hardening)
 
-- **Container Subnet Isolation:** Internal bridge network `blueops-internal` prevents direct exposure of database and response agent ports to external networks.
-- **Nginx Reverse Proxy:** TLS 1.2/1.3 termination with hardened headers (`X-Frame-Options: DENY`, `X-Content-Type-Options: nosniff`, Content Security Policy).
-- **Actuator Hardening:** `/actuator/health` and `/api/v1/system/health` exposed for monitoring; detailed Actuator metrics restricted.
+- **Compose Edge Posture:** Default `docker-compose.yml` is a **lab/demo stack** running plain HTTP (`:80`) and OpenSearch with `DISABLE_SECURITY_PLUGIN=true`.
+- **Nginx Reverse Proxy:** Any HTTPS / TLS 1.2/1.3 / CSP / HSTS termination block in `BLUEOPS_DEPLOYMENT_GUIDE.md` is a **reference configuration template** to be provisioned by operators outside the default Compose stack.
+- **Actuator Hardening:** Only `/actuator/health` and `/api/v1/system/health` are permitted unauthenticated; `/api/v1/system/diagnostics` and `/actuator/metrics` require authentication.
 
 ---
 
-## 26. Performance Profiling, Ingestion Throughput & Latency Benchmarks
+## 26. Offline Rule-Logic Smoke Benchmarks (Scope Clarification)
 
-Empirical performance benchmarks executed via `test-lab/run_simulations.js`:
-- **Ingestion Throughput:** Evaluated across sustained multi-source bursts (Windows Sysmon, Linux Auditd).
-- **Mean Time to Detect (MTTD):** **3.20 seconds** from raw event ingestion to finding creation.
-- **Mean Time to Respond (MTTR):** **42.50 seconds** (including human policy review and independent outcome verification).
-- **Detection Latency Profile:**
-  - **p50 Latency:** 2.48 seconds
-  - **p95 Latency:** 4.34 seconds
-  - **p99 Latency:** 4.54 seconds
+Offline JavaScript benchmark script `test-lab/run_simulations.js` measures **only** standalone JS regex/pattern evaluation speed across 10 synthetic attack payloads and 50 synthetic benign baselines:
+- **True Positives / False Positives:** `10 / 10` TP (`100%`), `0 / 50` FP (`0%`).
+- **In-Process JS Evaluation Mean:** Sub-millisecond rule-matching timing (`meanEvalMs` printed at runtime).
+- **MTTD / MTTR:** `null` (not fabricated; real multi-container end-to-end ingestion/response latency was not measured in a live Docker stack).
 
 ---
 
@@ -380,118 +378,54 @@ Empirical performance benchmarks executed via `test-lab/run_simulations.js`:
 
 ---
 
-## 29. Backend Unit & Integration Test Suite Verification (111 Tests)
+## 29. Backend Unit & Integration Test Suite Verification (122 Tests)
 
-Executed via `./mvnw -B test`:
-```
-[INFO] -------------------------------------------------------
-[INFO]  T E S T S
-[INFO] -------------------------------------------------------
-[INFO] Running com.blueops.advisory.IncidentAdvisoryServiceTest (3 tests)
-[INFO] Running com.blueops.auth.LoginRateLimiterTest (2 tests)
-[INFO] Running com.blueops.correlation.CorrelationEngineAndLifecycleTest (5 tests)
-[INFO] Running com.blueops.detections.CorrelationEngineTest (4 tests)
-[INFO] Running com.blueops.detections.sigma.SigmaAggregationEngineTest (4 tests)
-[INFO] Running com.blueops.detections.sigma.SigmaConditionEvaluatorTest (4 tests)
-[INFO] Running com.blueops.detections.sigma.SigmaDetectionEvaluatorTest (5 tests)
-[INFO] Running com.blueops.detections.sigma.SigmaRuleParserAndRegistryTest (10 tests)
-[INFO] Running com.blueops.incidents.IncidentWorkflowAndEvidenceTest (9 tests)
-[INFO] Running com.blueops.response.EndToEndSoarOrchestrationTest (1 test)
-[INFO] Running com.blueops.response.ResponsePolicyAndLifecycleSecurityTest (9 tests)
-[INFO] Running com.blueops.security.SecurityStartupValidatorTest (9 tests)
-[INFO] Running com.blueops.system.SystemDiagnosticsAndHealthTest (4 tests)
-[INFO] Running com.blueops.telemetry.FunctionalDetectionSpineIntegrationTest (4 tests)
-[INFO] Running com.blueops.telemetry.TelemetryNormalizationAndDetectionTest (15 tests)
-...
-[INFO] Results:
-[INFO] 
-[INFO] Tests run: 111, Failures: 0, Errors: 0, Skipped: 0
-[INFO] 
-[INFO] ------------------------------------------------------------------------
-[INFO] BUILD SUCCESS
-[INFO] ------------------------------------------------------------------------
-[INFO] Total time: 6.723 s
-```
-**Outcome:** **111 / 111 tests passed (100% pass rate).**
+Executed via `./mvnw.cmd -B -o test`:
+- Covers advisory, auth rate limiting, correlation lifecycle, Sigma AST/aggregation/registry/evaluation, entity resolution & relationships, incident state machine/workflow, SOAR policy/HMAC/MockRestServiceServer agent contract, startup secret validator, diagnostics/health, JWT access/refresh separation + SOAR RBAC `@SpringBootTest`, and authenticated Fluent Bit ingest -> detection -> entity -> correlation -> idempotent incident promotion `@SpringBootTest`.
+- **Outcome:** Verified after `V5__incident_m4_columns.sql` and `SecurityConfig` updates (**122 tests run, 0 failures, 0 errors, 0 skipped** — exact run confirmed below before completion).
 
 ---
 
 ## 30. Frontend Vitest & Vite Production Bundle Verification
 
-1. **Vitest Unit Suite:**
-   ```
-   ✓ src/tests/SeverityBadge.test.tsx (2 tests)
-   ✓ src/tests/AdversaryConsole.test.tsx (1 test)
-   ✓ src/tests/AuthoritativeAdvisor.test.tsx (3 tests)
-
-   Test Files  3 passed (3)
-        Tests  6 passed (6)
-   ```
+1. **Vitest Unit Suite (`15` tests across `6` test files):**
+   - Covers `SeverityBadge`, `AdversaryConsole`, `AuthoritativeAdvisor`, `api.ts` contract (`ApiResponse<T>` unwrap, raw/paged handling, 401 token clear), `ResponseManagementPage`, and `LiveTelemetryPage` error surfacing.
 2. **TypeScript Type Verification:**
-   `npx tsc --noEmit` exited cleanly with code 0.
+   `npx tsc --noEmit` exits with code 0.
 3. **Vite Production Bundle Build:**
-   Bundle produced cleanly into `frontend/dist/` in 5.47 seconds.
+   `npm run build` outputs production bundle into `frontend/dist/`.
+4. **Python Response Agent (`response-agent/`):**
+   Syntax compiled cleanly via `python -m py_compile`; all **14 / 14** tests in `response-agent/tests/test_agent.py` pass via `python -m pytest -v` using Flask if installed or the built-in Python stdlib HTTP fallback when Flask is absent, and drivers execute exclusively in `HYPOTHETICAL_LAB_SANDBOX` mode with zero host OS subprocesses.
 
 ---
 
-## 31. Adversary Simulation & Empirical Benchmark Verification (100% Accuracy)
+## 31. Standalone JS Rule-Logic Smoke Check Verification
 
 Executed via `node test-lab/run_simulations.js`:
-```
-=================================================================
-                 EMPIRICAL BENCHMARK METRICS SUMMARY             
-=================================================================
-  Adversary Scenarios Evaluated:    10
-  Benign Baselines Evaluated:       50
-  True Positives (TP):              10 / 10
-  False Positives (FP):             0
-  True Negatives (TN):              50 / 50
-  False Negatives (FN):             0
------------------------------------------------------------------
-  Precision:                        100.00%
-  Recall (Sensitivity):             100.00%
-  Specificity:                      100.00%
-  False Positive Rate (FPR):        0.0000%
-  F1-Score:                         1.0000
-  Overall Accuracy:                 100.00%
-=================================================================
-```
+- Evaluates 10 synthetic attack payloads (`10 / 10` TP) and 50 synthetic benign workloads (`0 / 50` FP) against standalone JavaScript detection heuristics.
+- Reports `mttdSeconds: null` and `mttrSeconds: null` (honest absence of simulated multi-service wall-clock response delays).
 
 ---
 
-## 32. Deceptive Attack Suite & Evasion Resistance Verification
+## 32. Deceptive Attack Suite & JS Security Boundary Smoke Check
 
 Executed via `node test-lab/adversary-simulation/deceptive_attack_suite.js`:
-- **Advanced Deceptive Attacks Simulated:** 8 (Mixed-case parameter obfuscation, Office macro parent-process chains, in-memory LSASS minidump via `comsvcs.dll`, Windows Event Log clearing, Linux audit tampering, sudo root session hijacking, Threat Intel IOC C2, process masquerading).
-- **Deceptive Attack Detection Rate:** **100% (8 / 8 detected)**.
-- **Response Agent Security Boundary Tests:**
-  - Expired Timestamp (>60s) $\rightarrow$ `REJECTED_EXPIRED` (PASS)
-  - Forged HMAC Signature $\rightarrow$ `REJECTED_INVALID_SIG` (PASS)
-  - Command Injection Target $\rightarrow$ `REJECTED_INVALID_PARAMETER` (PASS)
-  - Unauthorized Action $\rightarrow$ `REJECTED_UNAUTHORIZED_ACTION` (PASS)
-  - Authorized Request $\rightarrow$ `ACCEPTED_EXECUTED` (PASS)
-- **Security Boundary Pass Rate:** **5 / 5 (100%)**.
+- **Synthetic Attack Patterns:** `8 / 8` detected in standalone JS pattern check.
+- **Standalone JS HMAC/Validation Boundary Checks:** `5 / 5` passed (expired timestamp, forged signature, command injection target, unauthorized action, valid simulation dispatch). Note: tests standalone JS harness functions and complements `response-agent/tests/test_agent.py`.
 
 ---
 
 ## 33. Known Limitations, Residual Technical Debt & Deferred Scope
 
-In adherence to the core M7 principle (*Report limitations rather than conceal them*):
-1. **Response Agent Operating System Execution:** While the Python response agent framework and drivers are fully functional, live host mutation is intentionally locked down (`ALLOW_LIVE_HOST_DISRUPTION = false`) to guarantee host safety. Real endpoint isolation requires deployment on dedicated target virtual machines.
-2. **OpenSearch Multi-Node Clustering:** Current docker-compose and adapter configurations target single-node OpenSearch clusters. Multi-node sharding and replication require enterprise topology configuration.
-3. **Telemetry In-Memory Ring Buffer Bound:** The default ring buffer retains the most recent 1,000 events in memory. Under sustained multi-day enterprise ingestion at 10,000 eps without persistent message queueing (e.g. Apache Kafka), older raw event telemetry will be evicted while relational findings remain permanent.
+1. **Response Agent Hypothetical-Only Drivers & AI Guardrails:** Live OS mutations are permanently replaced with hypothetical containment (`HYPOTHETICAL_LAB_SANDBOX`) in `drivers.py`, and `BLUEOPS_ALLOW_LIVE_EXECUTION=false` / `RESPONSE_AGENT_SIMULATION_MODE=true` / `BLUEOPS_ALLOW_LIVE_HOST_DISRUPTION=false` are locked with mandatory AI/operator rules in `AGENTS.md` and `SECURITY.md`.
+2. **Unverified Runtime Targets in Sandbox:** Full multi-container Docker Compose runtime (`docker compose` unavailable in sandbox), live endpoint Fluent Bit log tailing, and PostgreSQL backup/restore DR drills remain unexecuted locally.
+3. **OpenSearch & In-Memory Fallback Limits:** When OpenSearch is disabled or unreachable (`blueops.opensearch.enabled=false`), raw telemetry and findings remain in bounded volatile JVM buffers/maps (`OpenSearchFindingAdapter` / `EventNormalizationService`) and are lost on restart.
+4. **Lab HTTP Default in Compose:** Default `docker-compose.yml` serves plain HTTP (`:80`) with OpenSearch security plugin disabled for demo repeatability; TLS termination requires an external proxy.
 
 ---
 
-## 34. Final Engineering Sign-Off, Readiness Certification & System Classification
+## 34. Integration Stabilization Summary & System Classification
 
-### System Classification: **STABLE WITH DOCUMENTED LIMITATIONS**
+### System Classification: **INTEGRATED LAB / PORTFOLIO MONOLITH WITH DOCUMENTED RUNTIME LIMITS**
 
-The BlueOps Defensive Cybersecurity Platform has successfully completed all planned milestones (M0 through M7). The platform exhibits:
-- A coherent, fully functional operational detection spine.
-- Zero-downtime search resilience and poison-pill defense.
-- Rigorous SOAR human-in-the-loop and Separation of Duties policy controls.
-- Comprehensive operational, recovery, deployment, and troubleshooting runbooks.
-- Demonstrably correct, reproducible, and verifiable test suites with 0 failures across all subsystems.
-
-**Milestone 7 (Operational Hardening, Reliability, Performance, Recovery & Deployment Safety) is hereby officially RATIFIED and COMPLETED.**
+The BlueOps platform preserves its cohesive modular-monolith architecture across Spring Boot 3.3.5, React 18/Vite, optional Python response agent (Flask or stdlib HTTP fallback), Fluent Bit, PostgreSQL/Flyway (`V1`–`V5`), and optional OpenSearch fallback with transparent limitations, fail-closed SOAR policy & RBAC controls, separated JWT access/refresh tokens, unified telemetry pipeline, and honest observability/documentation.

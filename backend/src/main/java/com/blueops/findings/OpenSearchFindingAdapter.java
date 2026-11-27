@@ -2,6 +2,7 @@ package com.blueops.findings;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.web.client.RestTemplateBuilder;
 import org.springframework.http.*;
@@ -18,6 +19,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class OpenSearchFindingAdapter {
 
     private static final Logger log = LoggerFactory.getLogger(OpenSearchFindingAdapter.class);
+    public static final String DEMO_SEEDED_DETAIL_KEY = "demo_seeded";
 
     private final RestTemplate restTemplate;
     private final String opensearchUri;
@@ -28,10 +30,21 @@ public class OpenSearchFindingAdapter {
 
     public OpenSearchFindingAdapter(
             RestTemplateBuilder builder,
+            String opensearchUri,
+            String username,
+            String password,
+            boolean enabled) {
+        this(builder, opensearchUri, username, password, enabled, false);
+    }
+
+    @Autowired
+    public OpenSearchFindingAdapter(
+            RestTemplateBuilder builder,
             @Value("${blueops.opensearch.uri:http://localhost:9200}") String opensearchUri,
             @Value("${blueops.opensearch.username:admin}") String username,
             @Value("${blueops.opensearch.password:admin}") String password,
-            @Value("${blueops.opensearch.enabled:true}") boolean enabled) {
+            @Value("${blueops.opensearch.enabled:true}") boolean enabled,
+            @Value("${blueops.demo.seed-findings:false}") boolean seedDemoFindings) {
         this.opensearchUri = opensearchUri;
         this.enabled = enabled;
         this.restTemplate = builder
@@ -40,7 +53,22 @@ public class OpenSearchFindingAdapter {
                 .basicAuthentication(username, password)
                 .build();
 
-        seedInitialDemonstrationFindings();
+        if (seedDemoFindings) {
+            log.info("Explicit demo finding seeding enabled (blueops.demo.seed-findings=true). Seeding isolated demo findings.");
+            seedInitialDemonstrationFindings();
+        }
+    }
+
+    public static boolean isDemoFinding(FindingDto finding) {
+        return finding != null
+                && finding.getDetails() != null
+                && Boolean.TRUE.equals(finding.getDetails().get(DEMO_SEEDED_DETAIL_KEY));
+    }
+
+    public List<FindingDto> fetchOperationalFindings() {
+        return fetchFindings().stream()
+                .filter(f -> !isDemoFinding(f))
+                .toList();
     }
 
     public List<FindingDto> fetchFindings() {
@@ -144,7 +172,7 @@ public class OpenSearchFindingAdapter {
                 "Credential Access", "T1110.001", "Password Guessing",
                 "LNX-ASSET-001", "LAB-LNX-01", Instant.now().minusSeconds(1800),
                 "UNASSIGNED", "DOC-OS-001",
-                Map.of("sourceIp", "198.51.100.24", "targetUser", "root", "failureCount", 8)
+                Map.of("sourceIp", "198.51.100.24", "targetUser", "root", "failureCount", 8, DEMO_SEEDED_DETAIL_KEY, true)
         );
 
         FindingDto f2 = new FindingDto(
@@ -152,7 +180,7 @@ public class OpenSearchFindingAdapter {
                 "Execution", "T1059.001", "PowerShell",
                 "WIN-ASSET-001", "LAB-WIN-01", Instant.now().minusSeconds(900),
                 "UNASSIGNED", "DOC-OS-002",
-                Map.of("commandLine", "powershell.exe -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQA...", "pid", 4812, "parent", "cmd.exe")
+                Map.of("commandLine", "powershell.exe -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQA...", "pid", 4812, "parent", "cmd.exe", DEMO_SEEDED_DETAIL_KEY, true)
         );
 
         FindingDto f3 = new FindingDto(
@@ -160,7 +188,7 @@ public class OpenSearchFindingAdapter {
                 "Command and Control", "T1071", "Application Layer Protocol",
                 "NET-ASSET-001", "LAB-FW-01", Instant.now().minusSeconds(300),
                 "UNASSIGNED", "DOC-OS-003",
-                Map.of("matchedIoc", "198.51.100.24", "destinationPort", 4444, "protocol", "TCP")
+                Map.of("matchedIoc", "198.51.100.24", "destinationPort", 4444, "protocol", "TCP", DEMO_SEEDED_DETAIL_KEY, true)
         );
 
         findingsStore.put(f1.getFindingId(), f1);

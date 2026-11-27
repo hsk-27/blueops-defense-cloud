@@ -57,6 +57,8 @@ export const InvestigationWorkspacePage: React.FC<InvestigationWorkspaceProps> =
   const [relatedFindings, setRelatedFindings] = useState<RelatedFinding[]>([]);
   const [recommendations, setRecommendations] = useState<IncidentRecommendation[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [secondaryWarning, setSecondaryWarning] = useState<string | null>(null);
   const [loadingAdvisor, setLoadingAdvisor] = useState(false);
 
   // Active right column tab: 'FINDINGS' | 'EVIDENCE' | 'RELATED'
@@ -87,13 +89,20 @@ export const InvestigationWorkspacePage: React.FC<InvestigationWorkspaceProps> =
   const loadIncidentData = async () => {
     try {
       setLoading(true);
+      setLoadError(null);
+      setSecondaryWarning(null);
+      const warnings: string[] = [];
+
       const [incData, tlData, findData, evdData, recData] = await Promise.all([
         api.getIncidentById(incidentId),
         api.getTimeline(incidentId),
         api.getIncidentFindings(incidentId),
-        api.getIncidentEvidence(incidentId).catch(() => [] as IncidentEvidence[]),
+        api.getIncidentEvidence(incidentId).catch((err) => {
+          warnings.push(`evidence unavailable (${err?.message || 'error'})`);
+          return [] as IncidentEvidence[];
+        }),
         api.getIncidentRecommendations(incidentId).catch((err) => {
-          console.warn('Failed to load incident recommendations:', err);
+          warnings.push(`advisory unavailable (${err?.message || 'error'})`);
           return [] as IncidentRecommendation[];
         })
       ]);
@@ -104,17 +113,23 @@ export const InvestigationWorkspacePage: React.FC<InvestigationWorkspaceProps> =
       setEvidenceList(evdData || []);
       setRecommendations(recData || []);
 
-      // If findings exist, query related findings for the first attached finding
       if (findData && findData.length > 0) {
         const primaryFindingId = findData[0].opensearchFindingId || findData[0].findingId;
         if (primaryFindingId) {
-          api.getRelatedFindings(primaryFindingId)
-            .then(rel => setRelatedFindings(rel || []))
-            .catch(() => setRelatedFindings([]));
+          try {
+            const rel = await api.getRelatedFindings(primaryFindingId);
+            setRelatedFindings(rel || []);
+          } catch (err: any) {
+            setRelatedFindings([]);
+            warnings.push(`related findings unavailable (${err?.message || 'error'})`);
+          }
         }
       }
-    } catch (err) {
-      console.error('Failed to load incident investigation details:', err);
+      if (warnings.length > 0) {
+        setSecondaryWarning(`Partial investigation load: ${warnings.join('; ')}`);
+      }
+    } catch (err: any) {
+      setLoadError(err?.message || 'Failed to load incident investigation details');
     } finally {
       setLoading(false);
     }
@@ -335,6 +350,22 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.type
     );
   }
 
+  if (loadError && !incident) {
+    return (
+      <div className="p-8 text-center space-y-3" role="alert">
+        <p className="text-rose-400 font-mono text-sm">Failed to load incident #{incidentId}: {loadError}</p>
+        <div className="flex justify-center space-x-3">
+          <button onClick={loadIncidentData} className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded text-xs font-mono">
+            Retry
+          </button>
+          <button onClick={onBack} className="text-blue-400 hover:underline text-xs font-mono">
+            Return to Incident Center
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   if (!incident) {
     return (
       <div className="p-8 text-center text-slate-400">
@@ -348,6 +379,12 @@ ${timeline.map((t) => `- **${new Date(t.timestamp).toLocaleString()}** [${t.type
 
   return (
     <div className="p-8 space-y-6 max-w-7xl mx-auto">
+      {secondaryWarning && (
+        <div role="alert" className="p-2.5 bg-amber-950/60 border border-amber-700/60 rounded text-xs font-mono text-amber-200 flex items-center space-x-2">
+          <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0" />
+          <span>{secondaryWarning}</span>
+        </div>
+      )}
       {/* Back button and Export Header */}
       <div className="flex items-center justify-between">
         <button

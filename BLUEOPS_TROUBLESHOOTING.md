@@ -10,9 +10,10 @@
 
 | Symptom | Probable Cause | Diagnostic Command / Log | Remediation Action |
 | :--- | :--- | :--- | :--- |
-| **Backend fails on boot** | Secret validation failed (`SecurityStartupValidator`) | `IllegalStateException: Production environment detected with insecure/default JWT or HMAC secret` | Supply high-entropy 256-bit keys via `JWT_SECRET` and `RESPONSE_AGENT_SECRET`. |
-| **Events rejected / DLQ growing** | Malformed timestamps or missing required fields | `GET /api/v1/telemetry/dlq` | Correct source log format; invoke `POST /api/v1/telemetry/dlq/replay`. |
-| **OpenSearch connection refused** | Container not running / OOM killed | `OpenSearch cluster is currently unreachable ... Serving from local finding store` | Platform operates automatically in fallback mode. Increase OpenSearch heap or restart container. |
+| **Backend fails on boot** | Secret validation failed (`SecurityStartupValidator`) | `IllegalStateException` citing insecure/default JWT or HMAC secret | Supply high-entropy 256-bit keys via `JWT_SECRET` and `RESPONSE_AGENT_SECRET`. |
+| **Fluent Bit gets 401/403 on `/api/v1/telemetry/ingest`** | Missing or mismatched `BLUEOPS_INGEST_API_KEY` | Collector auth fails closed in `JwtAuthenticationFilter` | Set identical `BLUEOPS_INGEST_API_KEY` in `backend` and `fluent-bit` containers (`X-BlueOps-Ingest-Key`). |
+| **Events rejected / DLQ growing** | Malformed payloads or replay ceiling | `GET /api/v1/telemetry/dlq` | Correct source log format; invoke `POST /api/v1/telemetry/dlq/replay`. |
+| **OpenSearch connection refused** | Container not running / disabled | `OpenSearch cluster is currently unreachable ... Serving from local finding store` | Platform operates automatically with in-memory finding store (volatile on restart). |
 | **Response Agent returns 401** | HMAC signature mismatch or clock skew | `Signature expired. Server time: X, Token timestamp: Y` | Verify NTP synchronization between backend and agent; verify matching `RESPONSE_AGENT_SECRET`. |
 | **Response Agent returns 409** | Replay detected / duplicate ActionId | `Replay detected: ActionId already processed` | Ensure unique UUIDv4 is generated per response action request. |
 | **Response Action rejected (400)** | Shell injection, CLI option leading hyphen, or whitespace | `Target parameter cannot begin with hyphen (CLI option injection rejected)` | Sanitize target input. Ensure strict format compliance (e.g. single IP or hostname without arguments). |

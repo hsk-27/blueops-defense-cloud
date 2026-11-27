@@ -127,8 +127,9 @@ public class EventNormalizationService {
                 event.setRegistry(new NormalizedEvent.RegistryMetadata(regPath, "ValueName", "PayloadData"));
             }
 
-            // BlueOps Metadata
-            event.setBlueops(new NormalizedEvent.BlueOpsMetadata("1.0.0", Instant.now(), "fluent-bit", "success"));
+            // BlueOps Metadata (records actual collector from payload; never fabricated pre-ingestion)
+            String collector = extractFirstString(raw, List.of("blueops.collector", "collector"), "api-ingest");
+            event.setBlueops(new NormalizedEvent.BlueOpsMetadata("1.0.0", Instant.now(), collector, "success"));
 
             // Maintain bounded deque
             while (recentEvents.size() >= MAX_BUFFER_SIZE) {

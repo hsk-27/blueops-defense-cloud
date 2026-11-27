@@ -26,6 +26,7 @@ public class SigmaDetectionEvaluator {
     private final SigmaAggregationEngine aggregationEngine;
     private final AtomicLong findingSeq = new AtomicLong(2000);
 
+    @Autowired
     public SigmaDetectionEvaluator(
             SigmaRuleRegistry ruleRegistry,
             SigmaFieldMatcher fieldMatcher,

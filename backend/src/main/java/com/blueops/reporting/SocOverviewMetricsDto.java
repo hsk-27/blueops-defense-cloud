@@ -17,8 +17,8 @@ public class SocOverviewMetricsDto {
     private long totalDetectionRules;
     private long activeDetectionRules;
 
-    private double meanTimeToDetectSeconds; // MTTD
-    private double meanTimeToRespondSeconds; // MTTR
+    private Double meanTimeToDetectSeconds; // MTTD (null when unmeasured)
+    private Double meanTimeToRespondSeconds; // MTTR (null when no contained incidents exist)
 
     private Map<String, String> subsystemHealth;
     private List<Map<String, Object>> recentIncidents;
@@ -57,11 +57,11 @@ public class SocOverviewMetricsDto {
     public long getActiveDetectionRules() { return activeDetectionRules; }
     public void setActiveDetectionRules(long activeDetectionRules) { this.activeDetectionRules = activeDetectionRules; }
 
-    public double getMeanTimeToDetectSeconds() { return meanTimeToDetectSeconds; }
-    public void setMeanTimeToDetectSeconds(double meanTimeToDetectSeconds) { this.meanTimeToDetectSeconds = meanTimeToDetectSeconds; }
+    public Double getMeanTimeToDetectSeconds() { return meanTimeToDetectSeconds; }
+    public void setMeanTimeToDetectSeconds(Double meanTimeToDetectSeconds) { this.meanTimeToDetectSeconds = meanTimeToDetectSeconds; }
 
-    public double getMeanTimeToRespondSeconds() { return meanTimeToRespondSeconds; }
-    public void setMeanTimeToRespondSeconds(double meanTimeToRespondSeconds) { this.meanTimeToRespondSeconds = meanTimeToRespondSeconds; }
+    public Double getMeanTimeToRespondSeconds() { return meanTimeToRespondSeconds; }
+    public void setMeanTimeToRespondSeconds(Double meanTimeToRespondSeconds) { this.meanTimeToRespondSeconds = meanTimeToRespondSeconds; }
 
     public Map<String, String> getSubsystemHealth() { return subsystemHealth; }
     public void setSubsystemHealth(Map<String, String> subsystemHealth) { this.subsystemHealth = subsystemHealth; }

@@ -46,7 +46,10 @@ public class ResponsePolicyEngine {
         List<String> violations = new ArrayList<>();
         ResponseRiskLevel riskLevel = actionDef.getRiskLevel() != null ? actionDef.getRiskLevel() : ResponseRiskLevel.MODERATE;
 
-        // 1. Parameter presence and input validation
+        // 1. Action enablement and parameter presence validation
+        if (!actionDef.isEnabled()) {
+            violations.add("Response action '" + actionDef.getActionCode() + "' is disabled in the catalog.");
+        }
         if (targetIdentifier == null || targetIdentifier.trim().isEmpty()) {
             violations.add("Target identifier cannot be empty or null.");
             return new PolicyEvaluationResultDto(ResponsePolicyOutcome.INVALID, riskLevel, true, false,
@@ -72,15 +75,22 @@ public class ResponsePolicyEngine {
             violations.add("Target matches protected infrastructure (" + cleanTarget + "). Disruption is strictly forbidden.");
         }
 
-        // 4. Target Registry Verification & Trust State
+        // 4. Fail-Closed Target Registry Verification, Trust State, & Type Compatibility
         Optional<ResponseTargetRecord> targetOpt = targetRepository.findByIdentifierIgnoreCase(cleanTarget);
-        if (targetOpt.isPresent()) {
+        if (targetOpt.isEmpty()) {
+            violations.add("Target '" + cleanTarget + "' is not registered in the authorized response target registry (fail-closed policy).");
+        } else {
             ResponseTargetRecord targetRecord = targetOpt.get();
             if (targetRecord.isProtected()) {
                 violations.add("Target is registered as protected critical asset: " + targetRecord.getDisplayName());
             }
-            if ("REVOKED".equalsIgnoreCase(targetRecord.getTrustStatus())) {
-                violations.add("Target trust status is REVOKED. All response orchestration suspended.");
+            if (!"AUTHORIZED".equalsIgnoreCase(targetRecord.getTrustStatus())) {
+                violations.add("Target trust status is '" + targetRecord.getTrustStatus() + "'. Only explicitly AUTHORIZED targets permit orchestration.");
+            }
+            if (!isTargetTypeCompatible(actionDef.getTargetType(), targetRecord.getTargetType())) {
+                violations.add("Target type mismatch: action '" + actionDef.getActionCode() + "' requires '"
+                        + actionDef.getTargetType() + "' target, but '" + cleanTarget + "' is registered as '"
+                        + targetRecord.getTargetType() + "'.");
             }
             if ("CRITICAL".equalsIgnoreCase(targetRecord.getCriticality()) && riskLevel == ResponseRiskLevel.MODERATE) {
                 // Elevate risk for critical targets
@@ -151,12 +161,32 @@ public class ResponsePolicyEngine {
         ResponseRiskLevel risk = proposal.getRiskLevel();
         if (risk == ResponseRiskLevel.HIGH || risk == ResponseRiskLevel.CRITICAL) {
             // Separation of duties rule: Creator cannot approve their own high-risk proposal
-            if (approver.trim().equalsIgnoreCase(proposal.getProposedBy().trim())) {
+            if (proposal.getProposedBy() != null
+                    && approver.trim().equalsIgnoreCase(proposal.getProposedBy().trim())) {
                 log.warn("[SOD VIOLATION] User [{}] attempted to self-approve high-risk proposal [{}]",
                         approver, proposal.getProposalUuid());
                 return false;
             }
         }
         return true;
+    }
+
+    private boolean isTargetTypeCompatible(String actionTargetType, String registeredTargetType) {
+        String expected = normalizeTargetCategory(actionTargetType);
+        String actual = normalizeTargetCategory(registeredTargetType);
+        return expected != null && expected.equals(actual);
+    }
+
+    private String normalizeTargetCategory(String rawType) {
+        if (rawType == null) {
+            return null;
+        }
+        return switch (rawType.trim().toUpperCase(Locale.ROOT)) {
+            case "IP" -> "IP";
+            case "USER", "USERNAME" -> "USER";
+            case "HOST", "ASSET" -> "HOST";
+            case "CONTAINER" -> "CONTAINER";
+            default -> rawType.trim().toUpperCase(Locale.ROOT);
+        };
     }
 }

@@ -28,18 +28,18 @@ export const Header: React.FC<HeaderProps> = ({ title, subtitle }) => {
           <kbd className="ml-3 px-1.5 py-0.5 rounded bg-[#1a1f2e] text-[10px] font-mono text-slate-300 border border-slate-700">Ctrl K</kbd>
         </div>
 
-        {/* Enterprise Workspace Selector */}
+        {/* Lab Environment Indicator */}
         <div className="hidden sm:flex items-center space-x-2 bg-[#121520] border border-[#212738] px-3 py-1.5 rounded-md text-xs font-mono">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-          <span className="text-slate-300 font-semibold">Prod (US-East-1)</span>
+          <span className="w-2 h-2 rounded-full bg-sky-500"></span>
+          <span className="text-slate-300 font-semibold">Lab Containment</span>
           <ChevronDown className="w-3 h-3 text-slate-500" />
         </div>
 
-        {/* Real-time Telemetry Health Pill */}
+        {/* Telemetry Status Pill */}
         <div className="flex items-center space-x-2 bg-[#121520] border border-[#212738] px-3 py-1.5 rounded-md text-xs font-mono">
           <Activity className="w-3.5 h-3.5 text-emerald-400" />
           <span className="text-slate-400">PIPELINE:</span>
-          <span className="text-emerald-400 font-bold">142 EPS</span>
+          <span className="text-emerald-400 font-bold">CONNECTED</span>
         </div>
       </div>
     </header>

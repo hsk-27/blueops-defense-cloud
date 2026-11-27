@@ -55,24 +55,24 @@ The host-level response agent operates under strict boundary defenses:
    - Every request requires a unique `action_id` (UUIDv4 nonce).
    - Nonces are tracked with a sliding Time-To-Live (TTL) cache. Entries expire only when their corresponding 60-second validity window has lapsed, preventing replay attacks across cache cleanups.
 3. **Command & Argument Injection Defense:**
-   - Commands are executed via direct `execve` list invocations (`subprocess.run(shell=False)`). Shell metacharacters (`;&|$\`><\r\n`) are completely disallowed.
-   - **CLI Option Injection Defense:** Target arguments are strictly validated against allowlist formats:
-     - IP Addresses: Strict IPv4/IPv6 CIDR syntax (`^[0-9a-fA-F.:/]+$`). Leading hyphens (`-`) or whitespace are strictly prohibited.
-     - Usernames: Strict POSIX username syntax (`^[a-zA-Z0-9._][a-zA-Z0-9._-]*$`), forbidding leading hyphens (`-`) or flags.
-4. **Action Allowlisting:** The agent accepts only explicitly allowlisted actions:
-   - `block_ip`
-   - `isolate_host`
-   - `terminate_process`
-   - `disable_user`
-   Arbitrary shell execution or ad-hoc system administration commands are rejected.
+   - All actions in [agent.py](response-agent/src/agent.py) validate catalog contracts (`ACT-001`–`ACT-007` / `P001`–`P007`) and reject shell metacharacters (`;&|$\`><\r\n`), whitespace, and leading hyphens (`-`) before reaching the driver layer.
+   - [drivers.py](response-agent/src/drivers.py) executes **zero OS subprocesses or shell commands** (`subprocess` removed; firewall, account, and host containment actions are purely hypothetical `HYPOTHETICAL_LAB_SANDBOX` models).
+4. **Action Allowlisting:** The agent accepts only explicitly allowlisted structured actions (`ACT-001`–`ACT-007` / `P001`–`P007`):
+   - `BLOCK_IP`, `DISABLE_USER`, `ISOLATE_HOST`, `RESTORE_IP`, `ENABLE_USER`, `RECONNECT_HOST`, `COLLECT_EVIDENCE`
+   Catalog `ACT-008` and arbitrary shell execution requests are rejected unconditionally (`501 UNSUPPORTED_ACTION` backend-side, `400 REJECTED_UNAUTHORIZED_ACTION` agent-side).
 
-### 3.3. Response Execution Safety: Simulation by Default
-- **Safe Testing Guarantee:** The default execution mode across all environments is `SIMULATION`.
-- **Zero Host Destruction:** In `SIMULATION` mode, actions are verified, audited, and logged to `simulation_audit.log` without modifying iptables, Windows Firewall, user accounts, or active processes.
-- **Live Mode Restrictions:** Live execution drivers (`LinuxDriver`, `WindowsDriver`) may only be enabled in dedicated, isolated laboratory virtual machines with explicit administrative configuration (`EXECUTION_MODE=LIVE`).
+### 3.3. Hypothetical Containment & Laptop Safety Guard
+- **Hypothetical-Only Drivers:** Both [SimulationResponseAdapter.java](backend/src/main/java/com/blueops/response/SimulationResponseAdapter.java) and [drivers.py](response-agent/src/drivers.py) execute exclusively in hypothetical/simulated sandbox mode (`SIMULATION` / `HYPOTHETICAL_LAB_SANDBOX`) without modifying `iptables`, Windows Firewall, user accounts, or active processes.
+- **Locked Defaults:** `BLUEOPS_ALLOW_LIVE_EXECUTION=false`, `RESPONSE_AGENT_SIMULATION_MODE=true`, `EXECUTION_MODE=SIMULATION`, and `BLUEOPS_ALLOW_LIVE_HOST_DISRUPTION=false`.
 
 ### 3.4. Role-Based Access Control (RBAC)
 - All endpoints enforce strict Spring Security filter chains and `@PreAuthorize` method annotations:
-  - `ROLE_SOC_ANALYST`: Read-only access to telemetry, detection findings, incident queues, and timeline investigations.
-  - `ROLE_INCIDENT_RESPONDER`: Ability to update incident status, attach evidence, and request response actions.
-  - `ROLE_ADMIN`: Ability to reload detection rules, manage users, modify security configuration, and approve high-impact containment actions.
+  - `ROLE_VIEWER`: Read-only access (`GET`) to telemetry, findings, incidents, and SOAR queues/catalogs.
+  - `ROLE_ANALYST`: Investigation updates plus SOAR policy preview, proposal creation, and proposal cancellation.
+  - `ROLE_ADMIN`: Rule reloads, destructive deletes, and SOAR proposal approval, denial, execution, and rollback (subject to Separation of Duties on `HIGH`/`CRITICAL` proposals).
+
+---
+
+## 4. AI Agent & Automation Safety Directive
+
+Per [AGENTS.md](AGENTS.md), **any AI coding assistant or operator script working on this repository must NOT relax or override simulation/hypothetical response settings or introduce OS-mutating commands** unless it is strictly proven **not to threaten the user's laptop** (e.g., an isolated disposable VM explicitly approved by the user) **or** provides a verified non-host-mutating workaround that works locally.

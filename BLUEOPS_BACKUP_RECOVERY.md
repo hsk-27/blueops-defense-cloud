@@ -2,17 +2,18 @@
 
 **Document ID:** BLUEOPS-DOC-M7-001  
 **Milestone:** M7 Operational Hardening & Reliability  
-**Classification:** Operational Security & Business Continuity  
-**Target RPO:** < 15 minutes  
-**Target RTO:** < 30 minutes  
+**Classification:** Reference Runbook & Recovery Design Specification  
+**Design Target RPO (Unverified in Repository):** < 15 minutes (requires external WAL archiving / scheduled cron jobs)  
+**Design Target RTO (Unverified in Repository):** < 30 minutes  
+**Implementation Status:** Reference documentation only — automated backup scripts, GPG key provisioning, cron jobs, and offsite S3 vaults are **not** bundled or active in this workspace.
 
 ---
 
 ## 1. Executive Summary & Objective
 
-The BlueOps Defensive Cybersecurity Platform maintains mission-critical security telemetry, detection findings, investigation dossiers, entity relationship graphs, and policy-governed SOAR response audit records.
+The BlueOps Defensive Cybersecurity Platform maintains security telemetry, detection findings, investigation dossiers, entity relationship graphs, and SOAR response audit records.
 
-This document establishes the official backup, recovery, and business continuity architecture for BlueOps. The objective is to ensure that in the event of hardware failure, catastrophic datacenter outage, database corruption, or ransomware attack on infrastructure, BlueOps can be completely recovered with zero data loss for ratified incidents and minimal loss for raw transient telemetry.
+This document defines the **reference** backup, recovery, and business continuity design targets for external infrastructure operators. Wait to rely on RPO/RTO guarantees until your deployment provisions and validates the external `pg_dump`/WAL automation described below. Note that Tier 4 in-memory buffers (normalized events, DLQ, and in-memory finding fallback when OpenSearch is offline) are **volatile** and lost across JVM restarts.
 
 ---
 
@@ -42,10 +43,11 @@ BlueOps segregates data into four distinct storage tiers based on persistence re
 
 ## 4. Backup Procedures
 
-### 4.1 Tier 1: Automated PostgreSQL Physical & Logical Backups
+### 4.1 Tier 1: Reference PostgreSQL Backup Template (`pg_dump`)
+> **Note:** `/opt/blueops/scripts/backup_postgres.sh` is an unimplemented reference operator template and is not shipped inside this repository.
 
 #### 4.1.1 Logical Dump (`pg_dump`)
-Logical backups capture consistent relational state across all Flyway schemas (`V1` through `V4`).
+Logical backups capture consistent relational state across Flyway schemas (`V1` through `V4`):
 
 ```bash
 #!/usr/bin/env bash
@@ -138,33 +140,25 @@ If schema checksum mismatch occurs due to manual patch divergence:
 java -jar app.jar --spring.flyway.repair=true
 ```
 
-### 5.4 Tier 3 (OpenSearch) Index Regeneration
-When recovering OpenSearch from a total failure, the search indices are re-hydrated directly from the PostgreSQL findings audit trail:
-1. Re-initialize index template:
-   ```bash
-   curl -X PUT "http://localhost:9200/_index_template/blueops_findings" \
-        -H "Content-Type: application/json" \
-        -d @config/opensearch/findings-template.json
-   ```
-2. Trigger Spring Boot finding resynchronization via `/api/v1/system/diagnostics` or backend restart. `OpenSearchFindingAdapter` automatically falls back to in-memory cached findings until the cluster is marked `UP`.
+### 5.4 Tier 3 (OpenSearch) Re-Initialization Note
+Note that in the current modular monolith, detection findings primarily live in the OpenSearch adapter index and in-memory `ConcurrentHashMap` fallback (with incident-linked findings persisted in PostgreSQL `incident_findings`). Only findings attached to PostgreSQL incidents survive a cold JVM + empty OpenSearch cluster loss; unlinked raw findings require OpenSearch snapshots/persistence.
 
 ---
 
-## 6. Disaster Recovery Drill & Verification Runbook
+## 6. Reference Disaster Recovery Drill Checklist (Not Executed Automatically)
 
-Quarterly verification must be executed in a sandboxed staging environment according to this protocol:
+Operators commissioning a staging or production cluster should execute and record this verification runbook manually:
 
 | Step | Action | Expected Result | Verification Check |
 | :--- | :--- | :--- | :--- |
-| **D-1** | Simulate PostgreSQL primary corruption | Connection errors logged in `/api/v1/system/health` | HTTP 503 `status: DEGRADED` |
-| **D-2** | Execute restore script on secondary target | Clean restoration with 0 fatal errors | Exit code 0 |
+| **D-1** | Simulate PostgreSQL unavailability | Connection errors logged in `/api/v1/system/health` | HTTP 503 `status: DEGRADED` |
+| **D-2** | Execute operator-provisioned restore script on isolated target | Clean restoration with 0 fatal errors | Exit code 0 |
 | **D-3** | Point backend to restored database | Spring Boot starts cleanly; Flyway validates V1..V4 | Log `Started BlueOpsApplication in X.XX seconds` |
-| **D-4** | Execute API probe | Query incidents, findings, and target catalog | 100% findings & incidents match pre-drill checksum |
-| **D-5** | Verify response engine containment | Engine initializes in `SIMULATION` mode | `ALLOW_LIVE_HOST_DISRUPTION = false` |
+| **D-4** | Execute API probe | Query incidents and target catalog | Relational records match pre-drill dump |
+| **D-5** | Verify response engine containment | Engine initializes in `SIMULATION` mode | `BLUEOPS_ALLOW_LIVE_HOST_DISRUPTION=false` |
 
 ---
 
-## 7. Audit Sign-Off & Governance
-- **Backup Verification Frequency:** Daily automated integrity checks.
-- **Drill Cadence:** Quarterly.
-- **RPO/RTO Compliance:** Validated in M7 benchmark testing.
+## 7. Governance & Actual Status
+- **Implemented Today:** Flyway schema validation (`V1`–`V4`) on startup; OpenSearch disconnect resilience (`in-memory` fallback).
+- **Not Implemented / Not Executed:** Automated `pg_dump` cron scripts, WAL archiving, encrypted off-site S3 vaults, and automated RPO < 15m / RTO < 30m restore drills.

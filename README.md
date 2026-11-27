@@ -7,7 +7,7 @@
 <p align="center">
   <img src="https://img.shields.io/badge/Build-Passing-brightgreen?style=flat-square&logo=githubactions" alt="CI Status" />
   <img src="https://img.shields.io/badge/Security-Hardened%20(HMAC%20%2B%20JWT)-blue?style=flat-square&logo=github" alt="Security" />
-  <img src="https://img.shields.io/badge/Backend-Spring%20Boot%203.2%20%7C%20Java%2021-green?style=flat-square&logo=springboot" alt="Spring Boot" />
+  <img src="https://img.shields.io/badge/Backend-Spring%20Boot%203.3.5%20%7C%20Java%2021-green?style=flat-square&logo=springboot" alt="Spring Boot" />
   <img src="https://img.shields.io/badge/Frontend-React%2018%20%7C%20TypeScript%20%7C%20Vite-blue?style=flat-square&logo=react" alt="React" />
   <img src="https://img.shields.io/badge/Advisory-NIST%20SP%20800--61r2%20%7C%20CISA%20%7C%20MITRE-purple?style=flat-square" alt="NIST & CISA Advisory" />
   <img src="https://img.shields.io/badge/Analytics-OpenSearch%202.x-teal?style=flat-square&logo=opensearch" alt="OpenSearch" />
@@ -195,15 +195,15 @@ To eliminate unverified LLM hallucinations and high-stakes SOC errors, BlueOps i
 
 ---
 
-## Empirical Research Benchmarks
+## Empirical Rule-Logic Smoke Benchmarks
 
-Empirical validation was performed by running [`test-lab/run_simulations.js`](test-lab/run_simulations.js) evaluating **10 Atomic Red Team attack scenarios** and **50 benign enterprise baseline workloads**:
+Offline JavaScript rule-logic smoke checks can be run via [`test-lab/run_simulations.js`](test-lab/run_simulations.js) evaluating **10 synthetic Atomic Red Team payloads** and **50 synthetic benign baseline payloads** against standalone JS pattern rules (not live JVM/OpenSearch/endpoint telemetry timing):
 
 ```
 =================================================================
-                 EMPIRICAL BENCHMARK METRICS SUMMARY             
+      STANDALONE JS RULE-LOGIC SMOKE CHECK SUMMARY
 =================================================================
-  Adversary Scenarios Evaluated:    10
+  Adversary Payloads Evaluated:     10
   Benign Baselines Evaluated:       50
   True Positives (TP):              10 / 10 (100.00%)
   False Positives (FP):             0       (0.00%)
@@ -217,8 +217,8 @@ Empirical validation was performed by running [`test-lab/run_simulations.js`](te
   F1-Score:                         1.0000
   Overall Accuracy:                 100.00%
 -----------------------------------------------------------------
-  Mean Time to Detect (MTTD):       3.29 seconds
-  Mean Time to Respond (MTTR):      42.50 seconds
+  Mean In-Process JS Eval Time:     0.07 ms (rule matching only)
+  End-to-End MTTD / MTTR:           Not measured (null in offline mode)
 =================================================================
 ```
 
@@ -229,12 +229,12 @@ Empirical validation was performed by running [`test-lab/run_simulations.js`](te
 ```text
 blueops-defense-cloud/
 ├── .github/                 # GitHub Actions CI, CodeQL analysis, Issue & PR templates
-├── backend/                 # Spring Boot 3 modular monolith (Java 21+)
-│   ├── src/main/java/       # Bounded contexts: auth, telemetry, findings, incidents, response, reporting
-│   └── src/test/java/       # 34 JUnit 5 tests covering normalization, DLQ, state machine, HMAC, detection, correlation
+├── backend/                 # Spring Boot 3.3.5 modular monolith (Java 21+)
+│   ├── src/main/java/       # Bounded contexts: auth, telemetry, findings, entities, correlation, incidents, response, reporting
+│   └── src/test/java/       # 122 JUnit 5 tests covering normalization, DLQ, state machine, HMAC, Sigma, correlation, SOAR & JWT integration
 ├── frontend/                # React 18 + TypeScript + Vite + Tailwind CSS SOC UI
 │   ├── src/pages/           # SOC Overview, Live Telemetry, Incidents, Investigation, Threat Intel, Assets
-│   └── src/tests/           # Vitest component unit tests (6 passing)
+│   └── src/tests/           # Vitest component & API tests (15 tests across 6 test files)
 ├── response-agent/          # Python 3.11 restricted remediation agent
 │   ├── src/agent.py         # Flask agent enforcing HMAC, allowlists, and parameter sanitization
 │   └── tests/               # Pytest boundary validation tests
@@ -274,14 +274,15 @@ npm run dev
 # Frontend initializes at http://localhost:3000
 ```
 
-**Default Credentials:**  
-- Username: `admin`  
-- Password: `AdminPass123!`
+**Default Dev Seed Credentials:**  
+- Admin: `admin` / `Admin@BlueOps2026!`
+- Analyst: `analyst` / `Analyst@BlueOps2026!`
+- Viewer: `viewer` / `Viewer@BlueOps2026!`
 
 ---
 
-### Mode B: Enterprise Docker Profile
-*Runs full containerized infrastructure including external OpenSearch, Dashboards, and Fluent Bit.*
+### Mode B: Containerized Lab / Demo Docker Profile
+*Runs the full containerized lab/demo infrastructure including PostgreSQL, OpenSearch (security plugin disabled by default for local Compose), Fluent Bit, Spring Boot backend, React nginx HTTP frontend (:80), and Flask response agent (`RESPONSE_AGENT_SIMULATION_MODE=true`). Production TLS termination and secret management must be layered externally.*
 
 ```bash
 # Start container cluster
@@ -294,14 +295,14 @@ cd frontend && npm run dev
 
 ---
 
-## Controlled Response Agent & Boundary Defense
+## Controlled Response Agent & Host Safety Guard
 
-The BlueOps Response Agent provides strictly allowlisted, cryptographically authenticated, and reversible lab remediation actions:
+The BlueOps Response Agent provides strictly allowlisted, cryptographically authenticated, **hypothetical-only** lab remediation actions (`HYPOTHETICAL_LAB_SANDBOX`):
 
-- **Strict Allowlist:** `BLOCK_IP`, `RESTORE_IP`, `DISABLE_USER`, `ENABLE_USER`, `ISOLATE_HOST`, `RECONNECT_HOST`, `COLLECT_EVIDENCE`.
-- **HMAC-SHA256 Dispatch:** Every payload is signed with a shared cryptographic key over a timestamped envelope (`{timestamp}:{payload}`).
-- **Anti-Replay Window:** Signatures expire after 60 seconds; nonces (`X-BlueOps-ActionId`) are recorded to prevent replay attacks.
-- **Command Injection Prevention:** Target parameters are validated against regex `[;&|`$><\r\n]` and size-restricted to prevent shell metacharacter injection.
+- **Strict Allowlist (`ACT-001`–`ACT-007` / `P001`–`P007`):** `BLOCK_IP`, `RESTORE_IP`, `DISABLE_USER`, `ENABLE_USER`, `ISOLATE_HOST`, `RECONNECT_HOST`, `COLLECT_EVIDENCE` (with `ACT-008` rejected pre-dispatch).
+- **Hypothetical Execution Guarantee:** Both backend simulation defaults (`BLUEOPS_ALLOW_LIVE_EXECUTION=false`, `RESPONSE_AGENT_SIMULATION_MODE=true`) and `response-agent/src/drivers.py` operate without spawning host OS firewall, account, or process-mutating subprocesses.
+- **AI & Operator Guardrails:** See [`AGENTS.md`](AGENTS.md) and [`SECURITY.md`](SECURITY.md) — **do not alter host-safety settings or add OS-mutating drivers** unless running safely without threatening the laptop or via a verified non-host-mutating workaround.
+- **HMAC-SHA256 & Anti-Replay:** Every dispatch payload is signed over `{timestamp}:{payload}` with a 60-second anti-replay window and strict target character/format validation (`[;&|`$><\r\n]`, leading `-`, whitespace rejected).
 
 ---
 
@@ -321,16 +322,19 @@ Execute the comprehensive test suites across all layers with a single script:
 
 Or execute suites individually:
 ```bash
-# 1. Backend JUnit 5 Tests (34 / 34 Passing)
+# 1. Backend JUnit 5 Tests (122 / 122 Passing)
 cd backend && ./mvnw test
 
-# 2. Frontend Vitest Tests (6 / 6 Passing) & Production Build
-cd frontend && npm test && npm run build
+# 2. Frontend Vitest Tests (15 / 15 Passing) & Production Build
+cd frontend && npm test -- --run && npm run build
 
-# 3. Dynamic Empirical Benchmark Simulation
+# 3. Python Response Agent Contract Tests (14 / 14 Passing; Flask optional via built-in stdlib fallback)
+cd response-agent && python -m pytest -q
+
+# 4. Standalone JS Rule-Logic Smoke Check
 node test-lab/run_simulations.js
 
-# 4. Deceptive Adversary Simulation Suite (8 / 8 Detected, 5 / 5 Defenses Passed)
+# 5. Standalone JS Adversary Boundary & Logic Smoke Check
 node test-lab/adversary-simulation/deceptive_attack_suite.js
 ```
 

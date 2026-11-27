@@ -29,11 +29,26 @@ class JwtTokenProviderTest {
         String token = jwtTokenProvider.generateAccessToken(auth);
         assertNotNull(token);
         assertTrue(jwtTokenProvider.validateToken(token));
+        assertTrue(jwtTokenProvider.validateAccessToken(token));
+        assertFalse(jwtTokenProvider.validateRefreshToken(token), "Access token must be rejected as refresh token");
+        assertEquals(JwtTokenProvider.TOKEN_TYPE_ACCESS, jwtTokenProvider.getTokenType(token));
         assertEquals("soc_analyst", jwtTokenProvider.getUsernameFromJwt(token));
+    }
+
+    @Test
+    void testRefreshTokenCannotBeUsedAsAccessToken() {
+        String refreshToken = jwtTokenProvider.generateRefreshToken("soc_analyst");
+        assertNotNull(refreshToken);
+        assertTrue(jwtTokenProvider.validateRefreshToken(refreshToken));
+        assertFalse(jwtTokenProvider.validateAccessToken(refreshToken), "Refresh token must be rejected as API access token");
+        assertEquals(JwtTokenProvider.TOKEN_TYPE_REFRESH, jwtTokenProvider.getTokenType(refreshToken));
+        assertEquals("soc_analyst", jwtTokenProvider.getUsernameFromJwt(refreshToken));
     }
 
     @Test
     void testInvalidTokenReturnsFalse() {
         assertFalse(jwtTokenProvider.validateToken("invalid.jwt.token"));
+        assertFalse(jwtTokenProvider.validateAccessToken("invalid.jwt.token"));
+        assertFalse(jwtTokenProvider.validateRefreshToken("invalid.jwt.token"));
     }
 }

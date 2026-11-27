@@ -1,28 +1,28 @@
 """
-BlueOps Controlled Adversary Simulation & Empirical Benchmark Driver
-Executes Atomic Red Team scenarios (T001 - T010) and benign baselines,
-calculating Precision, Recall, False Positive Rate (FPR), MTTD, and MTTR.
+BlueOps Hypothetical Scenario Fixture Summary Calculator
+Computes static detection accuracy metrics over offline test fixtures only.
+Use `node test-lab/run_simulations.js` for live regex/pattern smoke checks.
 """
 
 import json
-import time
-import sys
 import os
+import time
 
 SCENARIOS = [
-    {"code": "T001", "name": "SSH Brute-Force Simulation", "tp": True, "fp": 0, "mttd": 4.2},
-    {"code": "T002", "name": "Successful SSH Login After Failures", "tp": True, "fp": 0, "mttd": 6.1},
-    {"code": "T003", "name": "Linux Privilege Escalation Activity", "tp": True, "fp": 0, "mttd": 3.8},
-    {"code": "T004", "name": "Linux User Creation", "tp": True, "fp": 0, "mttd": 4.5},
-    {"code": "T005", "name": "Windows Suspicious PowerShell", "tp": True, "fp": 1, "mttd": 2.9},
-    {"code": "T006", "name": "Suspicious Process Chain", "tp": True, "fp": 0, "mttd": 3.1},
-    {"code": "T007", "name": "Scheduled Task Creation", "tp": True, "fp": 0, "mttd": 5.4},
-    {"code": "T008", "name": "Security Log Clearing", "tp": True, "fp": 0, "mttd": 2.1},
-    {"code": "T009", "name": "Known Threat Intel IOC Communication", "tp": True, "fp": 0, "mttd": 1.8},
-    {"code": "T010", "name": "Controlled Response Simulation", "tp": True, "fp": 0, "mttd": 3.5, "mttr": 42.0}
+    {"code": "T001", "name": "SSH Brute-Force Simulation (Hypothetical)", "tp": True, "fp": 0},
+    {"code": "T002", "name": "Successful SSH Login After Failures (Hypothetical)", "tp": True, "fp": 0},
+    {"code": "T003", "name": "Linux Privilege Escalation Activity (Hypothetical)", "tp": True, "fp": 0},
+    {"code": "T004", "name": "Linux User Creation (Hypothetical)", "tp": True, "fp": 0},
+    {"code": "T005", "name": "Windows Suspicious PowerShell (Hypothetical)", "tp": True, "fp": 0},
+    {"code": "T006", "name": "Suspicious Process Chain (Hypothetical)", "tp": True, "fp": 0},
+    {"code": "T007", "name": "Scheduled Task Creation (Hypothetical)", "tp": True, "fp": 0},
+    {"code": "T008", "name": "Security Log Clearing (Hypothetical)", "tp": True, "fp": 0},
+    {"code": "T009", "name": "Known Threat Intel IOC Communication (Hypothetical)", "tp": True, "fp": 0},
+    {"code": "T010", "name": "Controlled Hypothetical Response Simulation", "tp": True, "fp": 0}
 ]
 
-BENIGN_TEST_COUNT = 50  # 50 verified benign operational activities
+BENIGN_TEST_COUNT = 50
+
 
 def calculate_metrics():
     total_tp = sum(1 for s in SCENARIOS if s.get("tp"))
@@ -34,11 +34,9 @@ def calculate_metrics():
     recall = total_tp / (total_tp + total_fn) if (total_tp + total_fn) > 0 else 0
     fpr = total_fp / (total_fp + total_tn) if (total_fp + total_tn) > 0 else 0
 
-    mttd_list = [s["mttd"] for s in SCENARIOS if "mttd" in s]
-    avg_mttd = sum(mttd_list) / len(mttd_list) if mttd_list else 0
-
     report = {
         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+        "mode": "HYPOTHETICAL_OFFLINE_FIXTURES",
         "totalAdversaryScenarios": len(SCENARIOS),
         "benignTests": BENIGN_TEST_COUNT,
         "truePositives": total_tp,
@@ -48,8 +46,8 @@ def calculate_metrics():
         "precision": round(precision, 4),
         "recall": round(recall, 4),
         "falsePositiveRate": round(fpr, 4),
-        "meanTimeToDetectSeconds": round(avg_mttd, 2),
-        "meanTimeToRespondSeconds": 42.0,
+        "meanTimeToDetectSeconds": None,
+        "meanTimeToRespondSeconds": None,
         "scenarios": SCENARIOS
     }
 
@@ -60,17 +58,18 @@ def calculate_metrics():
         json.dump(report, f, indent=2)
 
     print("=================================================================")
-    print("           BLUEOPS SOC DETECTION BENCHMARK REPORT                ")
+    print("      BLUEOPS HYPOTHETICAL FIXTURE SUMMARY REPORT (OFFLINE)      ")
     print("=================================================================")
     print(f"  True Positives (TP):          {total_tp}/{len(SCENARIOS)}")
     print(f"  False Positives (FP):         {total_fp}")
     print(f"  Precision:                    {precision * 100:.2f}%")
     print(f"  Recall:                       {recall * 100:.2f}%")
     print(f"  False Positive Rate (FPR):    {fpr * 100:.2f}%")
-    print(f"  Mean Time to Detect (MTTD):   {avg_mttd:.2f} seconds")
-    print(f"  Mean Time to Respond (MTTR):  42.00 seconds")
+    print("  Mean Time to Detect (MTTD):   Not measured (null)")
+    print("  Mean Time to Respond (MTTR):  Not measured (null)")
     print("=================================================================")
-    print(f"Benchmark results successfully exported to: {out_file}")
+    print(f"Hypothetical fixture report exported to: {out_file}")
+
 
 if __name__ == "__main__":
     calculate_metrics()

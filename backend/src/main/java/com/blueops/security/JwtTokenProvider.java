@@ -19,6 +19,10 @@ public class JwtTokenProvider {
 
     private static final Logger log = LoggerFactory.getLogger(JwtTokenProvider.class);
 
+    public static final String TOKEN_TYPE_CLAIM = "type";
+    public static final String TOKEN_TYPE_ACCESS = "ACCESS";
+    public static final String TOKEN_TYPE_REFRESH = "REFRESH";
+
     private final SecretKey key;
     private final long jwtExpirationMs;
     private final long jwtRefreshExpirationMs;
@@ -41,6 +45,7 @@ public class JwtTokenProvider {
                 .subject(userPrincipal.getUsername())
                 .claim("role", userPrincipal.getUser().getRole().name())
                 .claim("userId", userPrincipal.getUser().getId())
+                .claim(TOKEN_TYPE_CLAIM, TOKEN_TYPE_ACCESS)
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(key)
@@ -53,7 +58,7 @@ public class JwtTokenProvider {
 
         return Jwts.builder()
                 .subject(username)
-                .claim("type", "REFRESH")
+                .claim(TOKEN_TYPE_CLAIM, TOKEN_TYPE_REFRESH)
                 .issuedAt(now)
                 .expiration(expiryDate)
                 .signWith(key)
@@ -61,21 +66,53 @@ public class JwtTokenProvider {
     }
 
     public String getUsernameFromJwt(String token) {
-        Claims claims = Jwts.parser()
-                .verifyWith(key)
-                .build()
-                .parseSignedClaims(token)
-                .getPayload();
+        Claims claims = parseClaims(token);
         return claims.getSubject();
+    }
+
+    public String getTokenType(String token) {
+        Claims claims = parseClaims(token);
+        return claims.get(TOKEN_TYPE_CLAIM, String.class);
     }
 
     public boolean validateToken(String authToken) {
         try {
-            Jwts.parser().verifyWith(key).build().parseSignedClaims(authToken);
+            parseClaims(authToken);
             return true;
         } catch (JwtException | IllegalArgumentException ex) {
             log.warn("Invalid JWT token: {}", ex.getMessage());
             return false;
         }
+    }
+
+    public boolean validateAccessToken(String authToken) {
+        return validateTokenWithExpectedType(authToken, TOKEN_TYPE_ACCESS);
+    }
+
+    public boolean validateRefreshToken(String refreshToken) {
+        return validateTokenWithExpectedType(refreshToken, TOKEN_TYPE_REFRESH);
+    }
+
+    private boolean validateTokenWithExpectedType(String token, String expectedType) {
+        try {
+            Claims claims = parseClaims(token);
+            String tokenType = claims.get(TOKEN_TYPE_CLAIM, String.class);
+            if (!expectedType.equals(tokenType)) {
+                log.warn("Rejected JWT with unexpected type claim [{}]; expected [{}]", tokenType, expectedType);
+                return false;
+            }
+            return true;
+        } catch (JwtException | IllegalArgumentException ex) {
+            log.warn("Invalid JWT token: {}", ex.getMessage());
+            return false;
+        }
+    }
+
+    private Claims parseClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(key)
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }

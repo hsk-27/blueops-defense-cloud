@@ -11,6 +11,7 @@ export const LiveTelemetryPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'STREAM' | 'DLQ'>('STREAM');
   const [stats, setStats] = useState<any>({ totalReceived: 0, totalNormalized: 0, bufferedCount: 0, dlqCount: 0 });
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [search, setSearch] = useState('');
   const [providerFilter, setProviderFilter] = useState('ALL');
@@ -26,16 +27,19 @@ export const LiveTelemetryPage: React.FC = () => {
     const fetchTelemetry = async () => {
       try {
         const [evts, st, dlqs] = await Promise.all([
-          api.getRecentTelemetry(50).catch(() => []),
-          api.getTelemetryStats().catch(() => ({ totalReceived: 0, totalNormalized: 0, bufferedCount: 0, dlqCount: 0 })),
-          api.getDeadLetterQueue(50).catch(() => [])
+          api.getRecentTelemetry(50),
+          api.getTelemetryStats(),
+          api.getDeadLetterQueue(50)
         ]);
         if (!isMounted) return;
-        setEvents(evts || []);
+        setError(null);
+        setEvents(Array.isArray(evts) ? evts : []);
         setStats(st || {});
-        setDlqEvents(dlqs || []);
-      } catch (err) {
-        console.error('Failed to load telemetry', err);
+        setDlqEvents(Array.isArray(dlqs) ? dlqs : []);
+      } catch (err: any) {
+        if (isMounted) {
+          setError(err?.message || 'Failed to load telemetry pipeline data');
+        }
       } finally {
         if (isMounted) setLoading(false);
       }
@@ -56,15 +60,16 @@ export const LiveTelemetryPage: React.FC = () => {
     setLoading(true);
     try {
       const [evts, st, dlqs] = await Promise.all([
-        api.getRecentTelemetry(50).catch(() => []),
-        api.getTelemetryStats().catch(() => ({ totalReceived: 0, totalNormalized: 0, bufferedCount: 0, dlqCount: 0 })),
-        api.getDeadLetterQueue(50).catch(() => [])
+        api.getRecentTelemetry(50),
+        api.getTelemetryStats(),
+        api.getDeadLetterQueue(50)
       ]);
-      setEvents(evts || []);
+      setError(null);
+      setEvents(Array.isArray(evts) ? evts : []);
       setStats(st || {});
-      setDlqEvents(dlqs || []);
-    } catch (err) {
-      console.error('Failed to refresh telemetry', err);
+      setDlqEvents(Array.isArray(dlqs) ? dlqs : []);
+    } catch (err: any) {
+      setError(err?.message || 'Failed to refresh telemetry stream');
     } finally {
       setLoading(false);
     }
@@ -150,6 +155,22 @@ export const LiveTelemetryPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div role="alert" className="p-3 bg-rose-950/60 border border-rose-800 rounded-md flex items-center justify-between text-xs font-mono text-rose-200">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0" />
+            <span>Telemetry API Error: {error}</span>
+          </div>
+          <button
+            onClick={handleManualRefresh}
+            className="px-2.5 py-1 bg-rose-900/60 hover:bg-rose-800/80 border border-rose-700 rounded text-[11px]"
+          >
+            Retry
+          </button>
+        </div>
+      )}
 
       {/* Metric Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">

@@ -194,13 +194,13 @@ class EndToEndSoarOrchestrationTest {
         assertEquals("APPROVED", approved.getStatus());
         assertEquals("lead-bob", approved.getApprover());
 
-        // Step 5: Bounded Adapter Execution & Independent Verification (M6.8, M6.10)
+        // Step 5: Bounded Adapter Execution & Truthful Simulation Recording (M6.8, M6.10)
         ResponseProposalDto executed = orchestrator.executeProposal(approved.getId(), "lead-bob");
-        assertEquals("VERIFIED", executed.getStatus());
+        assertEquals("SIMULATED", executed.getStatus());
         assertNotNull(executed.getVerification());
-        assertEquals("VERIFIED", executed.getVerification().getStatus());
+        assertEquals("SIMULATION_ONLY", executed.getVerification().getStatus());
         assertTrue(executed.getVerification().isSimulation());
-        assertTrue(executed.getVerification().getObservedOutcome().contains("Simulated lab firewall table query confirmed"));
+        assertTrue(executed.getVerification().getObservedOutcome().contains("Simulation only (dry-run)"));
 
         // Step 6: Validate Audit Trail Integrity (M6.11)
         assertTrue(auditTrail.stream().anyMatch(a -> a.getAction().equals("RESPONSE_PROPOSAL_CREATED")));

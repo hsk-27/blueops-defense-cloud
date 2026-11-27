@@ -35,10 +35,19 @@ blueops:
     password: ${BLUEOPS_OPENSEARCH_PASSWORD:BlueOpsAdminPass123!@#}
     sync-interval-ms: ${BLUEOPS_OPENSEARCH_SYNC_INTERVAL_MS:10000}
     enabled: ${BLUEOPS_OPENSEARCH_ENABLED:true}
+  # AI / OPERATOR SAFETY GUARD: Keep simulation-mode=true and allow-live-execution=false
+  # unless running in an isolated environment that cannot threaten the user's laptop
+  # or backed by a verified non-host-mutating workaround.
+  response:
+    allow-live-execution: ${BLUEOPS_ALLOW_LIVE_EXECUTION:false}
   response-agent:
     url: ${RESPONSE_AGENT_URL:http://localhost:5000}
     secret: ${RESPONSE_AGENT_SECRET:b7c938d10b7f43a99e1d8847e923832c3f59194e432c7e436814041b65b16130}
     simulation-mode: ${RESPONSE_AGENT_SIMULATION_MODE:true}
+  telemetry:
+    ingest-api-key: ${BLUEOPS_INGEST_API_KEY:}
+  demo:
+    seed-findings: ${BLUEOPS_DEMO_SEED_FINDINGS:false}
 
 # Actuator & Management
 management:

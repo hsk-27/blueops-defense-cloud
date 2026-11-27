@@ -48,6 +48,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setToken(null);
     setUser(null);
     localStorage.removeItem('blueops_token');
+    localStorage.removeItem('blueops_refresh_token');
     localStorage.removeItem('blueops_user');
   };
 

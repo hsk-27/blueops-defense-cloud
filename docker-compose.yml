@@ -1,3 +1,10 @@
+# ==============================================================================
+# BlueOps Defense Cloud - Lab / Demonstration Docker Compose Stack
+# WARNING: This Compose stack is intended for isolated lab/demo use ONLY.
+# - Nginx frontend exposes HTTP :80 without TLS termination.
+# - OpenSearch runs with DISABLE_SECURITY_PLUGIN=true on the internal bridge.
+# - Production mode enforces strong non-default secrets via SecurityStartupValidator.
+# ==============================================================================
 version: '3.8'
 
 services:
@@ -8,7 +15,7 @@ services:
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-blueops_db}
       POSTGRES_USER: ${POSTGRES_USER:-blueops_user}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-blueops_secure_password_replace_in_prod}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set strong POSTGRES_PASSWORD in .env}
     ports:
       - "${POSTGRES_PORT:-5432}:5432"
     volumes:
@@ -89,6 +96,8 @@ services:
     image: fluent/fluent-bit:3.0.4
     container_name: blueops-fluent-bit
     restart: unless-stopped
+    environment:
+      BLUEOPS_INGEST_API_KEY: ${BLUEOPS_INGEST_API_KEY:?Set BLUEOPS_INGEST_API_KEY in .env}
     ports:
       - "5140:5140/udp"
       - "5140:5140/tcp"
@@ -100,6 +109,8 @@ services:
       - fluentbit_buffer:/fluent-bit/buffer
     depends_on:
       opensearch:
+        condition: service_healthy
+      backend:
         condition: service_healthy
     deploy:
       resources:
@@ -118,13 +129,19 @@ services:
     ports:
       - "${SERVER_PORT:-8080}:8080"
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-blueops_db}
       SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-blueops_user}
-      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-blueops_secure_password_replace_in_prod}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:?Set strong POSTGRES_PASSWORD in .env}
+      BLUEOPS_OPENSEARCH_ENABLED: ${BLUEOPS_OPENSEARCH_ENABLED:-true}
       BLUEOPS_OPENSEARCH_URI: http://opensearch:9200
-      JWT_SECRET: ${JWT_SECRET:-404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
-      RESPONSE_AGENT_URL: http://response-agent:5000
+      JWT_SECRET: ${JWT_SECRET:?Set high-entropy 32+ char JWT_SECRET in .env}
+      BLUEOPS_INGEST_API_KEY: ${BLUEOPS_INGEST_API_KEY:?Set BLUEOPS_INGEST_API_KEY in .env}
+      BLUEOPS_DEMO_SEED_FINDINGS: ${BLUEOPS_DEMO_SEED_FINDINGS:-false}
+      RESPONSE_AGENT_URL: ${RESPONSE_AGENT_URL:-http://response-agent:5000}
+      RESPONSE_AGENT_SECRET: ${RESPONSE_AGENT_SECRET:?Set shared RESPONSE_AGENT_SECRET in .env}
+      RESPONSE_AGENT_SIMULATION_MODE: "true"
+      BLUEOPS_ALLOW_LIVE_EXECUTION: "false"
     depends_on:
       postgres:
         condition: service_healthy
@@ -172,8 +189,11 @@ services:
     ports:
       - "5000:5000"
     environment:
-      RESPONSE_AGENT_SECRET: ${RESPONSE_AGENT_SECRET:-b7c938d10b7f43a99e1d8847e923832c3f59194e432c7e436814041b65b16130}
+      RESPONSE_AGENT_SECRET: ${RESPONSE_AGENT_SECRET:?Set shared RESPONSE_AGENT_SECRET in .env}
+      # Host & AI Safety Guard: Hypothetical containment locked on by default
       RESPONSE_AGENT_SIMULATION_MODE: "true"
+      EXECUTION_MODE: SIMULATION
+      BLUEOPS_ALLOW_LIVE_HOST_DISRUPTION: "false"
       RESPONSE_AGENT_PORT: 5000
     healthcheck:
       test: ["CMD-SHELL", "curl -s -f http://localhost:5000/health || exit 1"]
